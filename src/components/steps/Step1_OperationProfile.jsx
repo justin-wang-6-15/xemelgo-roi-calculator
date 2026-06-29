@@ -33,6 +33,23 @@ const roles = [
   { label: 'Direct Employees', countKey: 'directCount', rateKey: 'directRate' },
 ];
 
+const UNITS_FIELD_LANG = {
+  '':              { label: 'Units Produced Per Month',               placeholder: '10,000', helper: 'Enter your monthly finished goods output. If your facility tracks work orders, use the number of work orders completed per month. When in doubt, use finished goods units.' },
+  manufacturing:   { label: 'Units Produced Per Month',               placeholder: '10,000', helper: 'Enter your monthly finished goods output. If your facility tracks work orders, use the number of work orders completed per month. When in doubt, use finished goods units.' },
+  aerospace:       { label: 'Work Orders Completed Per Month',         placeholder: '250',    helper: 'Enter the number of work orders or job orders your facility completes each month.' },
+  lifesciences:    { label: 'Lots or Batches Completed Per Month',     placeholder: '50',     helper: 'Enter the number of production lots or batches your facility releases per month.' },
+  foodbeverage:    { label: 'Cases or Pallets Produced Per Month',     placeholder: '2,000',  helper: 'Enter your monthly finished goods output in cases or pallet equivalents, whichever you track.' },
+  automotive:      { label: 'Vehicles or Assemblies Completed Per Month', placeholder: '500', helper: 'Enter the number of finished vehicles, modules, or major assemblies your facility completes per month.' },
+  electronics:     { label: 'PCBAs or Assemblies Completed Per Month', placeholder: '1,000',  helper: 'Enter the number of finished circuit board assemblies or electronic assemblies completed per month.' },
+  retail:          { label: 'Orders Shipped Per Month',                placeholder: '5,000',  helper: 'Enter the total number of outbound orders or shipments your facility processes per month.' },
+  other:           { label: 'Units or Jobs Completed Per Month',       placeholder: '1,000',  helper: 'Enter whatever unit best represents your monthly throughput — finished goods, work orders, or jobs completed.' },
+};
+
+const SHIFTS_FIELD_LANG = {
+  retail: { label: 'Operating Hours Per Day', helper: 'How many hours per day your facility or distribution center operates.' },
+};
+const DEFAULT_SHIFTS_LANG = { label: 'Shifts Per Day', helper: 'Number of shifts your facility runs.' };
+
 // Fix 2: updated descriptions with direct-employees clarification
 const ROLE_DESCRIPTIONS = [
   'Warehouse staff, stockroom associates, forklift operators — anyone who physically moves or stores inventory.',
@@ -133,10 +150,22 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           </select>
         </Field>
 
-        {/* Fix 5: updated helper text */}
-        <Field label="Units Produced Per Month" description="Enter your monthly finished goods output. If your facility tracks work orders, use the number of work orders completed per month. When in doubt, use finished goods units." error={errors.unitsPerMonth}>
-          <NumInput value={ops.unitsPerMonth} onChange={set('unitsPerMonth')} min={0} error={errors.unitsPerMonth} />
-        </Field>
+        {(() => {
+          const unitsLang = UNITS_FIELD_LANG[ops.industry] ?? UNITS_FIELD_LANG[''];
+          return (
+            <Field label={unitsLang.label} description={unitsLang.helper} error={errors.unitsPerMonth}>
+              <input
+                type="number"
+                value={ops.unitsPerMonth}
+                min={0}
+                placeholder={unitsLang.placeholder}
+                onChange={(e) => set('unitsPerMonth')(Number(e.target.value))}
+                className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent
+                  ${errors.unitsPerMonth ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
+              />
+            </Field>
+          );
+        })()}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Work Weeks / Year" description="Typical = 50 after holidays." error={errors.workWeeksPerYear}>
@@ -145,9 +174,14 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           <Field label="Working Days / Week" description="Standard production days. Typical = 5." error={errors.workDaysPerWeek}>
             <NumInput value={ops.workDaysPerWeek} onChange={set('workDaysPerWeek')} min={1} max={7} error={errors.workDaysPerWeek} />
           </Field>
-          <Field label="Shifts Per Day" description="Number of shifts your facility runs.">
-            <NumInput value={ops.shiftsPerDay} onChange={set('shiftsPerDay')} min={1} max={3} />
-          </Field>
+          {(() => {
+            const shiftsLang = SHIFTS_FIELD_LANG[ops.industry] ?? DEFAULT_SHIFTS_LANG;
+            return (
+              <Field label={shiftsLang.label} description={shiftsLang.helper}>
+                <NumInput value={ops.shiftsPerDay} onChange={set('shiftsPerDay')} min={1} max={ops.industry === 'retail' ? 24 : 3} />
+              </Field>
+            );
+          })()}
         </div>
       </div>
 
