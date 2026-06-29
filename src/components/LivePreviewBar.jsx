@@ -1,8 +1,8 @@
 import { calcFinancials } from '../utils/calculations';
 import { fmt$, fmtWks } from '../utils/format';
 
-export default function LivePreviewBar({ ops, savings, fin }) {
-  const result = calcFinancials(ops, savings, fin);
+export default function LivePreviewBar({ ops, useCases, fin }) {
+  const result = calcFinancials(ops, useCases, fin);
 
   const metrics = [
     { label: 'Annual Opportunity', value: fmt$(result.totalGrossAnnual) },

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import ProgressIndicator from './components/ProgressIndicator';
 import Step1_OperationProfile from './components/steps/Step1_OperationProfile';
-import Step2_SavingsInputs from './components/steps/Step2_SavingsInputs';
+import Step2_UseCases from './components/steps/Step2_UseCases';
 import Step3_FinancialResults from './components/steps/Step3_FinancialResults';
 import Step4_EmailGate from './components/steps/Step4_EmailGate';
 import ThankYou from './components/ThankYou';
@@ -23,16 +23,21 @@ const defaultOps = {
   directRate: 22,
 };
 
-const defaultSavings = {
-  meetingMinutesSaved: 30,
-  meetingPeopleAffected: 5,
-  handlerSearchMinutesSaved: 45,
-  handlerSearchPeopleAffected: 8,
-  productionSearchMinutesSaved: 30,
-  productionSearchPeopleAffected: 3,
-  cycleCountQuarterlySavings: 15000,
-  revenueAccelerationMonthly: 8000,
-};
+function makeDefaultUseCases(ops) {
+  return {
+    auditCycleCount: { enabled: true, hoursPerCount: 8, countsPerYear: 4, plannersPerCount: ops.plannerCount, reductionPct: 0.80 },
+    locateItems: { enabled: true, searchMinutes: 15, incidentsPerDay: 20, role: 'materialHandler', reductionPct: 0.70 },
+    picklistVerification: { enabled: false, picksPerDay: 500, errorRate: 0.02, costPerError: 50, reductionPct: 0.70 },
+    shipReceiveVerification: { enabled: false, transactionsPerDay: 15, minutesPerTransaction: 12, dockHeadcount: ops.materialHandlerCount, reductionPct: 0.60 },
+    internalDelivery: { enabled: false, transfersPerDay: 30, minutesPerTransfer: 8, headcount: ops.materialHandlerCount, reductionPct: 0.50 },
+    expiredProducts: { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.75 },
+    calibrationReminders: { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.80 },
+    geofencing: { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.70 },
+    fasterFulfillment: { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
+    misShipReduction: { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.75 },
+    dockTurnSpeed: { enabled: false, transactionsPerDay: 20, delayCostPerTransaction: 25, savingsMinutesPerTransaction: 10 },
+  };
+}
 
 const defaultFin = {
   capex: 50000,
@@ -45,7 +50,7 @@ export default function App() {
   const [step, setStep] = useState(1);
   const [transitionClass, setTransitionClass] = useState('step-enter');
   const [ops, setOps] = useState(defaultOps);
-  const [savings, setSavings] = useState(defaultSavings);
+  const [useCases, setUseCases] = useState(() => makeDefaultUseCases(defaultOps));
   const [fin, setFin] = useState(defaultFin);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
@@ -90,19 +95,19 @@ export default function App() {
         <div className={showPreview ? 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start' : ''}>
           <div className={transitionClass}>
             {done ? (
-              <ThankYou ops={ops} savings={savings} fin={fin} contactInfo={contactInfo} />
+              <ThankYou ops={ops} useCases={useCases} fin={fin} contactInfo={contactInfo} />
             ) : step === 1 ? (
               <Step1_OperationProfile ops={ops} setOps={setOps} onNext={() => goTo(2)} />
             ) : step === 2 ? (
-              <Step2_SavingsInputs ops={ops} savings={savings} setSavings={setSavings} onNext={() => goTo(3)} onBack={() => goTo(1, 'back')} />
+              <Step2_UseCases ops={ops} useCases={useCases} setUseCases={setUseCases} onNext={() => goTo(3)} onBack={() => goTo(1, 'back')} />
             ) : step === 3 ? (
-              <Step3_FinancialResults ops={ops} savings={savings} fin={fin} setFin={setFin} onNext={() => goTo(4)} onBack={() => goTo(2, 'back')} />
+              <Step3_FinancialResults ops={ops} useCases={useCases} fin={fin} setFin={setFin} onNext={() => goTo(4)} onBack={() => goTo(2, 'back')} />
             ) : step === 4 ? (
-              <Step4_EmailGate ops={ops} savings={savings} fin={fin} onSubmit={handleEmailSubmit} onBack={() => goTo(3, 'back')} />
+              <Step4_EmailGate ops={ops} useCases={useCases} fin={fin} onSubmit={handleEmailSubmit} onBack={() => goTo(3, 'back')} />
             ) : null}
           </div>
 
-          {showPreview && <LivePreviewBar ops={ops} savings={savings} fin={fin} />}
+          {showPreview && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
         </div>
       </main>
     </div>

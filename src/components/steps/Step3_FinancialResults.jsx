@@ -1,3 +1,4 @@
+import React from 'react';
 import { calcFinancials } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import MetricCard from '../MetricCard';
@@ -70,9 +71,9 @@ function SavingsBarChart({ result }) {
   );
 }
 
-export default function Step3_FinancialResults({ ops, savings, fin, setFin, onNext, onBack }) {
+export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onNext, onBack }) {
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
-  const result = calcFinancials(ops, savings, fin);
+  const result = calcFinancials(ops, useCases, fin);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -164,11 +165,22 @@ export default function Step3_FinancialResults({ ops, savings, fin, setFin, onNe
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              <tr><td className="py-1.5 pr-2 text-gray-700">Daily Production Meetings</td><td className="text-right text-gray-700">{fmt$(result.meeting.annualValue)}</td></tr>
-              <tr><td className="py-1.5 pr-2 text-gray-700">Material Handler Search</td><td className="text-right text-gray-700">{fmt$(result.handlerSearch.annualValue)}</td></tr>
-              <tr><td className="py-1.5 pr-2 text-gray-700">Production Control Search</td><td className="text-right text-gray-700">{fmt$(result.productionSearch.annualValue)}</td></tr>
-              <tr><td className="py-1.5 pr-2 text-gray-700">Quarterly Cycle Counts</td><td className="text-right text-gray-700">{fmt$(result.cycleCountAnnual)}</td></tr>
-              <tr><td className="py-1.5 pr-2 text-gray-700">Revenue Acceleration</td><td className="text-right text-gray-700">{fmt$(result.revenueAccelAnnual)}</td></tr>
+              {result.buckets.map((bucket) =>
+                bucket.lineItems.length > 0 ? (
+                  <React.Fragment key={bucket.name}>
+                    {bucket.lineItems.map((li) => (
+                      <tr key={li.key}>
+                        <td className="py-1.5 pr-2 text-gray-700 pl-2">{li.name}</td>
+                        <td className="text-right text-gray-700">{fmt$(li.annualValue)}</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-gray-50">
+                      <td className="py-1 pr-2 pl-2 text-xs font-medium text-gray-500">{bucket.name} subtotal</td>
+                      <td className="text-right text-xs font-medium text-gray-500 pr-1">{fmt$(bucket.subtotal)}</td>
+                    </tr>
+                  </React.Fragment>
+                ) : null
+              )}
               <tr className="border-t border-gray-300 font-semibold">
                 <td className="py-1.5 pr-2 text-gray-900">Total Gross Annual</td>
                 <td className="text-right text-gray-900">{fmt$(result.totalGrossAnnual)}</td>

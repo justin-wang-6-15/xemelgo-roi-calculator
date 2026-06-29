@@ -7,7 +7,7 @@ const HUBSPOT_PORTAL_ID = 'YOUR_PORTAL_ID';
 const HUBSPOT_FORM_ID = 'YOUR_FORM_ID';
 const HUBSPOT_FORM_ENDPOINT = `https://api.hsforms.com/submissions/v3/integration/submit/${HUBSPOT_PORTAL_ID}/${HUBSPOT_FORM_ID}`;
 
-export default function Step4_EmailGate({ ops, savings, fin, onSubmit, onBack }) {
+export default function Step4_EmailGate({ ops, useCases, fin, onSubmit, onBack }) {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -17,7 +17,7 @@ export default function Step4_EmailGate({ ops, savings, fin, onSubmit, onBack })
   const [loading, setLoading] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
-  const result = calcFinancials(ops, savings, fin);
+  const result = calcFinancials(ops, useCases, fin);
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
