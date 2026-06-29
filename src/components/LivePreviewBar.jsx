@@ -1,13 +1,12 @@
-import { calcFinancials } from '../utils/calculations';
-import { fmt$, fmtWks } from '../utils/format';
+import { calcUseCaseTotals } from '../utils/calculations';
+import { fmt$ } from '../utils/format';
 
-export default function LivePreviewBar({ ops, useCases, fin }) {
-  const result = calcFinancials(ops, useCases, fin);
+export default function LivePreviewBar({ ops, useCases }) {
+  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops);
 
   const metrics = [
-    { label: 'Annual Opportunity', value: fmt$(result.totalGrossAnnual) },
-    { label: 'Net Annual Value', value: fmt$(result.netAnnualValue) },
-    { label: 'Est. Payback', value: fmtWks(result.paybackWeeks) },
+    { label: 'Annual Opportunity', value: fmt$(totalGrossAnnual) },
+    { label: 'Est. Payback', value: 'Complete Step 3' },
   ];
 
   return (
@@ -32,11 +31,11 @@ export default function LivePreviewBar({ ops, useCases, fin }) {
             {metrics.map((m) => (
               <div key={m.label}>
                 <p className="text-xs text-blue-300">{m.label}</p>
-                <p className="text-xl font-bold">{m.value}</p>
+                <p className={`font-bold ${m.label === 'Est. Payback' ? 'text-sm text-blue-300' : 'text-xl'}`}>{m.value}</p>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-blue-300 leading-relaxed">Updates as you fill in your numbers.</p>
+          <p className="mt-4 text-xs text-blue-300 leading-relaxed">Updates as you toggle use cases.</p>
         </div>
       </div>
     </>
