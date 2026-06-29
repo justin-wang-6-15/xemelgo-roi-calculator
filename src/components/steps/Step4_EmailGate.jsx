@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { calcFinancials } from '../../utils/calculations';
-import { fmt$, fmtPct, fmtWks } from '../../utils/format';
-import MetricCard from '../MetricCard';
+import { calcFinancials, calcUseCaseTotals } from '../../utils/calculations';
+import { fmt$ } from '../../utils/format';
 
 const HUBSPOT_PORTAL_ID = 'YOUR_PORTAL_ID';
 const HUBSPOT_FORM_ID = 'YOUR_FORM_ID';
@@ -17,7 +16,7 @@ export default function Step4_EmailGate({ ops, useCases, fin, onSubmit, onBack }
   const [loading, setLoading] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
-  const result = calcFinancials(ops, useCases, fin);
+  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops);
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
@@ -49,26 +48,34 @@ export default function Step4_EmailGate({ ops, useCases, fin, onSubmit, onBack }
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Get your personalized ROI report.</h2>
       <p className="text-sm text-gray-500 mb-6">Your report includes everything you saw in this calculator plus a full use-case breakdown, your 5-year cash flow table, and a summary page formatted to share with your finance team or leadership. Enter your details below to receive it.</p>
 
-      {/* Blurred metric cards */}
-      <div className="relative mb-6">
-        <div className={`grid grid-cols-2 lg:grid-cols-3 gap-3 transition-all duration-700 ${unlocked ? '' : 'blur-sm opacity-40 select-none pointer-events-none'}`}>
-          <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="5-year total return" colorClass="border-blue-500" />
-          <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Present value of cash flows" colorClass="border-green-500" />
-          <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return" colorClass="border-purple-500" />
-          <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks to break even" colorClass="border-orange-500" />
-          <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus SaaS cost" colorClass="border-teal-500" />
-          <MetricCard label="Annual SaaS ROI" rawValue={result.saasRoi} formatter={fmtPct} explanation="Return on platform fee" colorClass="border-indigo-500" />
-        </div>
-        {!unlocked && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="bg-white rounded-full p-3 shadow-lg mb-2">
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <p className="text-sm font-semibold text-gray-700">Enter your details to unlock</p>
+      {/* Fix 6: replace blurred metric cards with teaser panel */}
+      <div className={`mb-6 transition-all duration-700 ${unlocked ? 'opacity-60' : ''}`}>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          {/* Annual opportunity — unblurred, already seen */}
+          <div className="px-6 py-5 border-b border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Total Annual Opportunity</p>
+            <p className="text-3xl font-bold text-blue-700">{fmt$(totalGrossAnnual)}</p>
+            <p className="text-xs text-gray-400 mt-1">Based on {Object.values(useCases).filter(u => u.enabled).length} use cases you selected</p>
           </div>
-        )}
+          {/* Locked: what's in the full report */}
+          <div className="px-6 py-5 bg-gray-50">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-1">Your full report includes:</p>
+                <ul className="text-sm text-gray-500 space-y-0.5">
+                  <li>• Line-by-line use case breakdown</li>
+                  <li>• 5-year cash flow table</li>
+                  <li>• One-page PDF formatted for your finance team or leadership</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">

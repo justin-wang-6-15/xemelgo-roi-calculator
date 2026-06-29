@@ -6,9 +6,11 @@ import Step3_FinancialResults from './components/steps/Step3_FinancialResults';
 import Step4_EmailGate from './components/steps/Step4_EmailGate';
 import ThankYou from './components/ThankYou';
 import LivePreviewBar from './components/LivePreviewBar';
+import { fmt$ } from './utils/format';
 
 const defaultOps = {
   companyName: '',
+  industry: '',
   unitsPerMonth: 5000,
   workWeeksPerYear: 50,
   workDaysPerWeek: 5,
@@ -39,6 +41,24 @@ function makeDefaultUseCases(ops) {
   };
 }
 
+// Fix 10: industry → which extra use case to toggle ON
+const INDUSTRY_USE_CASE_MAP = {
+  aerospace: 'calibrationReminders',
+  lifesciences: 'expiredProducts',
+  foodbeverage: 'expiredProducts',
+  retail: 'misShipReduction',
+};
+
+// Fix 10: industry sidebar notes
+const INDUSTRY_NOTES = {
+  aerospace: 'Defense contractors typically prioritize calibration and geofencing use cases.',
+  lifesciences: 'Regulated environments see high ROI from expiration tracking and audit readiness.',
+  foodbeverage: 'Perishable inventory operations benefit most from expired product and cycle count use cases.',
+  automotive: 'High-volume facilities see strong ROI from ship/receive verification and picklist accuracy.',
+  electronics: 'Component-intensive operations benefit from locate items and WIP tracking.',
+  retail: 'Distribution centers see strong ROI from outbound verification and cycle count reduction.',
+};
+
 function calcEstimatedCapex(ops) {
   const zones = Math.max(3, Math.min(12, Math.ceil(ops.unitsPerMonth / 2000)));
   return Math.round(zones * 8000 * 1.25);
@@ -51,16 +71,27 @@ const defaultFin = {
   wacc: 0.10,
 };
 
-function StaticBenchmarkCard() {
+// Fix 1: reactive benchmark card using ops
+function StaticBenchmarkCard({ ops }) {
+  const totalPayroll = (
+    ops.materialHandlerCount * ops.materialHandlerRate +
+    ops.plannerCount * ops.plannerRate +
+    ops.indirectCount * ops.indirectRate +
+    ops.directCount * ops.directRate
+  ) * 2000;
+  const estimated = Math.round(totalPayroll * 0.08 / 1000) * 1000;
+  const industryNote = INDUSTRY_NOTES[ops.industry];
+
   return (
     <div className="hidden lg:block">
       <div className="sticky top-8 bg-white border border-gray-200 rounded-xl shadow-md p-5">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Industry Benchmarks</p>
-        <p className="text-xs text-gray-600 mb-4">Based on operations like yours, Xemelgo customers typically see:</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Your Estimate</p>
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-gray-400">Annual opportunity</p>
-            <p className="text-lg font-bold text-gray-900">$150K–$700K</p>
+            <p className="text-xs text-gray-400">Estimated annual opportunity</p>
+            <p className={`text-lg font-bold ${estimated > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+              {estimated > 0 ? fmt$(estimated) : '—'}
+            </p>
           </div>
           <div>
             <p className="text-xs text-gray-400">Payback period</p>
@@ -71,7 +102,12 @@ function StaticBenchmarkCard() {
             <p className="text-lg font-bold text-gray-900">200–400%</p>
           </div>
         </div>
-        <p className="mt-4 text-xs text-gray-400 leading-relaxed">Complete Step 1 to see your personalized estimate.</p>
+        {industryNote && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-blue-700 italic leading-relaxed">{industryNote}</p>
+          </div>
+        )}
+        <p className="mt-3 text-xs text-gray-400 leading-relaxed">Based on your team size. Refine in Step 2.</p>
       </div>
     </div>
   );
@@ -114,6 +150,14 @@ export default function App() {
   }
 
   function handleStep1Next() {
+    // Fix 10: reset use cases to defaults + apply industry-specific toggle
+    const freshUseCases = makeDefaultUseCases(ops);
+    const extraToggle = INDUSTRY_USE_CASE_MAP[ops.industry];
+    if (extraToggle) {
+      freshUseCases[extraToggle] = { ...freshUseCases[extraToggle], enabled: true };
+    }
+    setUseCases(freshUseCases);
+
     setAnalyzing(true);
     setTimeout(() => {
       setTransitionClass('step-exit');
@@ -178,7 +222,7 @@ export default function App() {
             ) : null}
           </div>
 
-          {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
+          {!done && !analyzing && step === 1 && <StaticBenchmarkCard ops={ops} />}
           {!done && !analyzing && step === 2 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
         </div>
       </main>

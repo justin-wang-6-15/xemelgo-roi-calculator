@@ -28,16 +28,24 @@ function SavingsBarChart({ result }) {
   const offsetX = (chartW - totalGroupsW) / 2;
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-4">
+    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      {/* Fix 8: ramp-up callout ABOVE the chart, styled as info box */}
+      <div className="flex gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-5">
+        <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-xs text-blue-800 leading-relaxed">
+          <span className="font-semibold">Ramp-up assumption:</span> Year 1 savings reflect a 4-month adoption ramp (25% → 50% → 75% → 100% of full savings). Full run-rate savings begin in Month 4, consistent with typical Xemelgo deployments.
+        </p>
+      </div>
+
       <h3 className="text-base font-semibold text-gray-800 mb-1">5-Year Cumulative Outlook</h3>
       <p className="text-xs text-gray-500 mb-4">Cumulative savings vs. total investment over 5 years.</p>
       <div className="overflow-x-auto">
         <svg viewBox={`0 0 ${chartW} ${chartH + 40}`} className="w-full max-w-lg mx-auto">
           {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
             const y = chartH - tick * chartH;
-            return (
-              <line key={tick} x1={0} y1={y} x2={chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />
-            );
+            return <line key={tick} x1={0} y1={y} x2={chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />;
           })}
           {[0, 1, 2, 3, 4].map((i) => {
             const gx = offsetX + i * (groupW + 20);
@@ -47,9 +55,7 @@ function SavingsBarChart({ result }) {
               <g key={i}>
                 <rect x={gx} y={chartH - savH} width={barW} height={savH} fill="#2563eb" rx="3" />
                 <rect x={gx + barW + groupGap} y={chartH - costH} width={barW} height={costH} fill="#d1d5db" rx="3" />
-                <text x={gx + groupW / 2} y={chartH + 16} textAnchor="middle" fontSize="11" fill="#6b7280">
-                  Yr {i + 1}
-                </text>
+                <text x={gx + groupW / 2} y={chartH + 16} textAnchor="middle" fontSize="11" fill="#6b7280">Yr {i + 1}</text>
               </g>
             );
           })}
@@ -57,14 +63,8 @@ function SavingsBarChart({ result }) {
         </svg>
       </div>
       <div className="flex items-center gap-6 justify-center mt-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-blue-600" />
-          <span className="text-xs text-gray-500">Cumulative Savings</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-gray-300" />
-          <span className="text-xs text-gray-500">Cumulative Cost</span>
-        </div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-blue-600" /><span className="text-xs text-gray-500">Cumulative Savings</span></div>
+        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-gray-300" /><span className="text-xs text-gray-500">Cumulative Cost</span></div>
       </div>
     </div>
   );
@@ -74,10 +74,9 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin);
 
-  // Fix 6: Dynamic CapEx tooltip
+  // Fix 7: CapEx zone breakdown (always visible)
   const estimatedZones = Math.max(3, Math.min(12, Math.ceil(ops.unitsPerMonth / 2000)));
   const estimatedCapex = estimatedZones * 8000 * 1.25;
-  const capexTooltip = `Estimated based on your throughput volume: ${estimatedZones} zones × $8,000 + 25% installation = ${fmt$(estimatedCapex)}`;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -89,13 +88,8 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
           <h3 className="text-base font-semibold text-gray-800 mb-4">Investment Inputs</h3>
           <div className="space-y-4">
             <div>
-              {/* Fix 6: CapEx with tooltip showing estimate breakdown */}
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                CapEx (hardware, installation)
-                <Tooltip content={capexTooltip}>
-                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
-                </Tooltip>
-              </label>
+              {/* Fix 7: remove tooltip from label, show inline callout instead */}
+              <label className="block text-sm font-medium text-gray-700 mb-1">CapEx (hardware, installation)</label>
               <div className="flex items-center">
                 <span className="text-gray-500 mr-1">$</span>
                 <input
@@ -106,7 +100,11 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">This is an estimate based on your operation size. Your Xemelgo rep will confirm exact hardware requirements and pricing.</p>
+              {/* Fix 7: always-visible zone breakdown callout */}
+              <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600">
+                Estimate basis: <span className="font-medium">{estimatedZones} RFID reader zones</span> × $8,000 + 25% installation = <span className="font-medium">{fmt$(estimatedCapex)}</span>
+                <p className="mt-1 text-gray-400">Zones are estimated based on your monthly throughput. Your Xemelgo rep will confirm the exact count during scoping.</p>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -132,7 +130,6 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
               </div>
             </div>
             <div>
-              {/* Fix 7: Platform fee helper text */}
               <label className="block text-sm font-medium text-gray-700 mb-1">Xemelgo Monthly Platform Fee</label>
               <div className="flex items-center">
                 <span className="text-gray-500 mr-1">$</span>
@@ -209,16 +206,27 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
         </div>
       </div>
 
-      {/* Fix 8: Main 5 metric cards */}
+      {/* Main 5 metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
         <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" benchmark="Xemelgo avg: 200–400%" />
         <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
-        <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" benchmark="Exceeds typical WACC by 10–30×" />
+
+        {/* Fix 3: IRR cap at 300% */}
+        {result.irrAnnual > 3.0 ? (
+          <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-gray-300">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">IRR (Annual)</p>
+            <p className="text-lg font-semibold text-gray-400 mb-1">&gt;300%</p>
+            <p className="text-xs text-gray-400">IRR above 300% indicates the investment pays back so quickly that the traditional IRR metric loses practical meaning. Focus on payback period and NPV instead.</p>
+          </div>
+        ) : (
+          <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" />
+        )}
+
         <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" benchmark="Xemelgo avg: 18–24 weeks" />
         <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
       </div>
 
-      {/* Fix 8: Demoted Annual SaaS ROI card */}
+      {/* Demoted Annual SaaS ROI */}
       <div className="mb-6">
         <div className="bg-white rounded-lg shadow-sm border-l-4 border-indigo-200 p-4 max-w-xs">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Annual SaaS ROI</p>
@@ -229,14 +237,6 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
 
       <SavingsBarChart result={result} />
 
-      {/* Fix 10: Ramp-up callout */}
-      <div className="bg-amber-50 border border-amber-100 rounded-xl px-5 py-4 mb-6">
-        <p className="text-sm text-amber-800 leading-relaxed">
-          <span className="font-semibold">Year 1 reflects a 4-month ramp-up period</span> as your team gets up to speed with the platform. Savings reach full run rate from Month 4 onward — consistent with what Xemelgo customers experience during standard deployment.
-        </p>
-      </div>
-
-      {/* Fix 9: Teaser copy before Next */}
       <p className="text-sm text-gray-500 text-center mb-4">
         Next: get your full personalized report — includes a line-by-line breakdown by use case, all your inputs saved, and a 5-year cash flow table formatted for your finance team.
       </p>

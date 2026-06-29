@@ -33,11 +33,12 @@ const roles = [
   { label: 'Direct Employees', countKey: 'directCount', rateKey: 'directRate' },
 ];
 
+// Fix 2: updated descriptions with direct-employees clarification
 const ROLE_DESCRIPTIONS = [
   'Warehouse staff, stockroom associates, forklift operators — anyone who physically moves or stores inventory.',
   'Production schedulers, inventory analysts, supply chain coordinators — anyone managing what\'s where and what\'s needed next.',
   'Supervisors, managers, plant leadership — anyone overseeing operations but not directly handling materials.',
-  'Production line workers, assemblers, technicians — anyone whose primary job is making or building product.',
+  'Direct Employees: Frontline production workers — assemblers, machine operators, line technicians. Do not include anyone already listed as a Material Handler, Planner, or in Indirect/Leadership.',
 ];
 
 function RoleClassificationHelp() {
@@ -72,6 +73,8 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
   function validate() {
     const e = {};
     if (!ops.companyName.trim()) e.companyName = 'Company name is required.';
+    // Fix 10: industry required
+    if (!ops.industry) e.industry = 'Please select your industry.';
     if (!ops.unitsPerMonth || ops.unitsPerMonth <= 0) e.unitsPerMonth = 'Enter a value greater than 0.';
     if (!ops.workWeeksPerYear || ops.workWeeksPerYear <= 0) e.workWeeksPerYear = 'Required.';
     if (!ops.workDaysPerWeek || ops.workDaysPerWeek <= 0) e.workDaysPerWeek = 'Required.';
@@ -90,7 +93,6 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Let's size your opportunity</h2>
       <p className="text-sm text-gray-500 mb-4">Tell us about your team — we'll use this to calculate the true dollar value of time saved.</p>
 
-      {/* Fix 2: Intro block */}
       <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 mb-6">
         <p className="text-sm text-blue-900 leading-relaxed">
           <span className="font-semibold">Xemelgo is an RFID-powered operations platform</span> that gives manufacturers real-time visibility into inventory, WIP, and assets. This calculator estimates the financial impact for an operation like yours — complete the steps below to see your personalized ROI.
@@ -99,6 +101,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
 
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">
         <h3 className="text-base font-semibold text-gray-800 mb-4">Facility Overview</h3>
+
         <Field label="Company Name" error={errors.companyName}>
           <input
             type="text"
@@ -109,9 +112,32 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
               ${errors.companyName ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
           />
         </Field>
-        <Field label="Units Produced Per Month" description="How many finished goods or work orders does your facility complete each month?" error={errors.unitsPerMonth}>
+
+        {/* Fix 10: Industry selector, placed between Company Name and Units */}
+        <Field label="Industry / Vertical" error={errors.industry}>
+          <select
+            value={ops.industry}
+            onChange={(e) => setOps((prev) => ({ ...prev, industry: e.target.value }))}
+            className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white
+              ${errors.industry ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
+          >
+            <option value="">Select your industry</option>
+            <option value="manufacturing">Manufacturing (general)</option>
+            <option value="aerospace">Aerospace and Defense</option>
+            <option value="lifesciences">Life Sciences / Medical Devices</option>
+            <option value="foodbeverage">Food and Beverage</option>
+            <option value="automotive">Automotive</option>
+            <option value="electronics">Electronics / High-Tech</option>
+            <option value="retail">Retail / Distribution</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+
+        {/* Fix 5: updated helper text */}
+        <Field label="Units Produced Per Month" description="Enter your monthly finished goods output. If your facility tracks work orders, use the number of work orders completed per month. When in doubt, use finished goods units." error={errors.unitsPerMonth}>
           <NumInput value={ops.unitsPerMonth} onChange={set('unitsPerMonth')} min={0} error={errors.unitsPerMonth} />
         </Field>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Work Weeks / Year" description="Typical = 50 after holidays." error={errors.workWeeksPerYear}>
             <NumInput value={ops.workWeeksPerYear} onChange={set('workWeeksPerYear')} min={1} max={52} error={errors.workWeeksPerYear} />
@@ -134,7 +160,6 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
         </h3>
         <p className="text-xs text-gray-500 mb-3">Burdened rate = base wage + benefits, taxes, overhead. Typically 1.3–1.5× base wage.</p>
 
-        {/* Fix 3: Role classification help */}
         <RoleClassificationHelp />
 
         {/* Desktop table */}
@@ -150,7 +175,13 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
             <tbody>
               {roles.map((role) => (
                 <tr key={role.countKey} className="border-b border-gray-100">
-                  <td className="py-2 pr-4 text-gray-700">{role.label}</td>
+                  <td className="py-2 pr-4">
+                    <span className="text-gray-700">{role.label}</span>
+                    {/* Fix 2: clarifying note for Direct Employees */}
+                    {role.countKey === 'directCount' && (
+                      <p className="text-xs text-gray-400 italic mt-0.5">Production line workers only — do not include anyone already counted above.</p>
+                    )}
+                  </td>
                   <td className="py-2 px-2">
                     <input
                       type="number"
@@ -182,7 +213,11 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
         <div className="sm:hidden space-y-3">
           {roles.map((role) => (
             <div key={role.countKey} className="border border-gray-200 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700 mb-2">{role.label}</p>
+              <p className="text-sm font-medium text-gray-700 mb-0.5">{role.label}</p>
+              {/* Fix 2: clarifying note for Direct Employees */}
+              {role.countKey === 'directCount' && (
+                <p className="text-xs text-gray-400 italic mb-2">Production line workers only — do not include anyone already counted above.</p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">People</label>
