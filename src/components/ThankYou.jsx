@@ -13,7 +13,7 @@ export default function ThankYou({ ops, useCases, fin, contactInfo }) {
   async function handlePDF() {
     setPdfState('loading');
     try {
-      await generatePDF(ops, useCases, fin, result);
+      await generatePDF(ops, useCases, fin, result, contactInfo);
       setPdfState('idle');
     } catch (e) {
       console.error(e);
@@ -24,7 +24,7 @@ export default function ThankYou({ ops, useCases, fin, contactInfo }) {
   async function handleExcel() {
     setXlsxState('loading');
     try {
-      await generateExcel(ops, useCases, fin, result);
+      await generateExcel(ops, useCases, fin, result, contactInfo);
       setXlsxState('idle');
     } catch (e) {
       console.error(e);
