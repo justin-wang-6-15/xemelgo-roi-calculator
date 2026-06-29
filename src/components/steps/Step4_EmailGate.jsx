@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { calcFinancials } from '../../utils/calculations';
+import { fmt$, fmtPct, fmtWks } from '../../utils/format';
+import MetricCard from '../MetricCard';
 
 const HUBSPOT_PORTAL_ID = 'YOUR_PORTAL_ID';
 const HUBSPOT_FORM_ID = 'YOUR_FORM_ID';
 const HUBSPOT_FORM_ENDPOINT = `https://api.hsforms.com/submissions/v3/integration/submit/${HUBSPOT_PORTAL_ID}/${HUBSPOT_FORM_ID}`;
 
-export default function Step4_EmailGate({ ops, onSubmit, onBack }) {
+export default function Step4_EmailGate({ ops, savings, fin, onSubmit, onBack }) {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -12,7 +15,9 @@ export default function Step4_EmailGate({ ops, onSubmit, onBack }) {
     email: '',
   });
   const [loading, setLoading] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
 
+  const result = calcFinancials(ops, savings, fin);
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
@@ -32,16 +37,39 @@ export default function Step4_EmailGate({ ops, onSubmit, onBack }) {
         }),
       });
     } catch (_) {
-      // swallow errors — show thank you regardless
+      // swallow errors — show results regardless
     }
     setLoading(false);
-    onSubmit(form);
+    setUnlocked(true);
+    setTimeout(() => onSubmit(form), 800);
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 mb-1">Get Your Full ROI Report</h2>
-      <p className="text-sm text-gray-500 mb-6">Enter your details to unlock your personalized analysis and receive a copy.</p>
+    <div className="max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">You're one step away</h2>
+      <p className="text-sm text-gray-500 mb-6">Enter your details to unlock your full personalized report.</p>
+
+      {/* Blurred metric cards */}
+      <div className="relative mb-6">
+        <div className={`grid grid-cols-2 lg:grid-cols-3 gap-3 transition-all duration-700 ${unlocked ? '' : 'blur-sm opacity-40 select-none pointer-events-none'}`}>
+          <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="5-year total return" colorClass="border-blue-500" />
+          <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Present value of cash flows" colorClass="border-green-500" />
+          <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return" colorClass="border-purple-500" />
+          <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks to break even" colorClass="border-orange-500" />
+          <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus SaaS cost" colorClass="border-teal-500" />
+          <MetricCard label="Annual SaaS ROI" rawValue={result.saasRoi} formatter={fmtPct} explanation="Return on platform fee" colorClass="border-indigo-500" />
+        </div>
+        {!unlocked && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="bg-white rounded-full p-3 shadow-lg mb-2">
+              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-gray-700">Enter your details to unlock</p>
+          </div>
+        )}
+      </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,6 +95,7 @@ export default function Step4_EmailGate({ ops, onSubmit, onBack }) {
             <input required type="email" value={form.email} onChange={set('email')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
+          <p className="text-xs text-gray-400">We respect your privacy. No spam, ever.</p>
           <div className="flex justify-between pt-2">
             <button type="button" onClick={onBack} className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-colors">
               ← Back
@@ -79,7 +108,7 @@ export default function Step4_EmailGate({ ops, onSubmit, onBack }) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                 </svg>
               )}
-              {loading ? 'Submitting...' : 'View My Results →'}
+              {loading ? 'Unlocking...' : 'Unlock My Results →'}
             </button>
           </div>
         </form>

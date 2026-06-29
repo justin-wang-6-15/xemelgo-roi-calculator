@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import ProgressIndicator from './components/ProgressIndicator';
 import Step1_OperationProfile from './components/steps/Step1_OperationProfile';
 import Step2_SavingsInputs from './components/steps/Step2_SavingsInputs';
 import Step3_FinancialResults from './components/steps/Step3_FinancialResults';
 import Step4_EmailGate from './components/steps/Step4_EmailGate';
 import ThankYou from './components/ThankYou';
+import LivePreviewBar from './components/LivePreviewBar';
 
 const defaultOps = {
   companyName: '',
@@ -42,16 +43,29 @@ const defaultFin = {
 
 export default function App() {
   const [step, setStep] = useState(1);
+  const [transitionClass, setTransitionClass] = useState('step-enter');
   const [ops, setOps] = useState(defaultOps);
   const [savings, setSavings] = useState(defaultSavings);
   const [fin, setFin] = useState(defaultFin);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
+  const dirRef = useRef('forward');
+
+  function goTo(next, dir = 'forward') {
+    dirRef.current = dir;
+    setTransitionClass(dir === 'forward' ? 'step-exit' : 'step-exit-back');
+    setTimeout(() => {
+      setStep(next);
+      setTransitionClass(dir === 'forward' ? 'step-enter' : 'step-enter-back');
+    }, 220);
+  }
 
   const handleEmailSubmit = (info) => {
     setContactInfo(info);
     setDone(true);
   };
+
+  const showPreview = !done && (step === 1 || step === 2);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,17 +87,23 @@ export default function App() {
       <main className="max-w-5xl mx-auto px-4 py-8">
         {!done && <ProgressIndicator currentStep={step} />}
 
-        {done ? (
-          <ThankYou ops={ops} savings={savings} fin={fin} contactInfo={contactInfo} />
-        ) : step === 1 ? (
-          <Step1_OperationProfile ops={ops} setOps={setOps} onNext={() => setStep(2)} />
-        ) : step === 2 ? (
-          <Step2_SavingsInputs ops={ops} savings={savings} setSavings={setSavings} onNext={() => setStep(3)} onBack={() => setStep(1)} />
-        ) : step === 3 ? (
-          <Step3_FinancialResults ops={ops} savings={savings} fin={fin} setFin={setFin} onNext={() => setStep(4)} onBack={() => setStep(2)} />
-        ) : step === 4 ? (
-          <Step4_EmailGate ops={ops} onSubmit={handleEmailSubmit} onBack={() => setStep(3)} />
-        ) : null}
+        <div className={showPreview ? 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start' : ''}>
+          <div className={transitionClass}>
+            {done ? (
+              <ThankYou ops={ops} savings={savings} fin={fin} contactInfo={contactInfo} />
+            ) : step === 1 ? (
+              <Step1_OperationProfile ops={ops} setOps={setOps} onNext={() => goTo(2)} />
+            ) : step === 2 ? (
+              <Step2_SavingsInputs ops={ops} savings={savings} setSavings={setSavings} onNext={() => goTo(3)} onBack={() => goTo(1, 'back')} />
+            ) : step === 3 ? (
+              <Step3_FinancialResults ops={ops} savings={savings} fin={fin} setFin={setFin} onNext={() => goTo(4)} onBack={() => goTo(2, 'back')} />
+            ) : step === 4 ? (
+              <Step4_EmailGate ops={ops} savings={savings} fin={fin} onSubmit={handleEmailSubmit} onBack={() => goTo(3, 'back')} />
+            ) : null}
+          </div>
+
+          {showPreview && <LivePreviewBar ops={ops} savings={savings} fin={fin} />}
+        </div>
       </main>
     </div>
   );

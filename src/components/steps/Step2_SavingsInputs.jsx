@@ -1,24 +1,25 @@
+import { useState } from 'react';
 import { calcAllSavings } from '../../utils/calculations';
 import { fmt$, fmtHrs } from '../../utils/format';
+import RangeSlider from '../RangeSlider';
 
-function LaborCard({ title, description, minutesKey, peopleKey, annualValue, hoursPerWeek, savings, setSavings }) {
+function LaborCard({ title, description, minutesKey, peopleKey, annualValue, hoursPerWeek, savings, setSavings, flashKey }) {
   return (
     <div className="bg-white rounded-xl shadow-md p-6 mb-4">
       <h3 className="text-base font-semibold text-gray-800 mb-1">{title}</h3>
       <p className="text-sm text-gray-500 mb-4">{description}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Minutes Saved / Person / Day
           </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
+          <div className="flex items-center gap-3">
+            <RangeSlider
               min={0}
               max={120}
               value={savings[minutesKey]}
-              onChange={(e) => setSavings((prev) => ({ ...prev, [minutesKey]: Number(e.target.value) }))}
-              className="flex-1 accent-blue-600"
+              onChange={(val) => setSavings((prev) => ({ ...prev, [minutesKey]: val }))}
+              className="flex-1"
             />
             <input
               type="number"
@@ -31,7 +32,7 @@ function LaborCard({ title, description, minutesKey, peopleKey, annualValue, hou
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             People Affected
           </label>
           <input
@@ -43,7 +44,7 @@ function LaborCard({ title, description, minutesKey, peopleKey, annualValue, hou
           />
         </div>
       </div>
-      <div className="flex gap-4 bg-blue-50 rounded-lg p-3">
+      <div key={flashKey} className="flex gap-4 bg-blue-50 rounded-lg p-3 value-flash">
         <div>
           <span className="text-xs text-blue-600 font-medium">Weekly Hours Saved</span>
           <p className="text-lg font-bold text-blue-700">{fmtHrs(hoursPerWeek)}</p>
@@ -58,13 +59,19 @@ function LaborCard({ title, description, minutesKey, peopleKey, annualValue, hou
 }
 
 export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, onBack }) {
+  const [flashKey, setFlashKey] = useState(0);
   const result = calcAllSavings(ops, savings);
+
+  function handleSetSavings(updater) {
+    setSavings(updater);
+    setFlashKey((k) => k + 1);
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 mb-1">Where Xemelgo Creates Value</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Here's where the time goes</h2>
       <p className="text-sm text-gray-500 mb-6">
-        These benchmarks are based on real customer deployments. Adjust to match your operation.
+        These are the biggest time sinks Xemelgo eliminates. Adjust to match your operation.
       </p>
 
       <LaborCard
@@ -75,7 +82,8 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
         hoursPerWeek={result.meeting.hoursPerWeek}
         annualValue={result.meeting.annualValue}
         savings={savings}
-        setSavings={setSavings}
+        setSavings={handleSetSavings}
+        flashKey={flashKey}
       />
 
       <LaborCard
@@ -86,7 +94,8 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
         hoursPerWeek={result.handlerSearch.hoursPerWeek}
         annualValue={result.handlerSearch.annualValue}
         savings={savings}
-        setSavings={setSavings}
+        setSavings={handleSetSavings}
+        flashKey={flashKey}
       />
 
       <LaborCard
@@ -97,7 +106,8 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
         hoursPerWeek={result.productionSearch.hoursPerWeek}
         annualValue={result.productionSearch.annualValue}
         savings={savings}
-        setSavings={setSavings}
+        setSavings={handleSetSavings}
+        flashKey={flashKey}
       />
 
       <div className="bg-white rounded-xl shadow-md p-6 mb-4">
@@ -110,7 +120,7 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
               type="number"
               min={0}
               value={savings.cycleCountQuarterlySavings}
-              onChange={(e) => setSavings((prev) => ({ ...prev, cycleCountQuarterlySavings: Number(e.target.value) }))}
+              onChange={(e) => handleSetSavings((prev) => ({ ...prev, cycleCountQuarterlySavings: Number(e.target.value) }))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -124,7 +134,7 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
               type="number"
               min={0}
               value={savings.revenueAccelerationMonthly}
-              onChange={(e) => setSavings((prev) => ({ ...prev, revenueAccelerationMonthly: Number(e.target.value) }))}
+              onChange={(e) => handleSetSavings((prev) => ({ ...prev, revenueAccelerationMonthly: Number(e.target.value) }))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -132,7 +142,7 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
         </div>
       </div>
 
-      <div className="bg-blue-50 rounded-xl shadow-md p-6 mb-6">
+      <div key={`summary-${flashKey}`} className="bg-blue-50 rounded-xl shadow-md p-6 mb-6 value-flash">
         <h3 className="text-base font-semibold text-blue-900 mb-3">Projected Annual Opportunity</h3>
         <div className="space-y-2">
           {[
@@ -154,7 +164,7 @@ export default function Step2_SavingsInputs({ ops, savings, setSavings, onNext, 
         </div>
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between pb-20 lg:pb-0">
         <button onClick={onBack} className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-colors">
           ← Back
         </button>

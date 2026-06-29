@@ -1,12 +1,71 @@
 import { calcFinancials } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
+import MetricCard from '../MetricCard';
+import Tooltip from '../Tooltip';
 
-function MetricCard({ label, value, explanation, colorClass }) {
+function SavingsBarChart({ result }) {
+  const { cashFlows, totalCapex, annualSaasFee, netAnnualValue } = result;
+
+  // Year 1 gross = sum of monthly cash flows (before SaaS) — approximate from cashFlows[1..12] + monthlySaasFee
+  const monthlySaasFee = annualSaasFee / 12;
+  let year1Gross = 0;
+  for (let m = 1; m <= 12; m++) year1Gross += cashFlows[m] + monthlySaasFee;
+
+  const yearlyGross = [year1Gross, netAnnualValue, netAnnualValue, netAnnualValue, netAnnualValue];
+  const cumulativeSavings = yearlyGross.reduce((acc, v, i) => {
+    acc.push((acc[i - 1] || 0) + v);
+    return acc;
+  }, []);
+  const cumulativeCost = [1, 2, 3, 4, 5].map((y) => totalCapex + annualSaasFee * y);
+
+  const maxVal = Math.max(...cumulativeSavings, ...cumulativeCost);
+  const chartH = 140;
+  const chartW = 480;
+  const barW = 30;
+  const groupGap = 16;
+  const groupW = barW * 2 + groupGap;
+  const totalGroupsW = groupW * 5 + 20 * 4;
+  const offsetX = (chartW - totalGroupsW) / 2;
+
   return (
-    <div className={`bg-white rounded-xl shadow-md p-5 border-l-4 ${colorClass}`}>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-      <p className="text-xs text-gray-500">{explanation}</p>
+    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <h3 className="text-base font-semibold text-gray-800 mb-1">5-Year Cumulative Outlook</h3>
+      <p className="text-xs text-gray-500 mb-4">Cumulative savings vs. total investment over 5 years.</p>
+      <div className="overflow-x-auto">
+        <svg viewBox={`0 0 ${chartW} ${chartH + 40}`} className="w-full max-w-lg mx-auto">
+          {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
+            const y = chartH - tick * chartH;
+            return (
+              <line key={tick} x1={0} y1={y} x2={chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+            );
+          })}
+          {[0, 1, 2, 3, 4].map((i) => {
+            const gx = offsetX + i * (groupW + 20);
+            const savH = Math.max(2, (cumulativeSavings[i] / maxVal) * chartH);
+            const costH = Math.max(2, (cumulativeCost[i] / maxVal) * chartH);
+            return (
+              <g key={i}>
+                <rect x={gx} y={chartH - savH} width={barW} height={savH} fill="#2563eb" rx="3" />
+                <rect x={gx + barW + groupGap} y={chartH - costH} width={barW} height={costH} fill="#d1d5db" rx="3" />
+                <text x={gx + groupW / 2} y={chartH + 16} textAnchor="middle" fontSize="11" fill="#6b7280">
+                  Yr {i + 1}
+                </text>
+              </g>
+            );
+          })}
+          <line x1={0} y1={chartH} x2={chartW} y2={chartH} stroke="#e5e7eb" strokeWidth="1" />
+        </svg>
+      </div>
+      <div className="flex items-center gap-6 justify-center mt-2">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-blue-600" />
+          <span className="text-xs text-gray-500">Cumulative Savings</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm bg-gray-300" />
+          <span className="text-xs text-gray-500">Cumulative Cost</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -17,8 +76,8 @@ export default function Step3_FinancialResults({ ops, savings, fin, setFin, onNe
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 mb-1">Financial Inputs & Results</h2>
-      <p className="text-sm text-gray-500 mb-6">Review your investment and see the projected return.</p>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Your ROI at a glance</h2>
+      <p className="text-sm text-gray-500 mb-6">Based on your inputs, here's what Xemelgo is worth to your facility.</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl shadow-md p-6">
@@ -39,7 +98,12 @@ export default function Step3_FinancialResults({ ops, savings, fin, setFin, onNe
               <p className="mt-1 text-xs text-gray-500">One-time investment in RFID hardware, readers, antennas, and installation labor.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contingency Rate (%)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                Contingency Rate (%)
+                <Tooltip content="A buffer added to CapEx to cover unforeseen installation costs. Typically 10–15%.">
+                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
+                </Tooltip>
+              </label>
               <input
                 type="number"
                 min={0}
@@ -71,7 +135,12 @@ export default function Step3_FinancialResults({ ops, savings, fin, setFin, onNe
               <p className="mt-1 text-xs text-gray-500">Monthly SaaS subscription including software, support, and updates.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">WACC (%)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                WACC (%)
+                <Tooltip content="Weighted Average Cost of Capital — the minimum return your company requires on investments. Typically 8–12% for manufacturers.">
+                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
+                </Tooltip>
+              </label>
               <input
                 type="number"
                 min={0}
@@ -118,13 +187,15 @@ export default function Step3_FinancialResults({ ops, savings, fin, setFin, onNe
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <MetricCard label="5-Year ROI" value={fmtPct(result.fiveYrRoi - 1)} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" />
-        <MetricCard label="5-Year NPV" value={fmt$(result.npv)} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
-        <MetricCard label="IRR (Annual)" value={fmtPct(result.irrAnnual)} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" />
-        <MetricCard label="Payback Period" value={fmtWks(result.paybackWeeks)} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" />
-        <MetricCard label="Net Annual Value" value={fmt$(result.netAnnualValue)} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
-        <MetricCard label="Annual SaaS ROI" value={fmtPct(result.saasRoi)} explanation="Net annual value as a multiple of the platform fee" colorClass="border-indigo-500" />
+        <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" benchmark="Xemelgo avg: 200–400%" />
+        <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
+        <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" benchmark="Exceeds typical WACC by 10–30×" />
+        <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" benchmark="Xemelgo avg: 18–24 weeks" />
+        <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
+        <MetricCard label="Annual SaaS ROI" rawValue={result.saasRoi} formatter={fmtPct} explanation="Net annual value as a multiple of the platform fee" colorClass="border-indigo-500" />
       </div>
+
+      <SavingsBarChart result={result} />
 
       <div className="flex justify-between">
         <button onClick={onBack} className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-colors">

@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom range slider */
+.slider-custom {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+.slider-custom::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.slider-custom::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Input flash animation */
+@keyframes valueFlash {
+  0%   { background-color: #eff6ff; }
+  40%  { background-color: #bfdbfe; }
+  100% { background-color: #eff6ff; }
+}
+.value-flash {
+  animation: valueFlash 0.6s ease-out;
+}
+
+/* Step transition animations */
+@keyframes stepEnter {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes stepExit {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-28px); }
+}
+@keyframes stepEnterBack {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes stepExitBack {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(28px); }
+}
+.step-enter      { animation: stepEnter     220ms ease-out both; }
+.step-exit       { animation: stepExit      220ms ease-in  both; }
+.step-enter-back { animation: stepEnterBack 220ms ease-out both; }
+.step-exit-back  { animation: stepExitBack  220ms ease-in  both; }

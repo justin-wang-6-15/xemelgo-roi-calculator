@@ -6,40 +6,53 @@ const steps = [
 ];
 
 export default function ProgressIndicator({ currentStep }) {
+  const pct = Math.round(((currentStep - 1) / 3) * 100);
+
   return (
-    <div className="flex items-center justify-center mb-8">
-      {steps.map((step, idx) => {
-        const stepNum = idx + 1;
-        const isComplete = stepNum < currentStep;
-        const isCurrent = stepNum === currentStep;
-        return (
-          <div key={idx} className="flex items-center">
-            <div className="flex flex-col items-center">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-colors
-                  ${isComplete ? 'bg-green-500 border-green-500 text-white' : ''}
-                  ${isCurrent ? 'bg-blue-600 border-blue-600 text-white' : ''}
-                  ${!isComplete && !isCurrent ? 'bg-white border-gray-300 text-gray-400' : ''}
-                `}
-              >
-                {isComplete ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : stepNum}
+    <div className="mb-8">
+      <div className="flex items-center justify-center">
+        {steps.map((step, idx) => {
+          const stepNum = idx + 1;
+          const isComplete = stepNum < currentStep;
+          const isCurrent = stepNum === currentStep;
+          return (
+            <div key={idx} className="flex items-center">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-colors
+                    ${isComplete ? 'bg-green-500 border-green-500 text-white' : ''}
+                    ${isCurrent ? 'bg-blue-600 border-blue-600 text-white' : ''}
+                    ${!isComplete && !isCurrent ? 'bg-white border-gray-300 text-gray-400' : ''}
+                  `}
+                >
+                  {isComplete ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : stepNum}
+                </div>
+                <span className={`mt-1 text-xs font-medium hidden sm:block
+                  ${isCurrent ? 'text-blue-600' : isComplete ? 'text-green-600' : 'text-gray-400'}
+                `}>
+                  {step.label}
+                </span>
               </div>
-              <span className={`mt-1 text-xs font-medium hidden sm:block
-                ${isCurrent ? 'text-blue-600' : isComplete ? 'text-green-600' : 'text-gray-400'}
-              `}>
-                {step.label}
-              </span>
+              {idx < steps.length - 1 && (
+                <div className={`w-16 sm:w-24 h-0.5 mx-1 mb-4 ${isComplete ? 'bg-green-400' : 'bg-gray-200'}`} />
+              )}
             </div>
-            {idx < steps.length - 1 && (
-              <div className={`w-16 sm:w-24 h-0.5 mx-1 mb-4 ${isComplete ? 'bg-green-400' : 'bg-gray-200'}`} />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      <div className="mt-3 max-w-xs mx-auto w-full">
+        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-500 rounded-full transition-all duration-500"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="text-center text-xs text-gray-400 mt-1">Step {currentStep} of 4</p>
+      </div>
     </div>
   );
 }

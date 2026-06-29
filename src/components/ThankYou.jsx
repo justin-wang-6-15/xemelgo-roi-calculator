@@ -1,33 +1,31 @@
 import { calcFinancials } from '../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../utils/format';
-
-function MetricCard({ label, value, explanation, colorClass }) {
-  return (
-    <div className={`bg-white rounded-xl shadow-md p-5 border-l-4 ${colorClass}`}>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-      <p className="text-xs text-gray-500">{explanation}</p>
-    </div>
-  );
-}
+import MetricCard from './MetricCard';
 
 export default function ThankYou({ ops, savings, fin, contactInfo }) {
   const result = calcFinancials(ops, savings, fin);
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Hero */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
           <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">
-          {contactInfo?.firstName ? `Thanks, ${contactInfo.firstName}!` : 'Thank You!'}
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Your facility could recover{' '}
+          <span className="text-blue-600">{fmt$(result.netAnnualValue)}</span>{' '}
+          per year.
         </h2>
-        <p className="text-gray-500">Here is your personalized Xemelgo ROI analysis{ops.companyName ? ` for ${ops.companyName}` : ''}.</p>
+        <p className="text-gray-500">
+          {contactInfo?.firstName ? `Thanks, ${contactInfo.firstName}! ` : ''}
+          Here's your complete Xemelgo ROI analysis{ops.companyName ? ` for ${ops.companyName}` : ''}.
+        </p>
       </div>
 
+      {/* Savings summary */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">
         <h3 className="text-base font-semibold text-gray-800 mb-4">Savings Summary</h3>
         <table className="w-full text-sm">
@@ -59,22 +57,37 @@ export default function ThankYou({ ops, savings, fin, contactInfo }) {
         </table>
       </div>
 
+      {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <MetricCard label="5-Year ROI" value={fmtPct(result.fiveYrRoi - 1)} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" />
-        <MetricCard label="5-Year NPV" value={fmt$(result.npv)} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
-        <MetricCard label="IRR (Annual)" value={fmtPct(result.irrAnnual)} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" />
-        <MetricCard label="Payback Period" value={fmtWks(result.paybackWeeks)} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" />
-        <MetricCard label="Net Annual Value" value={fmt$(result.netAnnualValue)} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
-        <MetricCard label="Annual SaaS ROI" value={fmtPct(result.saasRoi)} explanation="Net annual value as a multiple of the platform fee" colorClass="border-indigo-500" />
+        <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" benchmark="Xemelgo avg: 200–400%" />
+        <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
+        <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" benchmark="Exceeds typical WACC by 10–30×" />
+        <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" benchmark="Xemelgo avg: 18–24 weeks" />
+        <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
+        <MetricCard label="Annual SaaS ROI" rawValue={result.saasRoi} formatter={fmtPct} explanation="Net annual value as a multiple of the platform fee" colorClass="border-indigo-500" />
       </div>
 
+      {/* What happens next */}
+      <div className="bg-blue-50 rounded-xl p-5 mb-6">
+        <h3 className="font-semibold text-blue-900 mb-3">What happens next?</h3>
+        <ol className="space-y-2 text-sm text-blue-800">
+          <li>✅ Your personalized report is ready to download below</li>
+          <li>📅 Schedule a 30-minute demo — we'll walk through your numbers live</li>
+          <li>🚀 Most customers go live within 6–8 weeks of signing</li>
+        </ol>
+      </div>
+
+      {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center print:hidden">
-        <a
-          href="#"
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-3 rounded-lg text-center transition-colors"
-        >
-          Schedule a Demo
-        </a>
+        <div className="flex flex-col items-center">
+          <a
+            href="#"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-10 py-3.5 rounded-lg text-center transition-colors text-base"
+          >
+            Schedule a Demo
+          </a>
+          <p className="mt-1.5 text-xs text-gray-400">Free 30-min call with a solutions engineer</p>
+        </div>
         <button
           onClick={() => window.print()}
           className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-8 py-3 rounded-lg border border-gray-300 transition-colors"
