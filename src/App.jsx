@@ -39,22 +39,70 @@ function makeDefaultUseCases(ops) {
   };
 }
 
+function calcEstimatedCapex(ops) {
+  const zones = Math.max(3, Math.min(12, Math.ceil(ops.unitsPerMonth / 2000)));
+  return Math.round(zones * 8000 * 1.25);
+}
+
 const defaultFin = {
-  capex: 50000,
+  capex: calcEstimatedCapex(defaultOps),
   contingencyRate: 0.10,
   monthlyPlatformFee: 3000,
   wacc: 0.10,
 };
 
+function StaticBenchmarkCard() {
+  return (
+    <div className="hidden lg:block">
+      <div className="sticky top-8 bg-white border border-gray-200 rounded-xl shadow-md p-5">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Industry Benchmarks</p>
+        <p className="text-xs text-gray-600 mb-4">Based on operations like yours, Xemelgo customers typically see:</p>
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-gray-400">Annual opportunity</p>
+            <p className="text-lg font-bold text-gray-900">$150K–$700K</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Payback period</p>
+            <p className="text-lg font-bold text-gray-900">18–24 weeks</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">5-Year ROI</p>
+            <p className="text-lg font-bold text-gray-900">200–400%</p>
+          </div>
+        </div>
+        <p className="mt-4 text-xs text-gray-400 leading-relaxed">Complete Step 1 to see your personalized estimate.</p>
+      </div>
+    </div>
+  );
+}
+
+function AnalyzingScreen() {
+  return (
+    <div className="max-w-2xl mx-auto flex flex-col items-center justify-center py-24">
+      <div className="relative mb-6">
+        <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+      </div>
+      <p className="text-xl font-semibold text-gray-800 mb-2">Analyzing your operation...</p>
+      <p className="text-sm text-gray-400">Building your personalized estimate</p>
+      <div className="mt-6 w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: '70%' }} />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [step, setStep] = useState(1);
   const [transitionClass, setTransitionClass] = useState('step-enter');
+  const [analyzing, setAnalyzing] = useState(false);
   const [ops, setOps] = useState(defaultOps);
   const [useCases, setUseCases] = useState(() => makeDefaultUseCases(defaultOps));
   const [fin, setFin] = useState(defaultFin);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
   const dirRef = useRef('forward');
+  const hasVisitedStep3 = useRef(false);
 
   function goTo(next, dir = 'forward') {
     dirRef.current = dir;
@@ -65,12 +113,33 @@ export default function App() {
     }, 220);
   }
 
+  function handleStep1Next() {
+    setAnalyzing(true);
+    setTimeout(() => {
+      setTransitionClass('step-exit');
+      setTimeout(() => {
+        setAnalyzing(false);
+        setStep(2);
+        dirRef.current = 'forward';
+        setTransitionClass('step-enter');
+      }, 220);
+    }, 1500);
+  }
+
+  function handleGoToStep3() {
+    if (!hasVisitedStep3.current) {
+      hasVisitedStep3.current = true;
+      setFin((prev) => ({ ...prev, capex: calcEstimatedCapex(ops) }));
+    }
+    goTo(3);
+  }
+
   const handleEmailSubmit = (info) => {
     setContactInfo(info);
     setDone(true);
   };
 
-  const showPreview = !done && (step === 1 || step === 2);
+  const showGrid = !done && !analyzing && (step === 1 || step === 2);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -90,16 +159,18 @@ export default function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {!done && <ProgressIndicator currentStep={step} />}
+        {!done && !analyzing && <ProgressIndicator currentStep={step} />}
 
-        <div className={showPreview ? 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start' : ''}>
+        <div className={showGrid ? 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start' : ''}>
           <div className={transitionClass}>
-            {done ? (
+            {analyzing ? (
+              <AnalyzingScreen />
+            ) : done ? (
               <ThankYou ops={ops} useCases={useCases} fin={fin} contactInfo={contactInfo} />
             ) : step === 1 ? (
-              <Step1_OperationProfile ops={ops} setOps={setOps} onNext={() => goTo(2)} />
+              <Step1_OperationProfile ops={ops} setOps={setOps} onNext={handleStep1Next} />
             ) : step === 2 ? (
-              <Step2_UseCases ops={ops} useCases={useCases} setUseCases={setUseCases} onNext={() => goTo(3)} onBack={() => goTo(1, 'back')} />
+              <Step2_UseCases ops={ops} useCases={useCases} setUseCases={setUseCases} onNext={handleGoToStep3} onBack={() => goTo(1, 'back')} />
             ) : step === 3 ? (
               <Step3_FinancialResults ops={ops} useCases={useCases} fin={fin} setFin={setFin} onNext={() => goTo(4)} onBack={() => goTo(2, 'back')} />
             ) : step === 4 ? (
@@ -107,7 +178,8 @@ export default function App() {
             ) : null}
           </div>
 
-          {showPreview && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
+          {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
+          {!done && !analyzing && step === 2 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
         </div>
       </main>
     </div>

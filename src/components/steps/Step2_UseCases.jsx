@@ -2,7 +2,20 @@ import { useState } from 'react';
 import RangeSlider from '../RangeSlider';
 import Tooltip from '../Tooltip';
 import { fmt$ } from '../../utils/format';
-import { calcUseCaseValue, BUCKET_CONFIG } from '../../utils/calculations';
+import { calcUseCaseValue, calcUseCaseTotals, BUCKET_CONFIG } from '../../utils/calculations';
+
+// Fix 4: Source notes for each reduction slider
+const REDUCTION_NOTES = {
+  auditCycleCount: 'Xemelgo customers report 70–90% reduction in count time. Default set to 80% — adjust to be conservative.',
+  locateItems: 'Based on 60+ deployments, search time drops 60–80% in Year 1. Default set to 70%.',
+  picklistVerification: 'Customers see 65–80% reduction in pick errors after 90 days. Default set to 70%.',
+  shipReceiveVerification: 'Dock verification time drops 50–70% with portal-based RFID reads. Default set to 60%.',
+  internalDelivery: 'Transfer confirmation time drops 40–60% with zone-level RFID. Default set to 50%.',
+  expiredProducts: 'Customers with expiration tracking see 70–85% reduction in write-offs. Default set to 75%.',
+  calibrationReminders: 'Automated alerts reduce missed calibrations by 75–90%. Default set to 80%.',
+  geofencing: 'Zone breach incidents drop 60–80% with real-time geofence alerts. Default set to 70%.',
+  misShipReduction: 'Outbound verification cuts mis-ship rates by 70–85%. Default set to 75%.',
+};
 
 function ToggleSwitch({ checked, onChange }) {
   return (
@@ -21,24 +34,28 @@ function ToggleSwitch({ checked, onChange }) {
 }
 
 function ReductionInput({ ucKey, uc, onUpdate }) {
+  const note = REDUCTION_NOTES[ucKey];
   return (
-    <div className="flex items-center gap-3">
-      <RangeSlider
-        min={0}
-        max={100}
-        value={Math.round(uc.reductionPct * 100)}
-        onChange={(val) => onUpdate(ucKey, 'reductionPct', val / 100)}
-        className="flex-1"
-      />
-      <input
-        type="number"
-        min={0}
-        max={100}
-        value={Math.round(uc.reductionPct * 100)}
-        onChange={(e) => onUpdate(ucKey, 'reductionPct', Number(e.target.value) / 100)}
-        className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      <span className="text-sm text-gray-500">%</span>
+    <div>
+      <div className="flex items-center gap-3">
+        <RangeSlider
+          min={0}
+          max={100}
+          value={Math.round(uc.reductionPct * 100)}
+          onChange={(val) => onUpdate(ucKey, 'reductionPct', val / 100)}
+          className="flex-1"
+        />
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={Math.round(uc.reductionPct * 100)}
+          onChange={(e) => onUpdate(ucKey, 'reductionPct', Number(e.target.value) / 100)}
+          className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <span className="text-sm text-gray-500">%</span>
+      </div>
+      {note && <p className="mt-1.5 text-xs text-gray-400 italic">{note}</p>}
     </div>
   );
 }
@@ -47,6 +64,7 @@ function UseCaseInputs({ ucKey, uc, ops, onUpdate }) {
   const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
   const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
   const grid = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+  const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
 
   if (ucKey === 'auditCycleCount') {
     return (
@@ -292,8 +310,15 @@ function UseCaseInputs({ ucKey, uc, ops, onUpdate }) {
   }
 
   if (ucKey === 'dockTurnSpeed') {
+    // Fix 5: updated helper text + live math preview
+    const annualValue = calcUseCaseValue(ucKey, uc, ops);
     return (
       <div className={grid}>
+        <div className="sm:col-span-2">
+          <p className="text-xs text-gray-500 mb-3">
+            This covers both inbound receipts and outbound shipments. RFID portal reads replace manual scanning at the dock door, reducing transaction time and carrier wait costs.
+          </p>
+        </div>
         <div>
           <label className={labelCls}>Dock transactions per day</label>
           <input type="number" value={uc.transactionsPerDay} onChange={(e) => onUpdate(ucKey, 'transactionsPerDay', Number(e.target.value))} className={inputCls} />
@@ -306,8 +331,13 @@ function UseCaseInputs({ ucKey, uc, ops, onUpdate }) {
           </div>
         </div>
         <div>
-          <label className={labelCls}>Expected time savings per transaction (min)</label>
+          <label className={labelCls}>Time savings per transaction (min)</label>
           <input type="number" value={uc.savingsMinutesPerTransaction} onChange={(e) => onUpdate(ucKey, 'savingsMinutesPerTransaction', Number(e.target.value))} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600">
+            Your estimate: <span className="font-medium">{uc.savingsMinutesPerTransaction} min saved</span> × <span className="font-medium">{uc.transactionsPerDay} txns/day</span> × <span className="font-medium">{daysPerYear} days/yr</span> = <span className="font-semibold text-green-700">{fmt$(annualValue)}</span> saved annually
+          </div>
         </div>
       </div>
     );
@@ -316,25 +346,38 @@ function UseCaseInputs({ ucKey, uc, ops, onUpdate }) {
   return null;
 }
 
-function UseCaseRow({ ucKey, label, uc, ops, onToggle, onUpdate }) {
+// Category 2: Card design — summary mode with "Adjust assumptions" expand
+function UseCaseRow({ ucKey, label, uc, ops, onToggle, onUpdate, expanded, onToggleExpanded }) {
   const annualValue = uc.enabled ? calcUseCaseValue(ucKey, uc, ops) : 0;
+
   return (
-    <div className={`border-b border-gray-100 last:border-0 ${uc.enabled ? 'bg-blue-50/30' : ''}`}>
-      <div className="flex items-center gap-3 px-6 py-3">
+    <div className={`border-b border-gray-100 last:border-0 ${uc.enabled ? 'bg-white' : 'bg-gray-50/50'}`}>
+      {/* Header row */}
+      <div className="flex items-center gap-3 px-6 py-4">
         <ToggleSwitch checked={uc.enabled} onChange={() => onToggle(ucKey)} />
-        <span className={`text-sm font-medium flex-1 ${uc.enabled ? 'text-gray-900' : 'text-gray-500'}`}>{label}</span>
+        <span className={`text-sm font-medium flex-1 ${uc.enabled ? 'text-gray-900' : 'text-gray-400'}`}>{label}</span>
         {uc.enabled && (
-          <span className="text-sm font-semibold text-blue-600">{fmt$(annualValue)}</span>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-lg font-bold text-green-600">{fmt$(annualValue)}</span>
+            <button
+              onClick={() => onToggleExpanded(ucKey)}
+              className="text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap flex items-center gap-0.5"
+            >
+              Adjust assumptions {expanded ? '▲' : '▾'}
+            </button>
+          </div>
         )}
       </div>
-      {uc.enabled && (
-        <div className="px-6 pb-4">
-          <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} onUpdate={onUpdate} />
-          <div className="mt-3 flex gap-4 bg-blue-50 rounded-lg p-3">
-            <div>
-              <span className="text-xs text-blue-600 font-medium">Annual Value</span>
-              <p className="text-lg font-bold text-blue-700">{fmt$(annualValue)}</p>
-            </div>
+
+      {/* Expanded: show inputs */}
+      {uc.enabled && expanded && (
+        <div className="px-6 pb-5 border-t border-blue-50 bg-blue-50/30">
+          <div className="pt-4">
+            <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} onUpdate={onUpdate} />
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+            <span className="text-xs text-green-700 font-medium">Annual Value:</span>
+            <span className="text-base font-bold text-green-700">{fmt$(annualValue)}</span>
           </div>
         </div>
       )}
@@ -342,7 +385,7 @@ function UseCaseRow({ ucKey, label, uc, ops, onToggle, onUpdate }) {
   );
 }
 
-function BucketSection({ bucket, useCases, ops, onToggle, onUpdate }) {
+function BucketSection({ bucket, useCases, ops, onToggle, onUpdate, expandedKeys, onToggleExpanded }) {
   const [open, setOpen] = useState(true);
   const subtotal = bucket.keys
     .filter((key) => useCases[key]?.enabled)
@@ -365,7 +408,9 @@ function BucketSection({ bucket, useCases, ops, onToggle, onUpdate }) {
           </svg>
           <span className="text-base font-semibold text-gray-800">{bucket.name}</span>
         </div>
-        <span className="text-sm font-semibold text-blue-600">{fmt$(subtotal)} / yr</span>
+        <span className={`text-sm font-semibold ${subtotal > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+          {subtotal > 0 ? `${fmt$(subtotal)} / yr` : '—'}
+        </span>
       </button>
       {open && (
         <div className="border-t border-gray-100">
@@ -378,6 +423,8 @@ function BucketSection({ bucket, useCases, ops, onToggle, onUpdate }) {
               ops={ops}
               onToggle={onToggle}
               onUpdate={onUpdate}
+              expanded={expandedKeys.has(key)}
+              onToggleExpanded={onToggleExpanded}
             />
           ))}
         </div>
@@ -387,17 +434,34 @@ function BucketSection({ bucket, useCases, ops, onToggle, onUpdate }) {
 }
 
 export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onBack }) {
+  const [expandedKeys, setExpandedKeys] = useState(new Set());
+
   function toggle(key) {
     setUseCases((prev) => ({ ...prev, [key]: { ...prev[key], enabled: !prev[key].enabled } }));
   }
   function update(key, field, value) {
     setUseCases((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   }
+  function toggleExpanded(key) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops);
+  const enabledCount = Object.values(useCases).filter((uc) => uc.enabled).length;
+  const activeBuckets = BUCKET_CONFIG.filter((b) => b.keys.some((k) => useCases[k]?.enabled)).length;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Here's where the time goes</h2>
-      <p className="text-sm text-gray-500 mb-6">Toggle on the use cases that apply to your operation. Each one adds to your total opportunity.</p>
+      {/* Category 2: Step header */}
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Here's what we found for an operation like yours.</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        These estimates are based on Xemelgo customer benchmarks for your operation size. Adjust any assumption that doesn't match your reality — or leave them as-is and continue.
+      </p>
 
       {BUCKET_CONFIG.map((bucket) => (
         <BucketSection
@@ -407,8 +471,24 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onB
           ops={ops}
           onToggle={toggle}
           onUpdate={update}
+          expandedKeys={expandedKeys}
+          onToggleExpanded={toggleExpanded}
         />
       ))}
+
+      {/* Category 2: Total bar */}
+      <div className="bg-blue-600 rounded-xl shadow-md p-5 mb-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-blue-200">Your total estimated annual opportunity</p>
+            <p className="text-3xl font-bold mt-0.5">{fmt$(totalGrossAnnual)}</p>
+          </div>
+          <div className="text-right text-sm text-blue-200">
+            <p>Based on {enabledCount} use case{enabledCount !== 1 ? 's' : ''}</p>
+            <p>across {activeBuckets} categor{activeBuckets !== 1 ? 'ies' : 'y'}</p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-between pb-20 lg:pb-0">
         <button onClick={onBack} className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-colors">

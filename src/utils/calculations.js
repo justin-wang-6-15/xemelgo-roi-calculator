@@ -68,7 +68,7 @@ export const BUCKET_CONFIG = [
     labels: {
       fasterFulfillment: 'Faster Order Fulfillment',
       misShipReduction: 'Mis-Ship Reduction',
-      dockTurnSpeed: 'Dock Turn Speed',
+      dockTurnSpeed: 'Receiving and Shipping Throughput',
     },
   },
 ];

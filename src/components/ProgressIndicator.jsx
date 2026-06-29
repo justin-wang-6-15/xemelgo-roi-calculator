@@ -1,6 +1,6 @@
 const steps = [
   { label: 'Operation Profile' },
-  { label: 'Savings Inputs' },
+  { label: 'Review Opportunity' },
   { label: 'Financial Inputs' },
   { label: 'Get Your Report' },
 ];

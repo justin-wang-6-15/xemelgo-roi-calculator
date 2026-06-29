@@ -33,6 +33,38 @@ const roles = [
   { label: 'Direct Employees', countKey: 'directCount', rateKey: 'directRate' },
 ];
 
+const ROLE_DESCRIPTIONS = [
+  'Warehouse staff, stockroom associates, forklift operators — anyone who physically moves or stores inventory.',
+  'Production schedulers, inventory analysts, supply chain coordinators — anyone managing what\'s where and what\'s needed next.',
+  'Supervisors, managers, plant leadership — anyone overseeing operations but not directly handling materials.',
+  'Production line workers, assemblers, technicians — anyone whose primary job is making or building product.',
+];
+
+function RoleClassificationHelp() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1 mb-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+      >
+        How to classify your team {open ? '▲' : '▾'}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 text-xs text-gray-600 bg-blue-50 rounded-lg p-3 border border-blue-100">
+          {roles.map((role, i) => (
+            <div key={role.countKey}>
+              <span className="font-semibold text-gray-700">{role.label}:</span>{' '}
+              {ROLE_DESCRIPTIONS[i]}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Step1_OperationProfile({ ops, setOps, onNext }) {
   const [errors, setErrors] = useState({});
   const set = (key) => (val) => setOps((prev) => ({ ...prev, [key]: val }));
@@ -56,7 +88,14 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Let's size your opportunity</h2>
-      <p className="text-sm text-gray-500 mb-6">Tell us about your team — we'll use this to calculate the true dollar value of time saved.</p>
+      <p className="text-sm text-gray-500 mb-4">Tell us about your team — we'll use this to calculate the true dollar value of time saved.</p>
+
+      {/* Fix 2: Intro block */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 mb-6">
+        <p className="text-sm text-blue-900 leading-relaxed">
+          <span className="font-semibold">Xemelgo is an RFID-powered operations platform</span> that gives manufacturers real-time visibility into inventory, WIP, and assets. This calculator estimates the financial impact for an operation like yours — complete the steps below to see your personalized ROI.
+        </p>
+      </div>
 
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">
         <h3 className="text-base font-semibold text-gray-800 mb-4">Facility Overview</h3>
@@ -93,7 +132,10 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
             <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
           </Tooltip>
         </h3>
-        <p className="text-xs text-gray-500 mb-4">Burdened rate = base wage + benefits, taxes, overhead. Typically 1.3–1.5× base wage.</p>
+        <p className="text-xs text-gray-500 mb-3">Burdened rate = base wage + benefits, taxes, overhead. Typically 1.3–1.5× base wage.</p>
+
+        {/* Fix 3: Role classification help */}
+        <RoleClassificationHelp />
 
         {/* Desktop table */}
         <div className="hidden sm:block overflow-x-auto">
@@ -176,7 +218,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           onClick={handleNext}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
         >
-          Next: Savings Inputs →
+          Next: Review Your Opportunity →
         </button>
       </div>
     </div>

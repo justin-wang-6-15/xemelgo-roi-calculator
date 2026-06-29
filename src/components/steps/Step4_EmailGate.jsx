@@ -46,8 +46,8 @@ export default function Step4_EmailGate({ ops, useCases, fin, onSubmit, onBack }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">You're one step away</h2>
-      <p className="text-sm text-gray-500 mb-6">Enter your details to unlock your full personalized report.</p>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Get your personalized ROI report.</h2>
+      <p className="text-sm text-gray-500 mb-6">Your report includes everything you saw in this calculator plus a full use-case breakdown, your 5-year cash flow table, and a summary page formatted to share with your finance team or leadership. Enter your details below to receive it.</p>
 
       {/* Blurred metric cards */}
       <div className="relative mb-6">
