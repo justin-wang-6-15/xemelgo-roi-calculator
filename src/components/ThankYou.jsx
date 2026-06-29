@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { calcFinancials } from '../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../utils/format';
 import MetricCard from './MetricCard';
+import { generatePDF } from '../utils/generatePDF';
+import { generateExcel } from '../utils/generateExcel';
 
 export default function ThankYou({ ops, useCases, fin, contactInfo }) {
   const result = calcFinancials(ops, useCases, fin);
+  const [pdfState, setPdfState] = useState('idle');
+  const [xlsxState, setXlsxState] = useState('idle');
+
+  async function handlePDF() {
+    setPdfState('loading');
+    try {
+      await generatePDF(ops, useCases, fin, result);
+      setPdfState('idle');
+    } catch (e) {
+      console.error(e);
+      setPdfState('error');
+    }
+  }
+
+  async function handleExcel() {
+    setXlsxState('loading');
+    try {
+      await generateExcel(ops, useCases, fin, result);
+      setXlsxState('idle');
+    } catch (e) {
+      console.error(e);
+      setXlsxState('error');
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -79,6 +105,73 @@ export default function ThankYou({ ops, useCases, fin, contactInfo }) {
         <MetricCard label="Annual SaaS ROI" rawValue={result.saasRoi} formatter={fmtPct} explanation="Net annual value as a multiple of the platform fee" colorClass="border-indigo-500" />
       </div>
 
+      {/* Download section */}
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Take your results with you</h3>
+        <p className="text-sm text-gray-500 mb-4">Share with your finance team or leadership — choose your format below.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* PDF Card */}
+          <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 flex flex-col">
+            <div className="flex items-center gap-3 mb-3">
+              <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="6" fill="#0B1028"/>
+                <path d="M9 8h9l5 5v11a1 1 0 01-1 1H9a1 1 0 01-1-1V9a1 1 0 011-1z" fill="white" fillOpacity="0.15" stroke="white" strokeWidth="1.2"/>
+                <path d="M18 8v5h5" stroke="white" strokeWidth="1.2" strokeLinejoin="round"/>
+                <path d="M11 17h10M11 20h7" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              <p className="font-bold text-gray-900">Executive Summary PDF</p>
+            </div>
+            <ul className="text-sm text-gray-500 space-y-1 mb-4 flex-1">
+              <li>• Branded 1–2 page report with your logo</li>
+              <li>• Headline metrics and savings breakdown</li>
+              <li>• Your full input assumptions</li>
+              <li>• Ready to share with leadership</li>
+            </ul>
+            <button
+              onClick={handlePDF}
+              disabled={pdfState === 'loading'}
+              className="w-full text-white font-semibold py-2.5 rounded-lg transition-opacity disabled:opacity-60"
+              style={{ backgroundColor: '#004FDB' }}
+            >
+              {pdfState === 'loading' ? 'Generating...' : 'Download PDF'}
+            </button>
+            {pdfState === 'error' && (
+              <p className="mt-2 text-xs text-red-600">Download failed — please try again or contact support@xemelgo.com.</p>
+            )}
+          </div>
+          {/* Excel Card */}
+          <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100 flex flex-col">
+            <div className="flex items-center gap-3 mb-3">
+              <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="6" fill="#217346"/>
+                <path d="M7 9h18v14H7z" fill="white" fillOpacity="0.12" stroke="white" strokeWidth="1.2"/>
+                <path d="M7 13h18M7 17h18M13 9v14" stroke="white" strokeWidth="1" strokeOpacity="0.6"/>
+                <text x="9" y="21" fontSize="7" fill="white" fontWeight="bold" fontFamily="sans-serif">XLS</text>
+              </svg>
+              <p className="font-bold text-gray-900">Detailed Financial Model</p>
+            </div>
+            <ul className="text-sm text-gray-500 space-y-1 mb-4 flex-1">
+              <li>• 2-sheet Excel workbook (.xlsx)</li>
+              <li>• Yellow input cells for sensitivity analysis</li>
+              <li>• 5-year cash flow model with live formulas</li>
+              <li>• NPV, IRR, cumulative cash flow table</li>
+            </ul>
+            <button
+              onClick={handleExcel}
+              disabled={xlsxState === 'loading'}
+              className="w-full text-white font-semibold py-2.5 rounded-lg transition-opacity disabled:opacity-60"
+              style={{ backgroundColor: '#217346' }}
+            >
+              {xlsxState === 'loading' ? 'Generating...' : 'Download Excel'}
+            </button>
+            {xlsxState === 'error' && (
+              <p className="mt-2 text-xs text-red-600">Download failed — please try again or contact support@xemelgo.com.</p>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 text-center mt-3">Both files include your company name and are generated from your exact inputs.</p>
+      </div>
+
       {/* What happens next */}
       <div className="bg-blue-50 rounded-xl p-5 mb-6">
         <h3 className="font-semibold text-blue-900 mb-3">What happens next?</h3>
@@ -100,12 +193,6 @@ export default function ThankYou({ ops, useCases, fin, contactInfo }) {
           </a>
           <p className="mt-1.5 text-xs text-gray-400">Free 30-min call with a solutions engineer</p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-8 py-3 rounded-lg border border-gray-300 transition-colors"
-        >
-          Download / Print Results
-        </button>
       </div>
     </div>
   );
