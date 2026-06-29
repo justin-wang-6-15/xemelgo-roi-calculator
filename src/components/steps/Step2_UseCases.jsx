@@ -290,7 +290,7 @@ function BucketSection({ bucket, useCases, ops, onToggle, onUpdate, expandedKeys
   );
 }
 
-export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onBack }) {
+export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onBack, showPrefillBanner, onDismissPrefillBanner }) {
   const [expandedKeys, setExpandedKeys] = useState(new Set());
 
   function toggle(key) {
@@ -315,6 +315,23 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onB
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Here's what we found for an operation like yours.</h2>
+
+      {showPrefillBanner && (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
+          <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-xs text-blue-800 leading-relaxed flex-1">
+            We've pre-filled some assumptions based on your operation details. Review and adjust any inputs that don't match your reality.
+          </p>
+          <button onClick={onDismissPrefillBanner} className="text-blue-400 hover:text-blue-600 flex-shrink-0 ml-1" aria-label="Dismiss">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <p className="text-sm text-gray-500 mb-6">
         These estimates are based on Xemelgo customer benchmarks for your operation size. Adjust any assumption that doesn't match your reality — or leave them as-is and continue.
       </p>

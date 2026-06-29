@@ -83,7 +83,132 @@ function RoleClassificationHelp() {
   );
 }
 
-export default function Step1_OperationProfile({ ops, setOps, onNext }) {
+const OPERATION_DETAILS_INDUSTRIES = new Set(['aerospace','lifesciences','foodbeverage','retail','automotive','electronics']);
+
+function OptLabel({ children }) {
+  return (
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      {children} <span className="text-gray-400 font-normal">(optional)</span>
+    </label>
+  );
+}
+
+function DetInput({ value, onChange, placeholder }) {
+  return (
+    <input
+      type="number"
+      value={value}
+      min={0}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+      className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  );
+}
+
+function OperationDetails({ industry, det, setDet }) {
+  if (!OPERATION_DETAILS_INDUSTRIES.has(industry)) return null;
+  const set = (key) => (val) => setDet((prev) => ({ ...prev, [key]: val }));
+  const helper = 'mt-1 text-xs text-gray-500';
+
+  return (
+    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      <h3 className="text-base font-semibold text-gray-800 mb-4">Operation Details</h3>
+      <div className="space-y-4">
+
+        {industry === 'aerospace' && <>
+          <div>
+            <OptLabel>Number of Unique Part Numbers Tracked</OptLabel>
+            <DetInput value={det.uniquePartNumbers} onChange={set('uniquePartNumbers')} placeholder="500" />
+            <p className={helper}>Active part numbers in your inventory. Drives locate items and audit complexity estimates.</p>
+          </div>
+          <div>
+            <OptLabel>Number of Regulated Components or Calibrated Tools</OptLabel>
+            <DetInput value={det.regulatedComponents} onChange={set('regulatedComponents')} placeholder="50" />
+            <p className={helper}>Assets requiring scheduled calibration or compliance tracking.</p>
+          </div>
+        </>}
+
+        {industry === 'lifesciences' && <>
+          <div>
+            <OptLabel>Number of Date-Sensitive or Expiring SKUs</OptLabel>
+            <DetInput value={det.dateSensitiveSkus} onChange={set('dateSensitiveSkus')} placeholder="30" />
+            <p className={helper}>SKUs with expiration dates, lot control requirements, or FIFO/FEFO compliance needs.</p>
+          </div>
+          <div>
+            <OptLabel>Audit or Inspection Frequency</OptLabel>
+            <select
+              value={det.auditFrequency}
+              onChange={(e) => set('auditFrequency')(e.target.value)}
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Semi-annually">Semi-annually</option>
+              <option value="Annually">Annually</option>
+            </select>
+            <p className={helper}>How often your facility conducts physical inventory audits or regulatory inspections.</p>
+          </div>
+        </>}
+
+        {industry === 'foodbeverage' && <>
+          <div>
+            <OptLabel>Average Product Shelf Life (days)</OptLabel>
+            <DetInput value={det.avgShelfLifeDays} onChange={set('avgShelfLifeDays')} placeholder="90" />
+            <p className={helper}>Average days from production to expiration across your SKU mix.</p>
+          </div>
+          <div>
+            <OptLabel>Number of SKUs with Expiration Tracking</OptLabel>
+            <DetInput value={det.skusWithExpirationTracking} onChange={set('skusWithExpirationTracking')} placeholder="40" />
+            <p className={helper}>SKUs that require date-code or FIFO rotation tracking.</p>
+          </div>
+        </>}
+
+        {industry === 'retail' && <>
+          <div>
+            <OptLabel>Number of Active SKUs in Inventory</OptLabel>
+            <DetInput value={det.activeSkus} onChange={set('activeSkus')} placeholder="2000" />
+            <p className={helper}>Total number of distinct SKUs currently in your facility. Drives cycle count and locate items complexity.</p>
+          </div>
+          <div>
+            <OptLabel>Average Order Lines Per Shipment</OptLabel>
+            <DetInput value={det.avgOrderLines} onChange={set('avgOrderLines')} placeholder="8" />
+            <p className={helper}>How many line items the average outbound order contains. Drives picklist verification savings.</p>
+          </div>
+        </>}
+
+        {industry === 'automotive' && <>
+          <div>
+            <OptLabel>Number of Supplier Docks or Receiving Doors</OptLabel>
+            <DetInput value={det.supplierDocks} onChange={set('supplierDocks')} placeholder="6" />
+            <p className={helper}>Active inbound dock doors. Drives ship and receive verification savings.</p>
+          </div>
+          <div>
+            <OptLabel>Number of Line-Side Inventory Points</OptLabel>
+            <DetInput value={det.lineSidePoints} onChange={set('lineSidePoints')} placeholder="20" />
+            <p className={helper}>Supermarket locations or point-of-use inventory staging areas on your production floor.</p>
+          </div>
+        </>}
+
+        {industry === 'electronics' && <>
+          <div>
+            <OptLabel>Number of Unique Component Part Numbers</OptLabel>
+            <DetInput value={det.uniqueComponentParts} onChange={set('uniqueComponentParts')} placeholder="800" />
+            <p className={helper}>Active component SKUs in your BOM library. High part counts drive stronger locate items ROI.</p>
+          </div>
+          <div>
+            <OptLabel>Number of Serialized Assets Tracked</OptLabel>
+            <DetInput value={det.serializedAssets} onChange={set('serializedAssets')} placeholder="100" />
+            <p className={helper}>Tools, fixtures, test equipment, or jigs requiring location and calibration tracking.</p>
+          </div>
+        </>}
+
+      </div>
+    </div>
+  );
+}
+
+export default function Step1_OperationProfile({ ops, setOps, operationDetails, setOperationDetails, onNext }) {
   const [errors, setErrors] = useState({});
   const set = (key) => (val) => setOps((prev) => ({ ...prev, [key]: val }));
 
@@ -184,6 +309,8 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           })()}
         </div>
       </div>
+
+      <OperationDetails industry={ops.industry} det={operationDetails} setDet={setOperationDetails} />
 
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">
         <h3 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-1.5">

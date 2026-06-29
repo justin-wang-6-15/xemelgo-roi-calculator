@@ -25,6 +25,21 @@ const defaultOps = {
   directRate: 22,
 };
 
+const defaultOperationDetails = {
+  uniquePartNumbers: '',
+  regulatedComponents: '',
+  dateSensitiveSkus: '',
+  auditFrequency: 'Quarterly',
+  avgShelfLifeDays: '',
+  skusWithExpirationTracking: '',
+  activeSkus: '',
+  avgOrderLines: '',
+  supplierDocks: '',
+  lineSidePoints: '',
+  uniqueComponentParts: '',
+  serializedAssets: '',
+};
+
 function makeDefaultUseCases(ops) {
   return {
     auditCycleCount: { enabled: true, hoursPerCount: 8, countsPerYear: 4, plannersPerCount: ops.plannerCount, reductionPct: 0.80 },
@@ -133,10 +148,13 @@ export default function App() {
   const [transitionClass, setTransitionClass] = useState('step-enter');
   const [analyzing, setAnalyzing] = useState(false);
   const [ops, setOps] = useState(defaultOps);
+  const [operationDetails, setOperationDetails] = useState(defaultOperationDetails);
   const [useCases, setUseCases] = useState(() => makeDefaultUseCases(defaultOps));
   const [fin, setFin] = useState(defaultFin);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
+  const [prefillBannerActive, setPrefillBannerActive] = useState(false);
+  const [prefillBannerDismissed, setPrefillBannerDismissed] = useState(false);
   const dirRef = useRef('forward');
   const hasVisitedStep3 = useRef(false);
 
@@ -150,13 +168,101 @@ export default function App() {
   }
 
   function handleStep1Next() {
-    // Fix 10: reset use cases to defaults + apply industry-specific toggle
     const freshUseCases = makeDefaultUseCases(ops);
     const extraToggle = INDUSTRY_USE_CASE_MAP[ops.industry];
     if (extraToggle) {
       freshUseCases[extraToggle] = { ...freshUseCases[extraToggle], enabled: true };
     }
+
+    // Part B: wire operation details into use case defaults
+    let prefilledAny = false;
+    const det = operationDetails;
+    const num = (v) => v !== '' && Number(v) > 0 ? Number(v) : null;
+
+    if (ops.industry === 'aerospace') {
+      const regulated = num(det.regulatedComponents);
+      if (regulated !== null) {
+        freshUseCases.calibrationReminders = { ...freshUseCases.calibrationReminders, failuresPerYear: Math.max(3, Math.ceil(regulated * 0.05)) };
+        prefilledAny = true;
+      }
+      const parts = num(det.uniquePartNumbers);
+      if (parts !== null) {
+        freshUseCases.locateItems = { ...freshUseCases.locateItems, incidentsPerDay: Math.min(50, Math.max(5, Math.ceil(parts / 50))) };
+        prefilledAny = true;
+      }
+    }
+
+    if (ops.industry === 'lifesciences') {
+      const skus = num(det.dateSensitiveSkus);
+      if (skus !== null) {
+        freshUseCases.expiredProducts = { ...freshUseCases.expiredProducts, incidentsPerYear: Math.max(2, Math.ceil(skus * 0.10)) };
+        prefilledAny = true;
+      }
+      if (det.auditFrequency) {
+        const freqMap = { Monthly: 12, Quarterly: 4, 'Semi-annually': 2, Annually: 1 };
+        const counts = freqMap[det.auditFrequency];
+        if (counts !== undefined) {
+          freshUseCases.auditCycleCount = { ...freshUseCases.auditCycleCount, countsPerYear: counts };
+          prefilledAny = true;
+        }
+      }
+    }
+
+    if (ops.industry === 'foodbeverage') {
+      const expiringSkus = num(det.skusWithExpirationTracking);
+      if (expiringSkus !== null) {
+        freshUseCases.expiredProducts = { ...freshUseCases.expiredProducts, incidentsPerYear: Math.max(3, Math.ceil(expiringSkus * 0.15)) };
+        prefilledAny = true;
+      }
+      const shelfLife = num(det.avgShelfLifeDays);
+      if (shelfLife !== null && shelfLife < 30) {
+        freshUseCases.expiredProducts = { ...freshUseCases.expiredProducts, enabled: true };
+      }
+    }
+
+    if (ops.industry === 'retail') {
+      const orderLines = num(det.avgOrderLines);
+      if (orderLines !== null) {
+        const picksPerDay = Math.round((ops.unitsPerMonth / 22) * orderLines);
+        freshUseCases.picklistVerification = { ...freshUseCases.picklistVerification, picksPerDay };
+        prefilledAny = true;
+      }
+      const activeSkus = num(det.activeSkus);
+      if (activeSkus !== null) {
+        freshUseCases.locateItems = { ...freshUseCases.locateItems, incidentsPerDay: Math.min(80, Math.max(5, Math.ceil(activeSkus / 100))) };
+        prefilledAny = true;
+      }
+    }
+
+    if (ops.industry === 'automotive') {
+      const docks = num(det.supplierDocks);
+      if (docks !== null) {
+        freshUseCases.shipReceiveVerification = { ...freshUseCases.shipReceiveVerification, transactionsPerDay: docks * 8 };
+        prefilledAny = true;
+      }
+      const lineSide = num(det.lineSidePoints);
+      if (lineSide !== null) {
+        freshUseCases.internalDelivery = { ...freshUseCases.internalDelivery, transfersPerDay: lineSide * 3 };
+        prefilledAny = true;
+      }
+    }
+
+    if (ops.industry === 'electronics') {
+      const serialized = num(det.serializedAssets);
+      if (serialized !== null) {
+        freshUseCases.calibrationReminders = { ...freshUseCases.calibrationReminders, failuresPerYear: Math.max(2, Math.ceil(serialized * 0.08)) };
+        prefilledAny = true;
+      }
+      const compParts = num(det.uniqueComponentParts);
+      if (compParts !== null) {
+        freshUseCases.locateItems = { ...freshUseCases.locateItems, incidentsPerDay: Math.min(60, Math.max(5, Math.ceil(compParts / 80))) };
+        prefilledAny = true;
+      }
+    }
+
     setUseCases(freshUseCases);
+    setPrefillBannerActive(prefilledAny);
+    setPrefillBannerDismissed(false);
 
     setAnalyzing(true);
     setTimeout(() => {
@@ -212,9 +318,9 @@ export default function App() {
             ) : done ? (
               <ThankYou ops={ops} useCases={useCases} fin={fin} contactInfo={contactInfo} />
             ) : step === 1 ? (
-              <Step1_OperationProfile ops={ops} setOps={setOps} onNext={handleStep1Next} />
+              <Step1_OperationProfile ops={ops} setOps={setOps} operationDetails={operationDetails} setOperationDetails={setOperationDetails} onNext={handleStep1Next} />
             ) : step === 2 ? (
-              <Step2_UseCases ops={ops} useCases={useCases} setUseCases={setUseCases} onNext={handleGoToStep3} onBack={() => goTo(1, 'back')} />
+              <Step2_UseCases ops={ops} useCases={useCases} setUseCases={setUseCases} onNext={handleGoToStep3} onBack={() => goTo(1, 'back')} showPrefillBanner={prefillBannerActive && !prefillBannerDismissed} onDismissPrefillBanner={() => setPrefillBannerDismissed(true)} />
             ) : step === 3 ? (
               <Step3_FinancialResults ops={ops} useCases={useCases} fin={fin} setFin={setFin} onNext={() => goTo(4)} onBack={() => goTo(2, 'back')} />
             ) : step === 4 ? (
