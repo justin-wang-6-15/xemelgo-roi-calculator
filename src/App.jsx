@@ -44,7 +44,8 @@ const defaultOperationDetails = {
 // All use cases disabled by default — user selects on Step 2
 function makeAllDisabledUseCases() {
   return {
-    auditCycleCount:         { enabled: false, hoursPerCount: 8, countsPerYear: 4, plannersPerCount: 3, reductionPct: 0.80 },
+    cycleCount:              { enabled: false, hoursPerCount: 4, countsPerWeek: 3, people: 2, burdenedRate: 35, reductionPct: 0.95 },
+    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 28, reductionPct: 0.85 },
     locateItems:             { enabled: false, searchMinutes: 15, incidentsPerDay: 20, role: 'materialHandler', reductionPct: 0.70 },
     picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 0.02, costPerError: 50, reductionPct: 0.70 },
     shipReceiveVerification: { enabled: false, transactionsPerDay: 15, minutesPerTransaction: 12, dockHeadcount: 10, reductionPct: 0.60 },

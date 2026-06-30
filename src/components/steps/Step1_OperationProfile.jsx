@@ -53,13 +53,10 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
               ${errors.industry ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
           >
             <option value="">Select your industry</option>
-            <option value="manufacturing">Manufacturing (general)</option>
-            <option value="aerospace">Aerospace and Defense</option>
-            <option value="lifesciences">Life Sciences / Medical Devices</option>
-            <option value="foodbeverage">Food and Beverage</option>
-            <option value="automotive">Automotive</option>
-            <option value="electronics">Electronics / High-Tech</option>
-            <option value="retail">Retail / Distribution</option>
+            <option value="manufacturing">Manufacturing</option>
+            <option value="retail">Retail</option>
+            <option value="supplychain">Supply Chain / Distribution</option>
+            <option value="healthcare">Healthcare / Life Sciences</option>
             <option value="other">Other</option>
           </select>
           {errors.industry && <p className="mt-1 text-xs text-red-600">{errors.industry}</p>}

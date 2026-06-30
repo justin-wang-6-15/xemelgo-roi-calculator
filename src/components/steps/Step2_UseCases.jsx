@@ -2,19 +2,17 @@ import { useState } from 'react';
 import { BUCKET_CONFIG } from '../../utils/calculations';
 
 const INDUSTRY_RECOMMENDATIONS = {
-  manufacturing: ['auditCycleCount', 'locateItems', 'shipReceiveVerification', 'picklistVerification'],
-  aerospace:     ['auditCycleCount', 'locateItems', 'calibrationReminders', 'geofencing'],
-  lifesciences:  ['expiredProducts', 'auditCycleCount', 'locateItems', 'calibrationReminders'],
-  foodbeverage:  ['expiredProducts', 'auditCycleCount', 'locateItems', 'misShipReduction'],
-  automotive:    ['shipReceiveVerification', 'internalDelivery', 'locateItems', 'picklistVerification'],
-  electronics:   ['locateItems', 'calibrationReminders', 'auditCycleCount', 'picklistVerification'],
-  retail:        ['misShipReduction', 'picklistVerification', 'dockTurnSpeed', 'locateItems'],
-  other:         ['auditCycleCount', 'locateItems', 'shipReceiveVerification', 'picklistVerification'],
-  '':            ['auditCycleCount', 'locateItems', 'shipReceiveVerification', 'picklistVerification'],
+  manufacturing: ['locateItems', 'cycleCount', 'audit', 'calibrationReminders', 'picklistVerification', 'internalDelivery'],
+  retail:        ['misShipReduction', 'picklistVerification', 'cycleCount', 'audit', 'dockTurnSpeed'],
+  supplychain:   ['dockTurnSpeed', 'locateItems', 'cycleCount', 'misShipReduction', 'internalDelivery', 'picklistVerification'],
+  healthcare:    ['expiredProducts', 'audit', 'cycleCount', 'calibrationReminders', 'locateItems', 'geofencing'],
+  other:         [],
+  '':            ['locateItems', 'cycleCount', 'audit', 'shipReceiveVerification', 'picklistVerification'],
 };
 
 const UC_REASON = {
-  auditCycleCount:         'Reduces the hours your team spends on manual inventory counts — often 70–90% faster.',
+  cycleCount:              'Cuts the hours spent on routine cycle counts by 90–98% — RFID reads replace manual scanning.',
+  audit:                   'Reduces full physical audit labor by 75–90%, turning multi-day shutdowns into hours.',
   locateItems:             'Eliminates time wasted searching for misplaced inventory or assets.',
   shipReceiveVerification: 'Replaces manual scanning at the dock door, cutting verification time by 50–70%.',
   picklistVerification:    'Reduces pick errors and the cost of returns, re-ships, and production delays.',
@@ -28,7 +26,8 @@ const UC_REASON = {
 };
 
 const UC_VALUE_RANGE = {
-  auditCycleCount:         '$5K–$30K / yr',
+  cycleCount:              '$10K–$50K / yr',
+  audit:                   '$5K–$30K / yr',
   locateItems:             '$15K–$60K / yr',
   picklistVerification:    '$20K–$90K / yr',
   shipReceiveVerification: '$25K–$120K / yr',
@@ -43,12 +42,9 @@ const UC_VALUE_RANGE = {
 
 const INDUSTRY_DISPLAY = {
   manufacturing: 'Manufacturing',
-  aerospace:     'Aerospace and Defense',
-  lifesciences:  'Life Sciences / Medical Device',
-  foodbeverage:  'Food and Beverage',
-  automotive:    'Automotive',
-  electronics:   'Electronics / High-Tech',
-  retail:        'Retail / Distribution',
+  retail:        'Retail',
+  supplychain:   'Supply Chain / Distribution',
+  healthcare:    'Healthcare / Life Sciences',
   other:         'your industry',
   '':            'your industry',
 };
@@ -118,11 +114,14 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onB
   const industry = ops.industry || '';
   const industryDisplay = INDUSTRY_DISPLAY[industry];
   const recommended = INDUSTRY_RECOMMENDATIONS[industry] ?? INDUSTRY_RECOMMENDATIONS[''];
+  const isOther = industry === 'other';
 
   const remainingByBucket = BUCKET_CONFIG.map((bucket) => ({
     ...bucket,
     keys: bucket.keys.filter((k) => !recommended.includes(k)),
   })).filter((b) => b.keys.length > 0);
+
+  const allByBucket = BUCKET_CONFIG.filter((b) => b.keys.length > 0);
 
   function toggle(key) {
     setUseCases((prev) => ({ ...prev, [key]: { ...prev[key], enabled: !prev[key].enabled } }));
@@ -134,44 +133,33 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onB
     <div className="max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Which of these sound like you?</h2>
       <p className="text-sm text-gray-500 mb-6">
-        Select all that apply. You'll review and adjust the numbers in the next step.
+        {isOther
+          ? 'Browse all use cases below and select any that apply to your operation.'
+          : 'Select all that apply. You\'ll review and adjust the numbers in the next step.'}
       </p>
 
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">
-          Recommended for {industryDisplay}
-        </h3>
-        <div className="space-y-3">
-          {recommended.map((key) => (
-            <RecommendedCard
-              key={key}
-              ucKey={key}
-              enabled={useCases[key]?.enabled ?? false}
-              onToggle={toggle}
-            />
-          ))}
+      {!isOther && (
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Recommended for {industryDisplay}
+          </h3>
+          <div className="space-y-3">
+            {recommended.map((key) => (
+              <RecommendedCard
+                key={key}
+                ucKey={key}
+                enabled={useCases[key]?.enabled ?? false}
+                onToggle={toggle}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mb-6">
-        <button
-          onClick={() => setExploreOpen((v) => !v)}
-          className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-        >
-          <svg
-            className={`w-4 h-4 transition-transform ${exploreOpen ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          {exploreOpen ? 'Hide other use cases' : 'Explore all use cases →'}
-        </button>
-
-        {exploreOpen && (
-          <div className="mt-4 space-y-6">
-            {remainingByBucket.map((bucket) => (
+        {isOther ? (
+          <div className="space-y-6">
+            {allByBucket.map((bucket) => (
               <div key={bucket.name}>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                   {bucket.name}
@@ -189,6 +177,45 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onB
               </div>
             ))}
           </div>
+        ) : (
+          <>
+            <button
+              onClick={() => setExploreOpen((v) => !v)}
+              className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <svg
+                className={`w-4 h-4 transition-transform ${exploreOpen ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              {exploreOpen ? 'Hide other use cases' : 'Explore all use cases →'}
+            </button>
+
+            {exploreOpen && (
+              <div className="mt-4 space-y-6">
+                {remainingByBucket.map((bucket) => (
+                  <div key={bucket.name}>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      {bucket.name}
+                    </p>
+                    <div className="space-y-2">
+                      {bucket.keys.map((key) => (
+                        <ExploreCard
+                          key={key}
+                          ucKey={key}
+                          enabled={useCases[key]?.enabled ?? false}
+                          onToggle={toggle}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 

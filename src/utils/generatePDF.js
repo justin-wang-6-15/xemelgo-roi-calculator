@@ -24,17 +24,15 @@ const W = 612;
 const UNITS_LABEL = {
   '':            'Units Produced Per Month',
   manufacturing: 'Units Produced Per Month',
-  aerospace:     'Work Orders Completed Per Month',
-  lifesciences:  'Lots or Batches Completed Per Month',
-  foodbeverage:  'Cases or Pallets Produced Per Month',
-  automotive:    'Vehicles or Assemblies Per Month',
-  electronics:   'PCBAs or Assemblies Per Month',
   retail:        'Orders Shipped Per Month',
+  supplychain:   'Shipments Processed Per Month',
+  healthcare:    'Lots or Batches Completed Per Month',
   other:         'Units or Jobs Per Month',
 };
 
 const UC_NAMES = {
-  auditCycleCount:         'Audit & Cycle Counting',
+  cycleCount:              'Cycle Counting',
+  audit:                   'Full Inventory Audit',
   locateItems:             'Locate Items',
   picklistVerification:    'Picklist Verification',
   shipReceiveVerification: 'Ship & Receive Verification',
@@ -49,7 +47,8 @@ const UC_NAMES = {
 
 // Plain-English field labels
 const UC_DEFS = {
-  auditCycleCount:         [['Hours per count','hoursPerCount','n'],['Counts per year','countsPerYear','n'],['Planners per count','plannersPerCount','n'],['Efficiency improvement','reductionPct','p']],
+  cycleCount:              [['Hours per count','hoursPerCount','n'],['Counts per week','countsPerWeek','n'],['People per count','people','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
+  audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Labor reduction','reductionPct','p']],
   locateItems:             [['Search time (min)','searchMinutes','n'],['Incidents per day','incidentsPerDay','n'],['Efficiency improvement','reductionPct','p']],
   picklistVerification:    [['Picks per day','picksPerDay','n'],['Error rate','errorRate','p'],['Cost per error','costPerError','$'],['Error reduction','reductionPct','p']],
   shipReceiveVerification: [['Minutes per transaction','minutesPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Dock headcount','dockHeadcount','n'],['Time reduction','reductionPct','p']],

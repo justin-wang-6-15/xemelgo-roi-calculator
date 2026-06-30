@@ -48,10 +48,11 @@ function accentBar(ws, endCol, row) {
   c(ws, `A${row}`, '', BLUE);
 }
 
-const LABOR_BUCKET_KEYS = ['auditCycleCount','locateItems','picklistVerification','shipReceiveVerification','internalDelivery'];
+const LABOR_BUCKET_KEYS = ['cycleCount','audit','locateItems','picklistVerification','shipReceiveVerification','internalDelivery'];
 
 const UC_NAMES = {
-  auditCycleCount:         'Audit & Cycle Counting',
+  cycleCount:              'Cycle Counting',
+  audit:                   'Full Inventory Audit',
   locateItems:             'Locate Items',
   picklistVerification:    'Picklist Verification',
   shipReceiveVerification: 'Ship & Receive Verification',
@@ -67,12 +68,9 @@ const UC_NAMES = {
 const UNITS_LABEL = {
   '':            'Units Produced Per Month',
   manufacturing: 'Units Produced Per Month',
-  aerospace:     'Work Orders Completed Per Month',
-  lifesciences:  'Lots or Batches Completed Per Month',
-  foodbeverage:  'Cases or Pallets Produced Per Month',
-  automotive:    'Vehicles or Assemblies Per Month',
-  electronics:   'PCBAs or Assemblies Per Month',
   retail:        'Orders Shipped Per Month',
+  supplychain:   'Shipments Processed Per Month',
+  healthcare:    'Lots or Batches Completed Per Month',
   other:         'Units or Jobs Per Month',
 };
 
@@ -80,9 +78,13 @@ function getLaborHours(key, uc, ops) {
   const dpy = ops.workDaysPerWeek * ops.workWeeksPerYear;
   const dpw = ops.workDaysPerWeek;
   switch (key) {
-    case 'auditCycleCount': {
-      const ah = uc.hoursPerCount * uc.countsPerYear * uc.plannersPerCount * uc.reductionPct;
-      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.plannersPerCount, weeklyHrs: ah / ops.workWeeksPerYear, annualHrs: ah, rate: ops.plannerRate };
+    case 'cycleCount': {
+      const ah = uc.hoursPerCount * uc.countsPerWeek * 50 * uc.people * uc.reductionPct;
+      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.people, weeklyHrs: uc.hoursPerCount * uc.countsPerWeek * uc.people * uc.reductionPct, annualHrs: ah, rate: uc.burdenedRate };
+    }
+    case 'audit': {
+      const ah = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
+      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.people, weeklyHrs: ah / ops.workWeeksPerYear, annualHrs: ah, rate: uc.burdenedRate };
     }
     case 'locateItems': {
       const tpd = (uc.searchMinutes / 60) * uc.incidentsPerDay * uc.reductionPct;

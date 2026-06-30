@@ -5,7 +5,8 @@ import { fmt$ } from '../../utils/format';
 import { calcUseCaseValue, BUCKET_CONFIG } from '../../utils/calculations';
 
 const REDUCTION_NOTES = {
-  auditCycleCount:         'Xemelgo customers report 70–90% reduction in count time. Default set to 80% — adjust to be conservative.',
+  cycleCount:              'Xemelgo customers report 90–98% reduction in cycle count time. Default set to 95%.',
+  audit:                   'Xemelgo customers report 75–90% reduction in full audit labor. Default set to 85%.',
   locateItems:             'Based on 60+ deployments, search time drops 60–80% in Year 1. Default set to 70%.',
   picklistVerification:    'Customers see 65–80% reduction in pick errors after 90 days. Default set to 70%.',
   shipReceiveVerification: 'Dock verification time drops 50–70% with portal-based RFID reads. Default set to 60%.',
@@ -112,37 +113,46 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
   };
   const num = (v) => (v !== '' && Number(v) > 0 ? Number(v) : null);
 
-  if (ucKey === 'auditCycleCount') return (
+  if (ucKey === 'cycleCount') return (
     <div className="space-y-4">
       <div className={grid2}>
         <div><label className={labelCls}>Hours per cycle count</label><input type="number" value={uc.hoursPerCount} onChange={(e) => onUpdate('hoursPerCount', Number(e.target.value))} className={inputCls} /></div>
+        <div><label className={labelCls}>Cycle counts per week</label><input type="number" value={uc.countsPerWeek} onChange={(e) => onUpdate('countsPerWeek', Number(e.target.value))} className={inputCls} /></div>
+        <div><label className={labelCls}>People per count</label><input type="number" value={uc.people} onChange={(e) => onUpdate('people', Number(e.target.value))} className={inputCls} /></div>
         <div>
-          <label className={labelCls}>Cycle counts per year</label>
-          {industry === 'lifesciences' ? (
-            <select
-              value={operationDetails.auditFrequency}
-              onChange={(e) => {
-                setDet('auditFrequency')(e.target.value);
-                const m = { Monthly: 12, Quarterly: 4, 'Semi-annually': 2, Annually: 1 };
-                const n = m[e.target.value];
-                if (n) onUpdate('countsPerYear', n);
-              }}
-              className={inputCls}
-            >
-              <option value="Monthly">Monthly (12/yr)</option>
-              <option value="Quarterly">Quarterly (4/yr)</option>
-              <option value="Semi-annually">Semi-annually (2/yr)</option>
-              <option value="Annually">Annually (1/yr)</option>
-            </select>
-          ) : (
-            <input type="number" value={uc.countsPerYear} onChange={(e) => onUpdate('countsPerYear', Number(e.target.value))} className={inputCls} />
-          )}
+          <label className={labelCls}>Burdened hourly rate ($/hr)</label>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-1 text-sm">$</span>
+            <input type="number" value={uc.burdenedRate} onChange={(e) => onUpdate('burdenedRate', Number(e.target.value))} className={inputCls} />
+            <span className="text-gray-400 ml-1.5 text-xs">/hr</span>
+          </div>
         </div>
-        <div><label className={labelCls}>Planners involved per count</label><input type="number" value={uc.plannersPerCount} onChange={(e) => onUpdate('plannersPerCount', Number(e.target.value))} className={inputCls} /></div>
-        <RateRow label="Planner burdened rate ($/hr)" rateKey="plannerRate" ops={ops} setOps={setOps} mark={mark} />
       </div>
       <div>
         <label className={labelCls}>Expected time reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </div>
+  );
+
+  if (ucKey === 'audit') return (
+    <div className="space-y-4">
+      <div className={grid2}>
+        <div><label className={labelCls}>People per audit</label><input type="number" value={uc.people} onChange={(e) => onUpdate('people', Number(e.target.value))} className={inputCls} /></div>
+        <div><label className={labelCls}>Days per audit</label><input type="number" value={uc.daysPerAudit} onChange={(e) => onUpdate('daysPerAudit', Number(e.target.value))} className={inputCls} /></div>
+        <div><label className={labelCls}>Hours per day during audit</label><input type="number" value={uc.hoursPerDay} onChange={(e) => onUpdate('hoursPerDay', Number(e.target.value))} className={inputCls} /></div>
+        <div><label className={labelCls}>Full audits per year</label><input type="number" value={uc.auditsPerYear} onChange={(e) => onUpdate('auditsPerYear', Number(e.target.value))} className={inputCls} /></div>
+        <div>
+          <label className={labelCls}>Burdened hourly rate ($/hr)</label>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-1 text-sm">$</span>
+            <input type="number" value={uc.burdenedRate} onChange={(e) => onUpdate('burdenedRate', Number(e.target.value))} className={inputCls} />
+            <span className="text-gray-400 ml-1.5 text-xs">/hr</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected labor reduction with RFID</label>
         <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
       </div>
     </div>
@@ -179,7 +189,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
         />
       </div>
 
-      {(industry === 'aerospace') && (
+      {(industry === 'manufacturing') && (
         <div className="border-t border-blue-100 pt-3 mt-1">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
@@ -213,16 +223,16 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
           </div>
         </div>
       )}
-      {(industry === 'electronics') && (
+      {(industry === 'supplychain') && (
         <div className="border-t border-blue-100 pt-3 mt-1">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
             <OpDetailField
-              label="Unique component part numbers"
-              helper="Active component SKUs in your BOM library."
-              value={operationDetails.uniqueComponentParts}
+              label="Unique SKUs in warehouse"
+              helper="Active SKU count in your distribution center."
+              value={operationDetails.uniquePartNumbers}
               onChange={(v) => {
-                setDet('uniqueComponentParts')(v);
+                setDet('uniquePartNumbers')(v);
                 const n = num(v);
                 if (n) onUpdate('incidentsPerDay', Math.min(60, Math.max(5, Math.ceil(n / 80))));
               }}
@@ -283,7 +293,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
         <RateRow label="Material handler rate ($/hr)" rateKey="materialHandlerRate" ops={ops} setOps={setOps} mark={mark} />
       </div>
 
-      {(industry === 'automotive') && (
+      {(industry === 'supplychain' || industry === 'manufacturing') && (
         <div className="border-t border-blue-100 pt-3">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
@@ -317,13 +327,13 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
         <RateRow label="Material handler rate ($/hr)" rateKey="materialHandlerRate" ops={ops} setOps={setOps} mark={mark} />
       </div>
 
-      {(industry === 'automotive') && (
+      {(industry === 'manufacturing' || industry === 'supplychain') && (
         <div className="border-t border-blue-100 pt-3">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
             <OpDetailField
               label="Number of line-side inventory points"
-              helper="Supermarket locations or point-of-use staging areas on your production floor."
+              helper="Staging areas or point-of-use locations on your floor."
               value={operationDetails.lineSidePoints}
               onChange={(v) => {
                 setDet('lineSidePoints')(v);
@@ -352,7 +362,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
         </div>
       </div>
 
-      {(industry === 'lifesciences') && (
+      {(industry === 'healthcare') && (
         <div className="border-t border-blue-100 pt-3">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
@@ -364,29 +374,6 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
                 setDet('dateSensitiveSkus')(v);
                 const n = num(v);
                 if (n) onUpdate('incidentsPerYear', Math.max(2, Math.ceil(n * 0.10)));
-              }}
-            />
-          </div>
-        </div>
-      )}
-      {(industry === 'foodbeverage') && (
-        <div className="border-t border-blue-100 pt-3">
-          <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
-          <div className={grid2}>
-            <OpDetailField
-              label="Avg product shelf life (days)"
-              helper="Average days from production to expiration across your SKU mix."
-              value={operationDetails.avgShelfLifeDays}
-              onChange={(v) => setDet('avgShelfLifeDays')(v)}
-            />
-            <OpDetailField
-              label="SKUs with expiration tracking"
-              helper="SKUs requiring date-code or FIFO rotation."
-              value={operationDetails.skusWithExpirationTracking}
-              onChange={(v) => {
-                setDet('skusWithExpirationTracking')(v);
-                const n = num(v);
-                if (n) onUpdate('incidentsPerYear', Math.max(3, Math.ceil(n * 0.15)));
               }}
             />
           </div>
@@ -410,7 +397,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
         </div>
       </div>
 
-      {(industry === 'aerospace') && (
+      {(industry === 'healthcare') && (
         <div className="border-t border-blue-100 pt-3">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
@@ -427,13 +414,13 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, mark, operationDetail
           </div>
         </div>
       )}
-      {(industry === 'electronics') && (
+      {(industry === 'manufacturing') && (
         <div className="border-t border-blue-100 pt-3">
           <p className="text-xs font-medium text-blue-700 mb-2">Operation context (optional — improves estimate accuracy)</p>
           <div className={grid2}>
             <OpDetailField
               label="Serialized assets tracked"
-              helper="Tools, fixtures, test equipment, or jigs requiring location and calibration tracking."
+              helper="Tools, fixtures, test equipment, or jigs requiring calibration tracking."
               value={operationDetails.serializedAssets}
               onChange={(v) => {
                 setDet('serializedAssets')(v);

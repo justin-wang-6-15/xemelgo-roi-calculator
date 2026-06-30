@@ -10,8 +10,10 @@ const ROLE_RATE_KEY = {
 export function calcUseCaseValue(key, uc, ops) {
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
   switch (key) {
-    case 'auditCycleCount':
-      return uc.hoursPerCount * uc.countsPerYear * uc.plannersPerCount * ops.plannerRate * uc.reductionPct;
+    case 'cycleCount':
+      return uc.hoursPerCount * uc.countsPerWeek * 50 * uc.people * uc.burdenedRate * uc.reductionPct;
+    case 'audit':
+      return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.burdenedRate * uc.reductionPct;
     case 'locateItems': {
       const rate = ops[ROLE_RATE_KEY[uc.role] || 'materialHandlerRate'];
       return (uc.searchMinutes / 60) * uc.incidentsPerDay * daysPerYear * rate * uc.reductionPct;
@@ -44,9 +46,10 @@ export function calcUseCaseValue(key, uc, ops) {
 export const BUCKET_CONFIG = [
   {
     name: 'Labor Efficiency',
-    keys: ['auditCycleCount', 'locateItems', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'],
+    keys: ['cycleCount', 'audit', 'locateItems', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'],
     labels: {
-      auditCycleCount: 'Audit & Cycle Counting',
+      cycleCount: 'Cycle Counting',
+      audit: 'Full Inventory Audit',
       locateItems: 'Locate Items',
       picklistVerification: 'Picklist Verification',
       shipReceiveVerification: 'Ship & Receive Verification',
