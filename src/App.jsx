@@ -122,15 +122,27 @@ export default function App() {
   const [fin, setFin] = useState(defaultFin);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
+  const [visitedSteps, setVisitedSteps] = useState(new Set([1]));
   const dirRef = useRef('forward');
   const hasVisitedStep4 = useRef(false);
 
+  function markVisited(stepNum) {
+    setVisitedSteps((prev) => {
+      if (prev.has(stepNum)) return prev;
+      const next = new Set(prev);
+      next.add(stepNum);
+      return next;
+    });
+  }
+
   function goTo(next, dir = 'forward') {
     dirRef.current = dir;
+    markVisited(next);
     setTransitionClass(dir === 'forward' ? 'step-exit' : 'step-exit-back');
     setTimeout(() => {
       setStep(next);
       setTransitionClass(dir === 'forward' ? 'step-enter' : 'step-enter-back');
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }, 220);
   }
 
@@ -138,6 +150,7 @@ export default function App() {
   function handleStep1Next() {
     setUseCases(makeAllDisabledUseCases());
     setOperationDetails(defaultOperationDetails);
+    markVisited(2);
     setAnalyzing(true);
     setTimeout(() => {
       setTransitionClass('step-exit');
@@ -146,6 +159,7 @@ export default function App() {
         setStep(2);
         dirRef.current = 'forward';
         setTransitionClass('step-enter');
+        window.scrollTo({ top: 0, behavior: 'instant' });
       }, 220);
     }, 1500);
   }
@@ -159,10 +173,33 @@ export default function App() {
     goTo(4);
   }
 
-  const handleEmailSubmit = (info) => {
+  function handleEmailSubmit(info) {
     setContactInfo(info);
     setDone(true);
-  };
+  }
+
+  // Logo click — full reset to initial state
+  function handleReset() {
+    setStep(1);
+    setTransitionClass('step-enter');
+    setAnalyzing(false);
+    setOps(defaultOps);
+    setOperationDetails(defaultOperationDetails);
+    setUseCases(makeAllDisabledUseCases());
+    setFin(defaultFin);
+    setContactInfo(null);
+    setDone(false);
+    setVisitedSteps(new Set([1]));
+    hasVisitedStep4.current = false;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // Step indicator click — navigate to a previously visited step without clearing data
+  function handleStepClick(stepNum) {
+    if (stepNum === step) return;
+    if (!visitedSteps.has(stepNum)) return;
+    goTo(stepNum, stepNum < step ? 'back' : 'forward');
+  }
 
   // Sidebar appears on step 1 (static benchmarks) and step 3 (live preview)
   const showGrid = !done && !analyzing && (step === 1 || step === 3);
@@ -171,21 +208,32 @@ export default function App() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div>
-            <span className="font-bold text-gray-900">Xemelgo</span>
-            <span className="text-gray-400 mx-2">|</span>
-            <span className="text-sm text-gray-500">ROI Calculator</span>
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={handleReset}
+          >
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <span className="font-bold text-gray-900">Xemelgo</span>
+              <span className="text-gray-400 mx-2">|</span>
+              <span className="text-sm text-gray-500">ROI Calculator</span>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {!done && !analyzing && <ProgressIndicator currentStep={step} />}
+        {!done && !analyzing && (
+          <ProgressIndicator
+            currentStep={step}
+            visitedSteps={visitedSteps}
+            onStepClick={handleStepClick}
+          />
+        )}
 
         <div className={showGrid ? 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start' : ''}>
           <div className={transitionClass}>
