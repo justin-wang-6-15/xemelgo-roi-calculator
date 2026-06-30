@@ -2,15 +2,16 @@ import { useState, useRef } from 'react';
 import ProgressIndicator from './components/ProgressIndicator';
 import Step1_OperationProfile from './components/steps/Step1_OperationProfile';
 import Step2_UseCases from './components/steps/Step2_UseCases';
+import Step3_ValidateInputs from './components/steps/Step3_ValidateInputs';
 import Step3_FinancialResults from './components/steps/Step3_FinancialResults';
 import Step4_EmailGate from './components/steps/Step4_EmailGate';
 import ThankYou from './components/ThankYou';
 import LivePreviewBar from './components/LivePreviewBar';
-import { fmt$ } from './utils/format';
 
 const defaultOps = {
   companyName: '',
   industry: '',
+  projectDescription: '',
   unitsPerMonth: 5000,
   workWeeksPerYear: 50,
   workDaysPerWeek: 5,
@@ -40,39 +41,22 @@ const defaultOperationDetails = {
   serializedAssets: '',
 };
 
-function makeDefaultUseCases(ops) {
+// All use cases disabled by default — user selects on Step 2
+function makeAllDisabledUseCases() {
   return {
-    auditCycleCount: { enabled: true, hoursPerCount: 8, countsPerYear: 4, plannersPerCount: ops.plannerCount, reductionPct: 0.80 },
-    locateItems: { enabled: true, searchMinutes: 15, incidentsPerDay: 20, role: 'materialHandler', reductionPct: 0.70 },
-    picklistVerification: { enabled: true, picksPerDay: 500, errorRate: 0.02, costPerError: 50, reductionPct: 0.70 },
-    shipReceiveVerification: { enabled: true, transactionsPerDay: 15, minutesPerTransaction: 12, dockHeadcount: ops.materialHandlerCount, reductionPct: 0.60 },
-    internalDelivery: { enabled: false, transfersPerDay: 30, minutesPerTransfer: 8, headcount: ops.materialHandlerCount, reductionPct: 0.50 },
-    expiredProducts: { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.75 },
-    calibrationReminders: { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.80 },
-    geofencing: { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.70 },
-    fasterFulfillment: { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
-    misShipReduction: { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.75 },
-    dockTurnSpeed: { enabled: false, transactionsPerDay: 20, delayCostPerTransaction: 25, savingsMinutesPerTransaction: 10 },
+    auditCycleCount:         { enabled: false, hoursPerCount: 8, countsPerYear: 4, plannersPerCount: 3, reductionPct: 0.80 },
+    locateItems:             { enabled: false, searchMinutes: 15, incidentsPerDay: 20, role: 'materialHandler', reductionPct: 0.70 },
+    picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 0.02, costPerError: 50, reductionPct: 0.70 },
+    shipReceiveVerification: { enabled: false, transactionsPerDay: 15, minutesPerTransaction: 12, dockHeadcount: 10, reductionPct: 0.60 },
+    internalDelivery:        { enabled: false, transfersPerDay: 30, minutesPerTransfer: 8, headcount: 10, reductionPct: 0.50 },
+    expiredProducts:         { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.75 },
+    calibrationReminders:    { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.80 },
+    geofencing:              { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.70 },
+    fasterFulfillment:       { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
+    misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.75 },
+    dockTurnSpeed:           { enabled: false, transactionsPerDay: 20, delayCostPerTransaction: 25, savingsMinutesPerTransaction: 10 },
   };
 }
-
-// Fix 10: industry → which extra use case to toggle ON
-const INDUSTRY_USE_CASE_MAP = {
-  aerospace: 'calibrationReminders',
-  lifesciences: 'expiredProducts',
-  foodbeverage: 'expiredProducts',
-  retail: 'misShipReduction',
-};
-
-// Fix 10: industry sidebar notes
-const INDUSTRY_NOTES = {
-  aerospace: 'Defense contractors typically prioritize calibration and geofencing use cases.',
-  lifesciences: 'Regulated environments see high ROI from expiration tracking and audit readiness.',
-  foodbeverage: 'Perishable inventory operations benefit most from expired product and cycle count use cases.',
-  automotive: 'High-volume facilities see strong ROI from ship/receive verification and picklist accuracy.',
-  electronics: 'Component-intensive operations benefit from locate items and WIP tracking.',
-  retail: 'Distribution centers see strong ROI from outbound verification and cycle count reduction.',
-};
 
 function calcEstimatedCapex(ops) {
   const zones = Math.max(3, Math.min(12, Math.ceil(ops.unitsPerMonth / 2000)));
@@ -86,17 +70,7 @@ const defaultFin = {
   wacc: 0.10,
 };
 
-// Fix 1: reactive benchmark card using ops
-function StaticBenchmarkCard({ ops }) {
-  const totalPayroll = (
-    ops.materialHandlerCount * ops.materialHandlerRate +
-    ops.plannerCount * ops.plannerRate +
-    ops.indirectCount * ops.indirectRate +
-    ops.directCount * ops.directRate
-  ) * 2000;
-  const estimated = Math.round(totalPayroll * 0.08 / 1000) * 1000;
-  const industryNote = INDUSTRY_NOTES[ops.industry];
-
+function StaticBenchmarkCard() {
   return (
     <div className="hidden lg:block">
       <div className="sticky top-8 bg-white border border-gray-200 rounded-xl shadow-md p-5">
@@ -104,9 +78,7 @@ function StaticBenchmarkCard({ ops }) {
         <div className="space-y-3">
           <div>
             <p className="text-xs text-gray-400">Estimated annual opportunity</p>
-            <p className={`text-lg font-bold ${estimated > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
-              {estimated > 0 ? fmt$(estimated) : '—'}
-            </p>
+            <p className="text-lg font-bold text-blue-700">$150K–$700K</p>
           </div>
           <div>
             <p className="text-xs text-gray-400">Payback period</p>
@@ -117,12 +89,9 @@ function StaticBenchmarkCard({ ops }) {
             <p className="text-lg font-bold text-gray-900">200–400%</p>
           </div>
         </div>
-        {industryNote && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <p className="text-xs text-blue-700 italic leading-relaxed">{industryNote}</p>
-          </div>
-        )}
-        <p className="mt-3 text-xs text-gray-400 leading-relaxed">Based on your team size. Refine in Step 2.</p>
+        <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+          Select your use cases next to see your personalized estimate.
+        </p>
       </div>
     </div>
   );
@@ -149,14 +118,12 @@ export default function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const [ops, setOps] = useState(defaultOps);
   const [operationDetails, setOperationDetails] = useState(defaultOperationDetails);
-  const [useCases, setUseCases] = useState(() => makeDefaultUseCases(defaultOps));
+  const [useCases, setUseCases] = useState(() => makeAllDisabledUseCases());
   const [fin, setFin] = useState(defaultFin);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
-  const [prefillBannerActive, setPrefillBannerActive] = useState(false);
-  const [prefillBannerDismissed, setPrefillBannerDismissed] = useState(false);
   const dirRef = useRef('forward');
-  const hasVisitedStep3 = useRef(false);
+  const hasVisitedStep4 = useRef(false);
 
   function goTo(next, dir = 'forward') {
     dirRef.current = dir;
@@ -167,103 +134,10 @@ export default function App() {
     }, 220);
   }
 
+  // Step 1 → Step 2: reset use cases to all-disabled, then show analyzing screen
   function handleStep1Next() {
-    const freshUseCases = makeDefaultUseCases(ops);
-    const extraToggle = INDUSTRY_USE_CASE_MAP[ops.industry];
-    if (extraToggle) {
-      freshUseCases[extraToggle] = { ...freshUseCases[extraToggle], enabled: true };
-    }
-
-    // Part B: wire operation details into use case defaults
-    let prefilledAny = false;
-    const det = operationDetails;
-    const num = (v) => v !== '' && Number(v) > 0 ? Number(v) : null;
-
-    if (ops.industry === 'aerospace') {
-      const regulated = num(det.regulatedComponents);
-      if (regulated !== null) {
-        freshUseCases.calibrationReminders = { ...freshUseCases.calibrationReminders, failuresPerYear: Math.max(3, Math.ceil(regulated * 0.05)) };
-        prefilledAny = true;
-      }
-      const parts = num(det.uniquePartNumbers);
-      if (parts !== null) {
-        freshUseCases.locateItems = { ...freshUseCases.locateItems, incidentsPerDay: Math.min(50, Math.max(5, Math.ceil(parts / 50))) };
-        prefilledAny = true;
-      }
-    }
-
-    if (ops.industry === 'lifesciences') {
-      const skus = num(det.dateSensitiveSkus);
-      if (skus !== null) {
-        freshUseCases.expiredProducts = { ...freshUseCases.expiredProducts, incidentsPerYear: Math.max(2, Math.ceil(skus * 0.10)) };
-        prefilledAny = true;
-      }
-      if (det.auditFrequency) {
-        const freqMap = { Monthly: 12, Quarterly: 4, 'Semi-annually': 2, Annually: 1 };
-        const counts = freqMap[det.auditFrequency];
-        if (counts !== undefined) {
-          freshUseCases.auditCycleCount = { ...freshUseCases.auditCycleCount, countsPerYear: counts };
-          prefilledAny = true;
-        }
-      }
-    }
-
-    if (ops.industry === 'foodbeverage') {
-      const expiringSkus = num(det.skusWithExpirationTracking);
-      if (expiringSkus !== null) {
-        freshUseCases.expiredProducts = { ...freshUseCases.expiredProducts, incidentsPerYear: Math.max(3, Math.ceil(expiringSkus * 0.15)) };
-        prefilledAny = true;
-      }
-      const shelfLife = num(det.avgShelfLifeDays);
-      if (shelfLife !== null && shelfLife < 30) {
-        freshUseCases.expiredProducts = { ...freshUseCases.expiredProducts, enabled: true };
-      }
-    }
-
-    if (ops.industry === 'retail') {
-      const orderLines = num(det.avgOrderLines);
-      if (orderLines !== null) {
-        const picksPerDay = Math.round((ops.unitsPerMonth / 22) * orderLines);
-        freshUseCases.picklistVerification = { ...freshUseCases.picklistVerification, picksPerDay };
-        prefilledAny = true;
-      }
-      const activeSkus = num(det.activeSkus);
-      if (activeSkus !== null) {
-        freshUseCases.locateItems = { ...freshUseCases.locateItems, incidentsPerDay: Math.min(80, Math.max(5, Math.ceil(activeSkus / 100))) };
-        prefilledAny = true;
-      }
-    }
-
-    if (ops.industry === 'automotive') {
-      const docks = num(det.supplierDocks);
-      if (docks !== null) {
-        freshUseCases.shipReceiveVerification = { ...freshUseCases.shipReceiveVerification, transactionsPerDay: docks * 8 };
-        prefilledAny = true;
-      }
-      const lineSide = num(det.lineSidePoints);
-      if (lineSide !== null) {
-        freshUseCases.internalDelivery = { ...freshUseCases.internalDelivery, transfersPerDay: lineSide * 3 };
-        prefilledAny = true;
-      }
-    }
-
-    if (ops.industry === 'electronics') {
-      const serialized = num(det.serializedAssets);
-      if (serialized !== null) {
-        freshUseCases.calibrationReminders = { ...freshUseCases.calibrationReminders, failuresPerYear: Math.max(2, Math.ceil(serialized * 0.08)) };
-        prefilledAny = true;
-      }
-      const compParts = num(det.uniqueComponentParts);
-      if (compParts !== null) {
-        freshUseCases.locateItems = { ...freshUseCases.locateItems, incidentsPerDay: Math.min(60, Math.max(5, Math.ceil(compParts / 80))) };
-        prefilledAny = true;
-      }
-    }
-
-    setUseCases(freshUseCases);
-    setPrefillBannerActive(prefilledAny);
-    setPrefillBannerDismissed(false);
-
+    setUseCases(makeAllDisabledUseCases());
+    setOperationDetails(defaultOperationDetails);
     setAnalyzing(true);
     setTimeout(() => {
       setTransitionClass('step-exit');
@@ -276,12 +150,13 @@ export default function App() {
     }, 1500);
   }
 
-  function handleGoToStep3() {
-    if (!hasVisitedStep3.current) {
-      hasVisitedStep3.current = true;
+  // Step 3 (Validate Inputs) → Step 4 (Financial Inputs): set CapEx estimate once
+  function handleGoToStep4() {
+    if (!hasVisitedStep4.current) {
+      hasVisitedStep4.current = true;
       setFin((prev) => ({ ...prev, capex: calcEstimatedCapex(ops) }));
     }
-    goTo(3);
+    goTo(4);
   }
 
   const handleEmailSubmit = (info) => {
@@ -289,7 +164,8 @@ export default function App() {
     setDone(true);
   };
 
-  const showGrid = !done && !analyzing && (step === 1 || step === 2);
+  // Sidebar appears on step 1 (static benchmarks) and step 3 (live preview)
+  const showGrid = !done && !analyzing && (step === 1 || step === 3);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -318,18 +194,48 @@ export default function App() {
             ) : done ? (
               <ThankYou ops={ops} useCases={useCases} fin={fin} contactInfo={contactInfo} />
             ) : step === 1 ? (
-              <Step1_OperationProfile ops={ops} setOps={setOps} operationDetails={operationDetails} setOperationDetails={setOperationDetails} onNext={handleStep1Next} />
+              <Step1_OperationProfile ops={ops} setOps={setOps} onNext={handleStep1Next} />
             ) : step === 2 ? (
-              <Step2_UseCases ops={ops} useCases={useCases} setUseCases={setUseCases} onNext={handleGoToStep3} onBack={() => goTo(1, 'back')} showPrefillBanner={prefillBannerActive && !prefillBannerDismissed} onDismissPrefillBanner={() => setPrefillBannerDismissed(true)} />
+              <Step2_UseCases
+                ops={ops}
+                useCases={useCases}
+                setUseCases={setUseCases}
+                onNext={() => goTo(3)}
+                onBack={() => goTo(1, 'back')}
+              />
             ) : step === 3 ? (
-              <Step3_FinancialResults ops={ops} useCases={useCases} fin={fin} setFin={setFin} onNext={() => goTo(4)} onBack={() => goTo(2, 'back')} />
+              <Step3_ValidateInputs
+                ops={ops}
+                setOps={setOps}
+                useCases={useCases}
+                setUseCases={setUseCases}
+                operationDetails={operationDetails}
+                setOperationDetails={setOperationDetails}
+                onNext={handleGoToStep4}
+                onBack={() => goTo(2, 'back')}
+              />
             ) : step === 4 ? (
-              <Step4_EmailGate ops={ops} useCases={useCases} fin={fin} onSubmit={handleEmailSubmit} onBack={() => goTo(3, 'back')} />
+              <Step3_FinancialResults
+                ops={ops}
+                useCases={useCases}
+                fin={fin}
+                setFin={setFin}
+                onNext={() => goTo(5)}
+                onBack={() => goTo(3, 'back')}
+              />
+            ) : step === 5 ? (
+              <Step4_EmailGate
+                ops={ops}
+                useCases={useCases}
+                fin={fin}
+                onSubmit={handleEmailSubmit}
+                onBack={() => goTo(4, 'back')}
+              />
             ) : null}
           </div>
 
-          {!done && !analyzing && step === 1 && <StaticBenchmarkCard ops={ops} />}
-          {!done && !analyzing && step === 2 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
+          {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
+          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
         </div>
       </main>
     </div>

@@ -1,12 +1,13 @@
 const steps = [
-  { label: 'Operation Profile' },
-  { label: 'Review Opportunity' },
+  { label: 'Project Overview' },
+  { label: 'Select Use Cases' },
+  { label: 'Validate Your Inputs' },
   { label: 'Financial Inputs' },
   { label: 'Get Your Report' },
 ];
 
 export default function ProgressIndicator({ currentStep }) {
-  const pct = Math.round(((currentStep - 1) / 3) * 100);
+  const pct = Math.round(((currentStep - 1) / 4) * 100);
 
   return (
     <div className="mb-8">
@@ -38,7 +39,7 @@ export default function ProgressIndicator({ currentStep }) {
                 </span>
               </div>
               {idx < steps.length - 1 && (
-                <div className={`w-16 sm:w-24 h-0.5 mx-1 mb-4 ${isComplete ? 'bg-green-400' : 'bg-gray-200'}`} />
+                <div className={`w-8 sm:w-14 h-0.5 mx-1 mb-4 ${isComplete ? 'bg-green-400' : 'bg-gray-200'}`} />
               )}
             </div>
           );
@@ -51,7 +52,7 @@ export default function ProgressIndicator({ currentStep }) {
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="text-center text-xs text-gray-400 mt-1">Step {currentStep} of 4</p>
+        <p className="text-center text-xs text-gray-400 mt-1">Step {currentStep} of 5</p>
       </div>
     </div>
   );

@@ -1,225 +1,12 @@
 import { useState } from 'react';
-import Tooltip from '../Tooltip';
 
-function Field({ label, description, error, children }) {
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {children}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-      {!error && description && <p className="mt-1 text-xs text-gray-500">{description}</p>}
-    </div>
-  );
-}
-
-function NumInput({ value, onChange, min, max, error }) {
-  return (
-    <input
-      type="number"
-      value={value}
-      min={min}
-      max={max}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent
-        ${error ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
-    />
-  );
-}
-
-const roles = [
-  { label: 'Material Handlers', countKey: 'materialHandlerCount', rateKey: 'materialHandlerRate' },
-  { label: 'Planners', countKey: 'plannerCount', rateKey: 'plannerRate' },
-  { label: 'Indirect / Leadership', countKey: 'indirectCount', rateKey: 'indirectRate' },
-  { label: 'Direct Employees', countKey: 'directCount', rateKey: 'directRate' },
-];
-
-const UNITS_FIELD_LANG = {
-  '':              { label: 'Units Produced Per Month',               placeholder: '10,000', helper: 'Enter your monthly finished goods output. If your facility tracks work orders, use the number of work orders completed per month. When in doubt, use finished goods units.' },
-  manufacturing:   { label: 'Units Produced Per Month',               placeholder: '10,000', helper: 'Enter your monthly finished goods output. If your facility tracks work orders, use the number of work orders completed per month. When in doubt, use finished goods units.' },
-  aerospace:       { label: 'Work Orders Completed Per Month',         placeholder: '250',    helper: 'Enter the number of work orders or job orders your facility completes each month.' },
-  lifesciences:    { label: 'Lots or Batches Completed Per Month',     placeholder: '50',     helper: 'Enter the number of production lots or batches your facility releases per month.' },
-  foodbeverage:    { label: 'Cases or Pallets Produced Per Month',     placeholder: '2,000',  helper: 'Enter your monthly finished goods output in cases or pallet equivalents, whichever you track.' },
-  automotive:      { label: 'Vehicles or Assemblies Completed Per Month', placeholder: '500', helper: 'Enter the number of finished vehicles, modules, or major assemblies your facility completes per month.' },
-  electronics:     { label: 'PCBAs or Assemblies Completed Per Month', placeholder: '1,000',  helper: 'Enter the number of finished circuit board assemblies or electronic assemblies completed per month.' },
-  retail:          { label: 'Orders Shipped Per Month',                placeholder: '5,000',  helper: 'Enter the total number of outbound orders or shipments your facility processes per month.' },
-  other:           { label: 'Units or Jobs Completed Per Month',       placeholder: '1,000',  helper: 'Enter whatever unit best represents your monthly throughput — finished goods, work orders, or jobs completed.' },
-};
-
-const SHIFTS_FIELD_LANG = {
-  retail: { label: 'Operating Hours Per Day', helper: 'How many hours per day your facility or distribution center operates.' },
-};
-const DEFAULT_SHIFTS_LANG = { label: 'Shifts Per Day', helper: 'Number of shifts your facility runs.' };
-
-// Fix 2: updated descriptions with direct-employees clarification
-const ROLE_DESCRIPTIONS = [
-  'Warehouse staff, stockroom associates, forklift operators — anyone who physically moves or stores inventory.',
-  'Production schedulers, inventory analysts, supply chain coordinators — anyone managing what\'s where and what\'s needed next.',
-  'Supervisors, managers, plant leadership — anyone overseeing operations but not directly handling materials.',
-  'Direct Employees: Frontline production workers — assemblers, machine operators, line technicians. Do not include anyone already listed as a Material Handler, Planner, or in Indirect/Leadership.',
-];
-
-function RoleClassificationHelp() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="mt-1 mb-4">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
-      >
-        How to classify your team {open ? '▲' : '▾'}
-      </button>
-      {open && (
-        <div className="mt-2 space-y-2 text-xs text-gray-600 bg-blue-50 rounded-lg p-3 border border-blue-100">
-          {roles.map((role, i) => (
-            <div key={role.countKey}>
-              <span className="font-semibold text-gray-700">{role.label}:</span>{' '}
-              {ROLE_DESCRIPTIONS[i]}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const OPERATION_DETAILS_INDUSTRIES = new Set(['aerospace','lifesciences','foodbeverage','retail','automotive','electronics']);
-
-function OptLabel({ children }) {
-  return (
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {children} <span className="text-gray-400 font-normal">(optional)</span>
-    </label>
-  );
-}
-
-function DetInput({ value, onChange, placeholder }) {
-  return (
-    <input
-      type="number"
-      value={value}
-      min={0}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-      className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  );
-}
-
-function OperationDetails({ industry, det, setDet }) {
-  if (!OPERATION_DETAILS_INDUSTRIES.has(industry)) return null;
-  const set = (key) => (val) => setDet((prev) => ({ ...prev, [key]: val }));
-  const helper = 'mt-1 text-xs text-gray-500';
-
-  return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-      <h3 className="text-base font-semibold text-gray-800 mb-4">Operation Details</h3>
-      <div className="space-y-4">
-
-        {industry === 'aerospace' && <>
-          <div>
-            <OptLabel>Number of Unique Part Numbers Tracked</OptLabel>
-            <DetInput value={det.uniquePartNumbers} onChange={set('uniquePartNumbers')} placeholder="500" />
-            <p className={helper}>Active part numbers in your inventory. Drives locate items and audit complexity estimates.</p>
-          </div>
-          <div>
-            <OptLabel>Number of Regulated Components or Calibrated Tools</OptLabel>
-            <DetInput value={det.regulatedComponents} onChange={set('regulatedComponents')} placeholder="50" />
-            <p className={helper}>Assets requiring scheduled calibration or compliance tracking.</p>
-          </div>
-        </>}
-
-        {industry === 'lifesciences' && <>
-          <div>
-            <OptLabel>Number of Date-Sensitive or Expiring SKUs</OptLabel>
-            <DetInput value={det.dateSensitiveSkus} onChange={set('dateSensitiveSkus')} placeholder="30" />
-            <p className={helper}>SKUs with expiration dates, lot control requirements, or FIFO/FEFO compliance needs.</p>
-          </div>
-          <div>
-            <OptLabel>Audit or Inspection Frequency</OptLabel>
-            <select
-              value={det.auditFrequency}
-              onChange={(e) => set('auditFrequency')(e.target.value)}
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="Monthly">Monthly</option>
-              <option value="Quarterly">Quarterly</option>
-              <option value="Semi-annually">Semi-annually</option>
-              <option value="Annually">Annually</option>
-            </select>
-            <p className={helper}>How often your facility conducts physical inventory audits or regulatory inspections.</p>
-          </div>
-        </>}
-
-        {industry === 'foodbeverage' && <>
-          <div>
-            <OptLabel>Average Product Shelf Life (days)</OptLabel>
-            <DetInput value={det.avgShelfLifeDays} onChange={set('avgShelfLifeDays')} placeholder="90" />
-            <p className={helper}>Average days from production to expiration across your SKU mix.</p>
-          </div>
-          <div>
-            <OptLabel>Number of SKUs with Expiration Tracking</OptLabel>
-            <DetInput value={det.skusWithExpirationTracking} onChange={set('skusWithExpirationTracking')} placeholder="40" />
-            <p className={helper}>SKUs that require date-code or FIFO rotation tracking.</p>
-          </div>
-        </>}
-
-        {industry === 'retail' && <>
-          <div>
-            <OptLabel>Number of Active SKUs in Inventory</OptLabel>
-            <DetInput value={det.activeSkus} onChange={set('activeSkus')} placeholder="2000" />
-            <p className={helper}>Total number of distinct SKUs currently in your facility. Drives cycle count and locate items complexity.</p>
-          </div>
-          <div>
-            <OptLabel>Average Order Lines Per Shipment</OptLabel>
-            <DetInput value={det.avgOrderLines} onChange={set('avgOrderLines')} placeholder="8" />
-            <p className={helper}>How many line items the average outbound order contains. Drives picklist verification savings.</p>
-          </div>
-        </>}
-
-        {industry === 'automotive' && <>
-          <div>
-            <OptLabel>Number of Supplier Docks or Receiving Doors</OptLabel>
-            <DetInput value={det.supplierDocks} onChange={set('supplierDocks')} placeholder="6" />
-            <p className={helper}>Active inbound dock doors. Drives ship and receive verification savings.</p>
-          </div>
-          <div>
-            <OptLabel>Number of Line-Side Inventory Points</OptLabel>
-            <DetInput value={det.lineSidePoints} onChange={set('lineSidePoints')} placeholder="20" />
-            <p className={helper}>Supermarket locations or point-of-use inventory staging areas on your production floor.</p>
-          </div>
-        </>}
-
-        {industry === 'electronics' && <>
-          <div>
-            <OptLabel>Number of Unique Component Part Numbers</OptLabel>
-            <DetInput value={det.uniqueComponentParts} onChange={set('uniqueComponentParts')} placeholder="800" />
-            <p className={helper}>Active component SKUs in your BOM library. High part counts drive stronger locate items ROI.</p>
-          </div>
-          <div>
-            <OptLabel>Number of Serialized Assets Tracked</OptLabel>
-            <DetInput value={det.serializedAssets} onChange={set('serializedAssets')} placeholder="100" />
-            <p className={helper}>Tools, fixtures, test equipment, or jigs requiring location and calibration tracking.</p>
-          </div>
-        </>}
-
-      </div>
-    </div>
-  );
-}
-
-export default function Step1_OperationProfile({ ops, setOps, operationDetails, setOperationDetails, onNext }) {
+export default function Step1_OperationProfile({ ops, setOps, onNext }) {
   const [errors, setErrors] = useState({});
-  const set = (key) => (val) => setOps((prev) => ({ ...prev, [key]: val }));
 
   function validate() {
     const e = {};
     if (!ops.companyName.trim()) e.companyName = 'Company name is required.';
-    // Fix 10: industry required
     if (!ops.industry) e.industry = 'Please select your industry.';
-    if (!ops.unitsPerMonth || ops.unitsPerMonth <= 0) e.unitsPerMonth = 'Enter a value greater than 0.';
-    if (!ops.workWeeksPerYear || ops.workWeeksPerYear <= 0) e.workWeeksPerYear = 'Required.';
-    if (!ops.workDaysPerWeek || ops.workDaysPerWeek <= 0) e.workDaysPerWeek = 'Required.';
     return e;
   }
 
@@ -232,8 +19,8 @@ export default function Step1_OperationProfile({ ops, setOps, operationDetails, 
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Let's size your opportunity</h2>
-      <p className="text-sm text-gray-500 mb-4">Tell us about your team — we'll use this to calculate the true dollar value of time saved.</p>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Let's get started</h2>
+      <p className="text-sm text-gray-500 mb-4">Tell us about your project — we'll recommend the right use cases for you.</p>
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 mb-6">
         <p className="text-sm text-blue-900 leading-relaxed">
@@ -242,9 +29,10 @@ export default function Step1_OperationProfile({ ops, setOps, operationDetails, 
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-        <h3 className="text-base font-semibold text-gray-800 mb-4">Facility Overview</h3>
+        <h3 className="text-base font-semibold text-gray-800 mb-4">Project Overview</h3>
 
-        <Field label="Company Name" error={errors.companyName}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
           <input
             type="text"
             value={ops.companyName}
@@ -253,10 +41,11 @@ export default function Step1_OperationProfile({ ops, setOps, operationDetails, 
             className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent
               ${errors.companyName ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
           />
-        </Field>
+          {errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>}
+        </div>
 
-        {/* Fix 10: Industry selector, placed between Company Name and Units */}
-        <Field label="Industry / Vertical" error={errors.industry}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Industry / Vertical</label>
           <select
             value={ops.industry}
             onChange={(e) => setOps((prev) => ({ ...prev, industry: e.target.value }))}
@@ -273,139 +62,21 @@ export default function Step1_OperationProfile({ ops, setOps, operationDetails, 
             <option value="retail">Retail / Distribution</option>
             <option value="other">Other</option>
           </select>
-        </Field>
-
-        {(() => {
-          const unitsLang = UNITS_FIELD_LANG[ops.industry] ?? UNITS_FIELD_LANG[''];
-          return (
-            <Field label={unitsLang.label} description={unitsLang.helper} error={errors.unitsPerMonth}>
-              <input
-                type="number"
-                value={ops.unitsPerMonth}
-                min={0}
-                placeholder={unitsLang.placeholder}
-                onChange={(e) => set('unitsPerMonth')(Number(e.target.value))}
-                className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent
-                  ${errors.unitsPerMonth ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
-              />
-            </Field>
-          );
-        })()}
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Field label="Work Weeks / Year" description="Typical = 50 after holidays." error={errors.workWeeksPerYear}>
-            <NumInput value={ops.workWeeksPerYear} onChange={set('workWeeksPerYear')} min={1} max={52} error={errors.workWeeksPerYear} />
-          </Field>
-          <Field label="Working Days / Week" description="Standard production days. Typical = 5." error={errors.workDaysPerWeek}>
-            <NumInput value={ops.workDaysPerWeek} onChange={set('workDaysPerWeek')} min={1} max={7} error={errors.workDaysPerWeek} />
-          </Field>
-          {(() => {
-            const shiftsLang = SHIFTS_FIELD_LANG[ops.industry] ?? DEFAULT_SHIFTS_LANG;
-            return (
-              <Field label={shiftsLang.label} description={shiftsLang.helper}>
-                <NumInput value={ops.shiftsPerDay} onChange={set('shiftsPerDay')} min={1} max={ops.industry === 'retail' ? 24 : 3} />
-              </Field>
-            );
-          })()}
-        </div>
-      </div>
-
-      <OperationDetails industry={ops.industry} det={operationDetails} setDet={setOperationDetails} />
-
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-        <h3 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-1.5">
-          Team Headcount & Burdened Rates
-          <Tooltip content="Burdened rate = base wage + payroll taxes + benefits + overhead. Typically 1.3–1.5× the hourly base wage.">
-            <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
-          </Tooltip>
-        </h3>
-        <p className="text-xs text-gray-500 mb-3">Burdened rate = base wage + benefits, taxes, overhead. Typically 1.3–1.5× base wage.</p>
-
-        <RoleClassificationHelp />
-
-        {/* Desktop table */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 pr-4 font-medium text-gray-700">Role</th>
-                <th className="text-left py-2 px-2 font-medium text-gray-700"># of People</th>
-                <th className="text-left py-2 pl-2 font-medium text-gray-700">Burdened Hourly Rate ($)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((role) => (
-                <tr key={role.countKey} className="border-b border-gray-100">
-                  <td className="py-2 pr-4">
-                    <span className="text-gray-700">{role.label}</span>
-                    {/* Fix 2: clarifying note for Direct Employees */}
-                    {role.countKey === 'directCount' && (
-                      <p className="text-xs text-gray-400 italic mt-0.5">Production line workers only — do not include anyone already counted above.</p>
-                    )}
-                  </td>
-                  <td className="py-2 px-2">
-                    <input
-                      type="number"
-                      value={ops[role.countKey]}
-                      min={0}
-                      onChange={(e) => setOps((prev) => ({ ...prev, [role.countKey]: Number(e.target.value) }))}
-                      className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </td>
-                  <td className="py-2 pl-2">
-                    <div className="flex items-center">
-                      <span className="text-gray-500 mr-1">$</span>
-                      <input
-                        type="number"
-                        value={ops[role.rateKey]}
-                        min={0}
-                        onChange={(e) => setOps((prev) => ({ ...prev, [role.rateKey]: Number(e.target.value) }))}
-                        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {errors.industry && <p className="mt-1 text-xs text-red-600">{errors.industry}</p>}
         </div>
 
-        {/* Mobile stacked cards */}
-        <div className="sm:hidden space-y-3">
-          {roles.map((role) => (
-            <div key={role.countKey} className="border border-gray-200 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700 mb-0.5">{role.label}</p>
-              {/* Fix 2: clarifying note for Direct Employees */}
-              {role.countKey === 'directCount' && (
-                <p className="text-xs text-gray-400 italic mb-2">Production line workers only — do not include anyone already counted above.</p>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">People</label>
-                  <input
-                    type="number"
-                    value={ops[role.countKey]}
-                    min={0}
-                    onChange={(e) => setOps((prev) => ({ ...prev, [role.countKey]: Number(e.target.value) }))}
-                    className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">$/hr (burdened)</label>
-                  <div className="flex items-center">
-                    <span className="text-gray-400 mr-1 text-sm">$</span>
-                    <input
-                      type="number"
-                      value={ops[role.rateKey]}
-                      min={0}
-                      onChange={(e) => setOps((prev) => ({ ...prev, [role.rateKey]: Number(e.target.value) }))}
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            What are you trying to solve? <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <textarea
+            value={ops.projectDescription || ''}
+            onChange={(e) => setOps((prev) => ({ ...prev, projectDescription: e.target.value }))}
+            placeholder="e.g. We lose hours every week searching for WIP across three production lines and want real-time visibility into where everything is."
+            rows={3}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
+          <p className="mt-1 text-xs text-gray-400">Helps us recommend the right use cases on the next step.</p>
         </div>
       </div>
 
@@ -414,7 +85,7 @@ export default function Step1_OperationProfile({ ops, setOps, operationDetails, 
           onClick={handleNext}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
         >
-          Next: Review Your Opportunity →
+          Next: Select Use Cases →
         </button>
       </div>
     </div>
