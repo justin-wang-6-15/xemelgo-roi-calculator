@@ -64,16 +64,16 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
 
         <div className="mb-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            What are you trying to solve? <span className="text-gray-400 font-normal">(optional)</span>
+            Project Title / Description <span className="text-gray-400 font-normal">(optional)</span>
           </label>
           <textarea
             value={ops.projectDescription || ''}
             onChange={(e) => setOps((prev) => ({ ...prev, projectDescription: e.target.value }))}
-            placeholder="e.g. We lose hours every week searching for WIP across three production lines and want real-time visibility into where everything is."
+            placeholder="e.g. Reduce inventory search time and improve cycle count accuracy across our DC."
             rows={3}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
-          <p className="mt-1 text-xs text-gray-400">Helps us recommend the right use cases on the next step.</p>
+          <p className="mt-1 text-xs text-gray-400">This helps us recommend the right use cases and appears on your exported report.</p>
         </div>
       </div>
 

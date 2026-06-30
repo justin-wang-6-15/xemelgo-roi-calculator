@@ -44,30 +44,25 @@ const defaultOperationDetails = {
 // All use cases disabled by default — user selects on Step 2
 function makeAllDisabledUseCases() {
   return {
-    cycleCount:              { enabled: false, hoursPerCount: 4, countsPerWeek: 3, people: 2, burdenedRate: 35, reductionPct: 0.95 },
-    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 28, reductionPct: 0.85 },
-    locateItems:             { enabled: false, searchMinutes: 15, incidentsPerDay: 20, role: 'materialHandler', reductionPct: 0.70 },
-    picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 0.02, costPerError: 50, reductionPct: 0.70 },
-    shipReceiveVerification: { enabled: false, transactionsPerDay: 15, minutesPerTransaction: 12, dockHeadcount: 10, reductionPct: 0.60 },
-    internalDelivery:        { enabled: false, transfersPerDay: 30, minutesPerTransfer: 8, headcount: 10, reductionPct: 0.50 },
-    expiredProducts:         { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.75 },
-    calibrationReminders:    { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.80 },
-    geofencing:              { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.70 },
+    cycleCount:              { enabled: false, hoursPerSession: 2, sessionsPerWeek: 3, peoplePerSession: 2, burdenedRate: 35, reductionPct: 0.95 },
+    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 28, reductionPct: 0.85, downtimeCostPerDay: '' },
+    locateItems:             { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.85 },
+    picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 2, costPerError: 50, reductionPct: 0.85 },
+    shipReceiveVerification: { enabled: false, minutesSavedPerTransaction: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.85 },
+    internalDelivery:        { enabled: false, minutesPerTransfer: 8, transfersPerDay: 30, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.85 },
+    expiredProducts:         { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.85 },
+    calibrationReminders:    { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.85 },
+    geofencing:              { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.85 },
     fasterFulfillment:       { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
-    misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.75 },
-    dockTurnSpeed:           { enabled: false, transactionsPerDay: 20, delayCostPerTransaction: 25, savingsMinutesPerTransaction: 10 },
+    misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.85 },
+    dockTurnSpeed:           { enabled: false, minutesSaved: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.85 },
   };
 }
 
-function calcEstimatedCapex(ops) {
-  const zones = Math.max(3, Math.min(12, Math.ceil(ops.unitsPerMonth / 2000)));
-  return Math.round(zones * 8000 * 1.25);
-}
-
 const defaultFin = {
-  capex: calcEstimatedCapex(defaultOps),
-  contingencyRate: 0.10,
-  monthlyPlatformFee: 3000,
+  capex: '',
+  contingencyRate: 0.025,
+  monthlyPlatformFee: '',
   wacc: 0.10,
 };
 
@@ -121,11 +116,11 @@ export default function App() {
   const [operationDetails, setOperationDetails] = useState(defaultOperationDetails);
   const [useCases, setUseCases] = useState(() => makeAllDisabledUseCases());
   const [fin, setFin] = useState(defaultFin);
+  const [customCategories, setCustomCategories] = useState([]);
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
   const [visitedSteps, setVisitedSteps] = useState(new Set([1]));
   const dirRef = useRef('forward');
-  const hasVisitedStep4 = useRef(false);
 
   function markVisited(stepNum) {
     setVisitedSteps((prev) => {
@@ -151,6 +146,7 @@ export default function App() {
   function handleStep1Next() {
     setUseCases(makeAllDisabledUseCases());
     setOperationDetails(defaultOperationDetails);
+    setCustomCategories([]);
     markVisited(2);
     setAnalyzing(true);
     setTimeout(() => {
@@ -163,15 +159,6 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: 'instant' });
       }, 220);
     }, 1500);
-  }
-
-  // Step 3 (Validate Inputs) → Step 4 (Financial Inputs): set CapEx estimate once
-  function handleGoToStep4() {
-    if (!hasVisitedStep4.current) {
-      hasVisitedStep4.current = true;
-      setFin((prev) => ({ ...prev, capex: calcEstimatedCapex(ops) }));
-    }
-    goTo(4);
   }
 
   function handleEmailSubmit(info) {
@@ -188,10 +175,10 @@ export default function App() {
     setOperationDetails(defaultOperationDetails);
     setUseCases(makeAllDisabledUseCases());
     setFin(defaultFin);
+    setCustomCategories([]);
     setContactInfo(null);
     setDone(false);
     setVisitedSteps(new Set([1]));
-    hasVisitedStep4.current = false;
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -241,7 +228,7 @@ export default function App() {
             {analyzing ? (
               <AnalyzingScreen />
             ) : done ? (
-              <ThankYou ops={ops} useCases={useCases} fin={fin} contactInfo={contactInfo} />
+              <ThankYou ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} contactInfo={contactInfo} />
             ) : step === 1 ? (
               <Step1_OperationProfile ops={ops} setOps={setOps} onNext={handleStep1Next} />
             ) : step === 2 ? (
@@ -249,6 +236,8 @@ export default function App() {
                 ops={ops}
                 useCases={useCases}
                 setUseCases={setUseCases}
+                customCategories={customCategories}
+                setCustomCategories={setCustomCategories}
                 onNext={() => goTo(3)}
                 onBack={() => goTo(1, 'back')}
               />
@@ -260,7 +249,9 @@ export default function App() {
                 setUseCases={setUseCases}
                 operationDetails={operationDetails}
                 setOperationDetails={setOperationDetails}
-                onNext={handleGoToStep4}
+                customCategories={customCategories}
+                setCustomCategories={setCustomCategories}
+                onNext={() => goTo(4)}
                 onBack={() => goTo(2, 'back')}
               />
             ) : step === 4 ? (
@@ -269,6 +260,7 @@ export default function App() {
                 useCases={useCases}
                 fin={fin}
                 setFin={setFin}
+                customCategories={customCategories}
                 onNext={() => goTo(5)}
                 onBack={() => goTo(3, 'back')}
               />
@@ -284,7 +276,7 @@ export default function App() {
           </div>
 
           {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
-          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} />}
+          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} />}
         </div>
       </main>
     </div>

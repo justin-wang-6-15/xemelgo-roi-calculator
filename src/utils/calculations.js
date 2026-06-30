@@ -1,43 +1,54 @@
 // src/utils/calculations.js
 
-const ROLE_RATE_KEY = {
-  materialHandler: 'materialHandlerRate',
-  planner: 'plannerRate',
-  indirect: 'indirectRate',
-  direct: 'directRate',
-};
-
 export function calcUseCaseValue(key, uc, ops) {
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
   switch (key) {
     case 'cycleCount':
-      return uc.hoursPerCount * uc.countsPerWeek * 50 * uc.people * uc.burdenedRate * uc.reductionPct;
-    case 'audit':
-      return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.burdenedRate * uc.reductionPct;
-    case 'locateItems': {
-      const rate = ops[ROLE_RATE_KEY[uc.role] || 'materialHandlerRate'];
-      return (uc.searchMinutes / 60) * uc.incidentsPerDay * daysPerYear * rate * uc.reductionPct;
+      return uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
+
+    case 'audit': {
+      const labor = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.burdenedRate * uc.reductionPct;
+      const downtime = (uc.downtimeCostPerDay !== '' && Number(uc.downtimeCostPerDay) > 0)
+        ? Number(uc.downtimeCostPerDay) * uc.daysPerAudit * uc.auditsPerYear
+        : 0;
+      return labor + downtime;
     }
+
+    case 'locateItems': {
+      return (uc.roleRows || []).reduce((sum, row) => {
+        return sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct;
+      }, 0);
+    }
+
     case 'picklistVerification':
-      return uc.picksPerDay * uc.errorRate * uc.costPerError * daysPerYear * uc.reductionPct;
+      return uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct;
+
     case 'shipReceiveVerification':
-      return (uc.minutesPerTransaction / 60) * uc.transactionsPerDay * uc.dockHeadcount * daysPerYear * ops.materialHandlerRate * uc.reductionPct;
+      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
     case 'internalDelivery':
-      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.headcount * daysPerYear * ops.materialHandlerRate * uc.reductionPct;
+      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
     case 'expiredProducts':
       return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
+
     case 'calibrationReminders':
       return uc.failuresPerYear * uc.costPerFailure * uc.reductionPct;
+
     case 'geofencing':
       return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
+
     case 'fasterFulfillment':
       return uc.currentCycleTime > 0
         ? ((uc.currentCycleTime - uc.targetCycleTime) / uc.currentCycleTime) * uc.ordersPerMonth * 12 * uc.revenuePerOrder * 0.10
         : 0;
+
     case 'misShipReduction':
       return uc.misShipsPerMonth * 12 * uc.costPerMisShip * uc.reductionPct;
+
     case 'dockTurnSpeed':
-      return uc.transactionsPerDay * uc.delayCostPerTransaction * daysPerYear * (uc.savingsMinutesPerTransaction / 60);
+      return (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
     default:
       return 0;
   }
@@ -76,7 +87,11 @@ export const BUCKET_CONFIG = [
   },
 ];
 
-export function calcUseCaseTotals(useCases, ops) {
+export function calcCustomCategoryTotal(customCategories) {
+  return (customCategories || []).reduce((sum, c) => sum + (Number(c.annualSavings) || 0), 0);
+}
+
+export function calcUseCaseTotals(useCases, ops, customCategories) {
   const buckets = BUCKET_CONFIG.map((bucket) => {
     const lineItems = bucket.keys
       .filter((key) => useCases[key]?.enabled)
@@ -88,12 +103,25 @@ export function calcUseCaseTotals(useCases, ops) {
     const subtotal = lineItems.reduce((sum, li) => sum + li.annualValue, 0);
     return { name: bucket.name, subtotal, lineItems };
   });
+
+  if (customCategories && customCategories.length > 0) {
+    buckets.push({
+      name: 'Custom',
+      subtotal: calcCustomCategoryTotal(customCategories),
+      lineItems: customCategories.map((c) => ({
+        key: `custom_${c.id}`,
+        name: c.name || 'Custom Category',
+        annualValue: Number(c.annualSavings) || 0,
+      })),
+    });
+  }
+
   const totalGrossAnnual = buckets.reduce((sum, b) => sum + b.subtotal, 0);
   return { totalGrossAnnual, buckets };
 }
 
-export function calcFinancials(ops, useCases, fin) {
-  const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops);
+export function calcFinancials(ops, useCases, fin, customCategories) {
+  const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops, customCategories);
   const totalCapex = fin.capex * (1 + fin.contingencyRate);
   const annualSaasFee = fin.monthlyPlatformFee * 12;
   const netAnnualValue = totalGrossAnnual - annualSaasFee;

@@ -5,15 +5,15 @@ import MetricCard from './MetricCard';
 import { generatePDF } from '../utils/generatePDF';
 import { generateExcel } from '../utils/generateExcel';
 
-export default function ThankYou({ ops, useCases, fin, contactInfo }) {
-  const result = calcFinancials(ops, useCases, fin);
+export default function ThankYou({ ops, useCases, fin, customCategories, contactInfo }) {
+  const result = calcFinancials(ops, useCases, fin, customCategories);
   const [pdfState, setPdfState] = useState('idle');
   const [xlsxState, setXlsxState] = useState('idle');
 
   async function handlePDF() {
     setPdfState('loading');
     try {
-      await generatePDF(ops, useCases, fin, result, contactInfo);
+      await generatePDF(ops, useCases, fin, result, contactInfo, customCategories);
       setPdfState('idle');
     } catch (e) {
       console.error(e);
@@ -24,7 +24,7 @@ export default function ThankYou({ ops, useCases, fin, contactInfo }) {
   async function handleExcel() {
     setXlsxState('loading');
     try {
-      await generateExcel(ops, useCases, fin, result, contactInfo);
+      await generateExcel(ops, useCases, fin, result, contactInfo, customCategories);
       setXlsxState('idle');
     } catch (e) {
       console.error(e);

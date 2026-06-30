@@ -108,7 +108,7 @@ function ExploreCard({ ucKey, enabled, onToggle }) {
   );
 }
 
-export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onBack }) {
+export default function Step2_UseCases({ ops, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
   const [exploreOpen, setExploreOpen] = useState(false);
 
   const industry = ops.industry || '';
@@ -217,6 +217,43 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, onNext, onB
             )}
           </>
         )}
+      </div>
+
+      {customCategories.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Custom Categories</h3>
+          <div className="space-y-2">
+            {customCategories.map((cat) => (
+              <div key={cat.id} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 bg-white">
+                <input
+                  type="text"
+                  value={cat.name}
+                  placeholder="Custom category name"
+                  onChange={(e) => setCustomCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, name: e.target.value } : c))}
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCustomCategories((prev) => prev.filter((c) => c.id !== cat.id))}
+                  className="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
+                  aria-label="Remove custom category"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={() => setCustomCategories((prev) => [...prev, { id: Date.now(), name: '', description: '', annualSavings: '' }])}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-300 hover:bg-blue-50 rounded-lg px-4 py-2 transition-colors"
+        >
+          <span className="text-base leading-none">+</span> Add Custom Savings Category
+        </button>
       </div>
 
       <div className={`rounded-xl px-5 py-3 mb-6 border ${selectedCount > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>

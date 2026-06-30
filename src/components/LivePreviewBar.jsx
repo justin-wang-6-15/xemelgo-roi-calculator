@@ -1,8 +1,8 @@
 import { calcUseCaseTotals } from '../utils/calculations';
 import { fmt$ } from '../utils/format';
 
-export default function LivePreviewBar({ ops, useCases }) {
-  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops);
+export default function LivePreviewBar({ ops, useCases, customCategories }) {
+  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops, customCategories || []);
 
   const metrics = [
     { label: 'Annual Opportunity', value: fmt$(totalGrossAnnual) },

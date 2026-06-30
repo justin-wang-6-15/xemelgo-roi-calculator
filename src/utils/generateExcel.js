@@ -79,26 +79,30 @@ function getLaborHours(key, uc, ops) {
   const dpw = ops.workDaysPerWeek;
   switch (key) {
     case 'cycleCount': {
-      const ah = uc.hoursPerCount * uc.countsPerWeek * 50 * uc.people * uc.reductionPct;
-      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.people, weeklyHrs: uc.hoursPerCount * uc.countsPerWeek * uc.people * uc.reductionPct, annualHrs: ah, rate: uc.burdenedRate };
+      const ah = uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.reductionPct;
+      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.peoplePerSession, weeklyHrs: uc.hoursPerSession * uc.sessionsPerWeek * uc.peoplePerSession * uc.reductionPct, annualHrs: ah, rate: uc.burdenedRate };
     }
     case 'audit': {
       const ah = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
       return { timeSavedPerDay: ah / dpy, peopleAffected: uc.people, weeklyHrs: ah / ops.workWeeksPerYear, annualHrs: ah, rate: uc.burdenedRate };
     }
     case 'locateItems': {
-      const tpd = (uc.searchMinutes / 60) * uc.incidentsPerDay * uc.reductionPct;
-      return { timeSavedPerDay: tpd, peopleAffected: 1, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: ops.materialHandlerRate };
+      const rows = uc.roleRows || [];
+      const annualHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpy * uc.reductionPct, 0);
+      const weeklyHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpw * uc.reductionPct, 0);
+      const peopleAffected = rows.reduce((s, row) => s + (Number(row.headcount) || 0), 0);
+      const avgRate = rows.length ? rows.reduce((s, row) => s + (Number(row.burdenedRate) || 0), 0) / rows.length : 0;
+      return { timeSavedPerDay: annualHrs / dpy, peopleAffected, weeklyHrs, annualHrs, rate: avgRate };
     }
     case 'picklistVerification':
       return { timeSavedPerDay: 0, peopleAffected: 0, weeklyHrs: 0, annualHrs: 0, rate: 0 };
     case 'shipReceiveVerification': {
-      const tpd = (uc.minutesPerTransaction / 60) * uc.transactionsPerDay * uc.dockHeadcount * uc.reductionPct;
-      return { timeSavedPerDay: tpd, peopleAffected: uc.dockHeadcount, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: ops.materialHandlerRate };
+      const tpd = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * uc.reductionPct;
+      return { timeSavedPerDay: tpd, peopleAffected: uc.dockStaff, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: uc.burdenedRate };
     }
     case 'internalDelivery': {
-      const tpd = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.headcount * uc.reductionPct;
-      return { timeSavedPerDay: tpd, peopleAffected: uc.headcount, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: ops.materialHandlerRate };
+      const tpd = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * uc.reductionPct;
+      return { timeSavedPerDay: tpd, peopleAffected: uc.peoplePerTransfer, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: uc.burdenedRate };
     }
     default: return null;
   }
@@ -352,7 +356,7 @@ function buildSavingsAnalysis(ws, ops, useCases, result, dateISO) {
     if (!h) return;
     const wkVal   = h.weeklyHrs * h.rate;
     const liResult = result.buckets.find(b => b.name === 'Labor Efficiency')?.lineItems.find(l => l.key === key);
-    const annValFinal = key === 'picklistVerification' ? (liResult?.annualValue ?? 0) : h.annualHrs * h.rate;
+    const annValFinal = (key === 'picklistVerification' || key === 'locateItems') ? (liResult?.annualValue ?? 0) : h.annualHrs * h.rate;
 
     ws.getRow(r).height = 18;
     const bg = key === 'picklistVerification' ? LGRAY : WHITE;
@@ -502,9 +506,9 @@ function buildFinancialAnalysis(ws, ops, useCases, fin, result, dateISO) {
 
   const capexLabel = enabledUcNames ? `${enabledUcNames.split(',')[0].trim()} CapEx` : 'Hardware & Installation CapEx';
   const costInputs = [
-    [capexLabel,                                                   fin.capex,              '$#,##0'],
+    [capexLabel,                                                   Number(fin.capex) || 0,             '$#,##0'],
     ['CapEx Contingency',                                          fin.contingencyRate,     '0.0%' ],
-    ['Xemelgo Monthly Fee',                                        fin.monthlyPlatformFee,  '$#,##0'],
+    ['Xemelgo Monthly Fee',                                        Number(fin.monthlyPlatformFee) || 0, '$#,##0'],
     ['Estimated Annual Opportunity (from Savings Analysis)',        result.totalGrossAnnual, '$#,##0'],
   ];
   costInputs.forEach(([lbl, val, fmt], i) => {
@@ -669,7 +673,7 @@ function buildFinancialAnalysis(ws, ops, useCases, fin, result, dateISO) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main export
 // ─────────────────────────────────────────────────────────────────────────────
-export async function generateExcel(ops, useCases, fin, result, contactInfo) {
+export async function generateExcel(ops, useCases, fin, result, contactInfo, customCategories) {
   const company = ops.companyName?.trim() || 'Your Facility';
   const dateISO = new Date().toISOString().slice(0, 10);
 

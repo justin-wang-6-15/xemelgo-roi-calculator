@@ -47,23 +47,24 @@ const UC_NAMES = {
 
 // Plain-English field labels
 const UC_DEFS = {
-  cycleCount:              [['Hours per count','hoursPerCount','n'],['Counts per week','countsPerWeek','n'],['People per count','people','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
-  audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Labor reduction','reductionPct','p']],
-  locateItems:             [['Search time (min)','searchMinutes','n'],['Incidents per day','incidentsPerDay','n'],['Efficiency improvement','reductionPct','p']],
-  picklistVerification:    [['Picks per day','picksPerDay','n'],['Error rate','errorRate','p'],['Cost per error','costPerError','$'],['Error reduction','reductionPct','p']],
-  shipReceiveVerification: [['Minutes per transaction','minutesPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Dock headcount','dockHeadcount','n'],['Time reduction','reductionPct','p']],
-  internalDelivery:        [['Minutes per transfer','minutesPerTransfer','n'],['Transfers per day','transfersPerDay','n'],['Headcount','headcount','n'],['Time reduction','reductionPct','p']],
+  cycleCount:              [['Hours per session','hoursPerSession','n'],['Sessions per week','sessionsPerWeek','n'],['People per session','peoplePerSession','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  locateItems:             [['Role rows','roleRows','custom']],
+  picklistVerification:    [['Picks/day','picksPerDay','n'],['Error rate','errorRate','pct'],['Cost/error','costPerError','$'],['Reduction','reductionPct','p']],
+  shipReceiveVerification: [['Min saved/transaction','minutesSavedPerTransaction','n'],['Transactions/day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  internalDelivery:        [['Min/transfer','minutesPerTransfer','n'],['Transfers/day','transfersPerDay','n'],['People/transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
   expiredProducts:         [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
   calibrationReminders:    [['Failures per year','failuresPerYear','n'],['Cost per failure','costPerFailure','$'],['Failure reduction','reductionPct','p']],
   geofencing:              [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
   fasterFulfillment:       [['Current cycle time (hrs)','currentCycleTime','n'],['Target cycle time (hrs)','targetCycleTime','n'],['Orders per month','ordersPerMonth','n'],['Revenue per order','revenuePerOrder','$']],
-  misShipReduction:        [['Mis-ships per month','misShipsPerMonth','n'],['Cost per mis-ship','costPerMisShip','$'],['Reduction rate','reductionPct','p']],
-  dockTurnSpeed:           [['Transactions per day','transactionsPerDay','n'],['Delay cost per transaction','delayCostPerTransaction','$'],['Minutes saved per transaction','savingsMinutesPerTransaction','n']],
+  misShipReduction:        [['Mis-ships/month','misShipsPerMonth','n'],['Cost/mis-ship','costPerMisShip','$'],['Reduction','reductionPct','p']],
+  dockTurnSpeed:           [['Min saved/transaction','minutesSaved','n'],['Transactions/day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
 };
 
 function fmtVal(v, type) {
   if (type === '$') return fmt$(v);
   if (type === 'p') return fmtPct(v);
+  if (type === 'pct') return String(v) + '%';
   return String(Number.isInteger(v) ? v : parseFloat(v.toFixed(2)));
 }
 
@@ -101,7 +102,7 @@ async function loadImg(path) {
   } catch { return null; }
 }
 
-export async function generatePDF(ops, useCases, fin, result, contactInfo) {
+export async function generatePDF(ops, useCases, fin, result, contactInfo, customCategories) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
 
   const company     = ops.companyName?.trim() || 'Your Facility';
@@ -326,7 +327,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo) {
   sf(...BGBLUE); box(0, 712, W, 42);
   sd(...BLUE); lw(0.5); doc.line(0, 712, W, 712);
   const invItems = [
-    { label: 'CapEx',               value: fmt$(fin.capex)           },
+    { label: 'CapEx',               value: fmt$(Number(fin.capex) || 0) },
     { label: 'Annual Platform Fee',  value: fmt$(result.annualSaasFee)},
     { label: 'WACC',                 value: fmtPct(fin.wacc)          },
   ];
@@ -457,6 +458,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo) {
       let iy = y + 26;
       defs.forEach(([label, field, type]) => {
         if (uc[field] === undefined) return;
+        if (type === 'custom') return;
         fn('normal', 7); sc(...GRAY99);
         doc.text(`${label}:`, cx + 10, iy);
         fn('bold', 7.5); sc(...NAVY);
@@ -480,10 +482,10 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo) {
   y += 20;
 
   const invRows = [
-    ['CapEx (hardware & installation)',  fmt$(fin.capex)],
+    ['CapEx (hardware & installation)',  fmt$(Number(fin.capex) || 0)],
     ['Contingency rate',                 fmtPct(fin.contingencyRate)],
     ['Total CapEx with contingency',     fmt$(result.totalCapex)],
-    ['Monthly platform fee',             fmt$(fin.monthlyPlatformFee)],
+    ['Monthly platform fee',             fmt$(Number(fin.monthlyPlatformFee) || 0)],
     ['Annual platform fee',              fmt$(result.annualSaasFee)],
     ['WACC',                             fmtPct(fin.wacc)],
   ];

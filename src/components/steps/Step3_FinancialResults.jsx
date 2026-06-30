@@ -4,79 +4,96 @@ import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import MetricCard from '../MetricCard';
 import Tooltip from '../Tooltip';
 
-function SavingsBarChart({ result }) {
-  const { cashFlows, totalCapex, annualSaasFee, netAnnualValue } = result;
+function CumulativeChart({ fin, totalGrossAnnual }) {
+  const W = 600, H = 300;
+  const PADDING = { top: 30, right: 30, bottom: 40, left: 70 };
 
-  const monthlySaasFee = annualSaasFee / 12;
-  let year1Gross = 0;
-  for (let m = 1; m <= 12; m++) year1Gross += cashFlows[m] + monthlySaasFee;
+  const capex = Number(fin.capex) || 0;
+  const monthlyFee = Number(fin.monthlyPlatformFee) || 0;
+  const totalCapex = capex * (1 + fin.contingencyRate);
+  const monthlyBase = totalGrossAnnual / 12;
+  const ramp = [0, 0.25, 0.50, 0.75, 1.0];
 
-  const yearlyGross = [year1Gross, netAnnualValue, netAnnualValue, netAnnualValue, netAnnualValue];
-  const cumulativeSavings = yearlyGross.reduce((acc, v, i) => {
-    acc.push((acc[i - 1] || 0) + v);
-    return acc;
-  }, []);
-  const cumulativeCost = [1, 2, 3, 4, 5].map((y) => totalCapex + annualSaasFee * y);
+  const cumSavings = [0];
+  const netPosition = [-totalCapex];
 
-  const maxVal = Math.max(...cumulativeSavings, ...cumulativeCost);
-  const chartH = 140;
-  const chartW = 480;
-  const barW = 30;
-  const groupGap = 16;
-  const groupW = barW * 2 + groupGap;
-  const totalGroupsW = groupW * 5 + 20 * 4;
-  const offsetX = (chartW - totalGroupsW) / 2;
+  for (let m = 1; m <= 60; m++) {
+    const mSavings = monthlyBase * (m <= 4 ? ramp[m] : 1.0);
+    cumSavings.push(cumSavings[m - 1] + mSavings);
+    netPosition.push(netPosition[m - 1] + mSavings - monthlyFee);
+  }
+
+  let breakEvenMonth = null;
+  for (let m = 1; m <= 60; m++) {
+    if (netPosition[m - 1] < 0 && netPosition[m] >= 0) {
+      breakEvenMonth = m;
+      break;
+    }
+  }
+
+  const yMin = Math.min(...netPosition, 0);
+  const yMax = Math.max(...cumSavings, 0);
+  const chartW = W - PADDING.left - PADDING.right;
+  const chartH = H - PADDING.top - PADDING.bottom;
+
+  const xScale = (m) => PADDING.left + (m / 60) * chartW;
+  const yScale = (v) => PADDING.top + chartH - ((v - yMin) / (yMax - yMin || 1)) * chartH;
+
+  const savingsPath = cumSavings.map((v, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
+  const netPath = netPosition.map((v, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
+
+  const yTicks = [0, 1, 2, 3, 4].map((i) => yMin + (i / 4) * (yMax - yMin));
+  const xLabels = [12, 24, 36, 48, 60];
+
+  const zero_y = yScale(0);
+
+  function fmtAxis(v) {
+    if (Math.abs(v) >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
+    if (Math.abs(v) >= 1000) return `$${(v / 1000).toFixed(0)}K`;
+    return `$${v.toFixed(0)}`;
+  }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-      {/* Fix 8: ramp-up callout ABOVE the chart, styled as info box */}
-      <div className="flex gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-5">
-        <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p className="text-xs text-blue-800 leading-relaxed">
-          <span className="font-semibold">Ramp-up assumption:</span> Year 1 savings reflect a 4-month adoption ramp (25% → 50% → 75% → 100% of full savings). Full run-rate savings begin in Month 4, consistent with typical Xemelgo deployments.
-        </p>
-      </div>
-
-      <h3 className="text-base font-semibold text-gray-800 mb-1">5-Year Cumulative Outlook</h3>
-      <p className="text-xs text-gray-500 mb-4">Cumulative savings vs. total investment over 5 years.</p>
-      <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartW} ${chartH + 40}`} className="w-full max-w-lg mx-auto">
-          {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
-            const y = chartH - tick * chartH;
-            return <line key={tick} x1={0} y1={y} x2={chartW} y2={y} stroke="#f3f4f6" strokeWidth="1" />;
-          })}
-          {[0, 1, 2, 3, 4].map((i) => {
-            const gx = offsetX + i * (groupW + 20);
-            const savH = Math.max(2, (cumulativeSavings[i] / maxVal) * chartH);
-            const costH = Math.max(2, (cumulativeCost[i] / maxVal) * chartH);
-            return (
-              <g key={i}>
-                <rect x={gx} y={chartH - savH} width={barW} height={savH} fill="#2563eb" rx="3" />
-                <rect x={gx + barW + groupGap} y={chartH - costH} width={barW} height={costH} fill="#d1d5db" rx="3" />
-                <text x={gx + groupW / 2} y={chartH + 16} textAnchor="middle" fontSize="11" fill="#6b7280">Yr {i + 1}</text>
-              </g>
-            );
-          })}
-          <line x1={0} y1={chartH} x2={chartW} y2={chartH} stroke="#e5e7eb" strokeWidth="1" />
-        </svg>
-      </div>
-      <div className="flex items-center gap-6 justify-center mt-2">
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-blue-600" /><span className="text-xs text-gray-500">Cumulative Savings</span></div>
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-gray-300" /><span className="text-xs text-gray-500">Cumulative Cost</span></div>
-      </div>
-    </div>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 300 }}>
+      {xLabels.map((m) => (
+        <line key={m} x1={xScale(m)} y1={PADDING.top} x2={xScale(m)} y2={H - PADDING.bottom} stroke="#EDF5FF" strokeWidth="1" />
+      ))}
+      <line x1={PADDING.left} y1={zero_y} x2={W - PADDING.right} y2={zero_y} stroke="#999999" strokeWidth="1" />
+      <path d={netPath} fill="none" stroke="#999999" strokeWidth="2" strokeDasharray="6,4" />
+      <path d={savingsPath} fill="none" stroke="#004FDB" strokeWidth="2" />
+      {breakEvenMonth != null && (
+        <>
+          <line x1={xScale(breakEvenMonth)} y1={PADDING.top} x2={xScale(breakEvenMonth)} y2={H - PADDING.bottom} stroke="#0D8CFF" strokeWidth="1.5" strokeDasharray="4,3" />
+          <text x={xScale(breakEvenMonth) + 4} y={PADDING.top + 14} fill="#0D8CFF" fontSize="10" fontWeight="600">
+            Breakeven — Wk {Math.round(breakEvenMonth * (52 / 12))}
+          </text>
+        </>
+      )}
+      {yTicks.map((v, i) => (
+        <g key={i}>
+          <line x1={PADDING.left - 4} y1={yScale(v)} x2={PADDING.left} y2={yScale(v)} stroke="#999" strokeWidth="1" />
+          <text x={PADDING.left - 6} y={yScale(v) + 4} textAnchor="end" fill="#999" fontSize="10">{fmtAxis(v)}</text>
+        </g>
+      ))}
+      {xLabels.map((m, i) => (
+        <text key={m} x={xScale(m)} y={H - PADDING.bottom + 16} textAnchor="middle" fill="#999" fontSize="10">Yr {i + 1}</text>
+      ))}
+      <g transform={`translate(${PADDING.left + 10}, ${PADDING.top + 10})`}>
+        <line x1="0" y1="6" x2="20" y2="6" stroke="#004FDB" strokeWidth="2" />
+        <text x="24" y="10" fill="#555" fontSize="10">Cumulative Savings</text>
+        <line x1="130" y1="6" x2="150" y2="6" stroke="#999" strokeWidth="2" strokeDasharray="5,3" />
+        <text x="154" y="10" fill="#555" fontSize="10">Net Position</text>
+      </g>
+    </svg>
   );
 }
 
-export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onNext, onBack }) {
+export default function Step3_FinancialResults({ ops, useCases, fin, setFin, customCategories, onNext, onBack }) {
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
-  const result = calcFinancials(ops, useCases, fin);
+  const result = calcFinancials(ops, useCases, fin, customCategories);
 
-  // Fix 7: CapEx zone breakdown (always visible)
-  const estimatedZones = Math.max(3, Math.min(12, Math.ceil(ops.unitsPerMonth / 2000)));
-  const estimatedCapex = estimatedZones * 8000 * 1.25;
+  const inputsReady = fin.capex !== '' && fin.monthlyPlatformFee !== '';
+  const dash = (formatted) => inputsReady ? formatted : '—';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -88,28 +105,29 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
           <h3 className="text-base font-semibold text-gray-800 mb-4">Investment Inputs</h3>
           <div className="space-y-4">
             <div>
-              {/* Fix 7: remove tooltip from label, show inline callout instead */}
-              <label className="block text-sm font-medium text-gray-700 mb-1">CapEx (hardware, installation)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                CapEx (hardware, installation)
+                <Tooltip content="Includes RFID hardware (readers, antennas, tags) and installation labor. Get the exact quote from your Xemelgo rep before entering this number.">
+                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
+                </Tooltip>
+              </label>
               <div className="flex items-center">
                 <span className="text-gray-500 mr-1">$</span>
                 <input
                   type="number"
                   min={0}
                   value={fin.capex}
-                  onChange={(e) => set('capex')(Number(e.target.value))}
+                  placeholder="Enter your quoted hardware and installation cost"
+                  onChange={(e) => set('capex')(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              {/* Fix 7: always-visible zone breakdown callout */}
-              <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600">
-                Estimate basis: <span className="font-medium">{estimatedZones} RFID reader zones</span> × $8,000 + 25% installation = <span className="font-medium">{fmt$(estimatedCapex)}</span>
-                <p className="mt-1 text-gray-400">Zones are estimated based on your monthly throughput. Your Xemelgo rep will confirm the exact count during scoping.</p>
-              </div>
+              <p className="mt-1 text-xs text-gray-500">Use the exact figure quoted by your Xemelgo rep. This is the number your finance team will need.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
                 Contingency Rate (%)
-                <Tooltip content="A buffer added to CapEx to cover unforeseen installation costs. Typically 10–15%.">
+                <Tooltip content="A buffer added to CapEx to cover unforeseen installation costs. Typical range is 0–5%.">
                   <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
                 </Tooltip>
               </label>
@@ -121,12 +139,12 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
                 onChange={(e) => set('contingencyRate')(Number(e.target.value) / 100)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="mt-1 text-xs text-gray-500">Buffer for unexpected installation costs. Applied to CapEx.</p>
+              <p className="mt-1 text-xs text-gray-500">Buffer for unexpected installation costs. Typical range is 0–5%. Applied to CapEx.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Total CapEx with Contingency</label>
               <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
-                {fmt$(result.totalCapex)}
+                {dash(fmt$(result.totalCapex))}
               </div>
             </div>
             <div>
@@ -137,11 +155,12 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
                   type="number"
                   min={0}
                   value={fin.monthlyPlatformFee}
-                  onChange={(e) => set('monthlyPlatformFee')(Number(e.target.value))}
+                  placeholder="Enter your monthly platform fee"
+                  onChange={(e) => set('monthlyPlatformFee')(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">Typical starting price for an operation your size. Actual pricing is confirmed with your Xemelgo rep based on deployment scope, number of readers, and modules selected.</p>
+              <p className="mt-1 text-xs text-gray-500">Use the exact fee confirmed with your Xemelgo rep. Actual pricing varies by deployment scope and modules selected.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -195,47 +214,70 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, onN
               </tr>
               <tr>
                 <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
-                <td className="text-right text-red-600">({fmt$(result.annualSaasFee)})</td>
+                <td className="text-right text-red-600">{inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}</td>
               </tr>
               <tr className="border-t-2 border-gray-400 font-bold">
                 <td className="py-2 pr-2 text-gray-900">Net Annual Value</td>
-                <td className="text-right text-blue-700 text-base">{fmt$(result.netAnnualValue)}</td>
+                <td className="text-right text-blue-700 text-base">{dash(fmt$(result.netAnnualValue))}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Main 5 metric cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
-        <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" benchmark="Xemelgo avg: 200–400%" />
-        <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
+      {/* Main metric cards */}
+      {inputsReady ? (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
+            <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" benchmark="Xemelgo avg: 200–400%" />
+            <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
+            {result.irrAnnual > 3.0 ? (
+              <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-gray-300">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">IRR (Annual)</p>
+                <p className="text-lg font-semibold text-gray-400 mb-1">&gt;300%</p>
+                <p className="text-xs text-gray-400">IRR above 300% indicates the investment pays back so quickly that the traditional IRR metric loses practical meaning. Focus on payback period and NPV instead.</p>
+              </div>
+            ) : (
+              <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" />
+            )}
+            <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" benchmark="Xemelgo avg: 18–24 weeks" />
+            <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
+          </div>
 
-        {/* Fix 3: IRR cap at 300% */}
-        {result.irrAnnual > 3.0 ? (
-          <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-gray-300">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">IRR (Annual)</p>
-            <p className="text-lg font-semibold text-gray-400 mb-1">&gt;300%</p>
-            <p className="text-xs text-gray-400">IRR above 300% indicates the investment pays back so quickly that the traditional IRR metric loses practical meaning. Focus on payback period and NPV instead.</p>
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow-sm border-l-4 border-indigo-200 p-4 max-w-xs">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Annual SaaS ROI</p>
+              <p className="text-xl font-bold text-gray-600">{fmtPct(result.saasRoi)}</p>
+              <p className="text-xs text-gray-400 mt-1">Net Annual Value ÷ Annual Platform Fee — dollars recovered per dollar spent on software, before hardware costs.</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {['5-Year ROI', '5-Year NPV', 'IRR (Annual)', 'Payback Period', 'Net Annual Value', 'Annual SaaS ROI'].map((label) => (
+            <div key={label} className="bg-white rounded-xl shadow-md p-5 border-l-4 border-gray-200">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+              <p className="text-lg font-semibold text-gray-300 mb-1">—</p>
+              <p className="text-xs text-gray-400">Enter CapEx and platform fee above to calculate</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 5-Year Cumulative Outlook Chart */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h3 className="text-base font-semibold text-gray-800 mb-1">5-Year Cumulative Outlook</h3>
+        <p className="text-xs text-gray-500 mb-4">Cumulative savings and net position over 5 years.</p>
+        {!inputsReady ? (
+          <div className="bg-gray-100 rounded-xl flex items-center justify-center" style={{ height: 300 }}>
+            <p className="text-sm text-gray-400 text-center max-w-xs">
+              Enter your CapEx and monthly platform fee above to see your 5-year cumulative outlook.
+            </p>
           </div>
         ) : (
-          <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" />
+          <CumulativeChart fin={fin} totalGrossAnnual={result.totalGrossAnnual} />
         )}
-
-        <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" benchmark="Xemelgo avg: 18–24 weeks" />
-        <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
       </div>
-
-      {/* Demoted Annual SaaS ROI */}
-      <div className="mb-6">
-        <div className="bg-white rounded-lg shadow-sm border-l-4 border-indigo-200 p-4 max-w-xs">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Annual SaaS ROI</p>
-          <p className="text-xl font-bold text-gray-600">{fmtPct(result.saasRoi)}</p>
-          <p className="text-xs text-gray-400 mt-1">Net Annual Value ÷ Annual Platform Fee — dollars recovered per dollar spent on software, before hardware costs.</p>
-        </div>
-      </div>
-
-      <SavingsBarChart result={result} />
 
       <p className="text-sm text-gray-500 text-center mb-4">
         Next: get your full personalized report — includes a line-by-line breakdown by use case, all your inputs saved, and a 5-year cash flow table formatted for your finance team.
