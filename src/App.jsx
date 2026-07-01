@@ -120,6 +120,7 @@ export default function App() {
   const [contactInfo, setContactInfo] = useState(null);
   const [done, setDone] = useState(false);
   const [visitedSteps, setVisitedSteps] = useState(new Set([1]));
+  const [showResetModal, setShowResetModal] = useState(false);
   const dirRef = useRef('forward');
 
   function markVisited(stepNum) {
@@ -198,7 +199,7 @@ export default function App() {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <div
             className="flex items-center gap-3 cursor-pointer"
-            onClick={handleReset}
+            onClick={step === 1 ? handleReset : () => setShowResetModal(true)}
           >
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,8 +212,39 @@ export default function App() {
               <span className="text-sm text-gray-500">ROI Calculator</span>
             </div>
           </div>
+          {!done && step > 1 && (
+            <button
+              onClick={() => setShowResetModal(true)}
+              className="ml-auto text-sm text-gray-400 hover:text-red-600 border border-gray-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Start Over
+            </button>
+          )}
         </div>
       </header>
+
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Start over?</h3>
+            <p className="text-sm text-gray-500 mb-5">All inputs will be cleared. This can't be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowResetModal(false); handleReset(); }}
+                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Yes, start over
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {!done && !analyzing && (

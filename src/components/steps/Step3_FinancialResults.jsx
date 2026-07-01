@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { calcFinancials } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
-import MetricCard from '../MetricCard';
 import Tooltip from '../Tooltip';
 
 function CumulativeChart({ fin, totalGrossAnnual }) {
@@ -44,7 +43,6 @@ function CumulativeChart({ fin, totalGrossAnnual }) {
 
   const yTicks = [0, 1, 2, 3, 4].map((i) => yMin + (i / 4) * (yMax - yMin));
   const xLabels = [12, 24, 36, 48, 60];
-
   const zero_y = yScale(0);
 
   function fmtAxis(v) {
@@ -78,7 +76,8 @@ function CumulativeChart({ fin, totalGrossAnnual }) {
       {xLabels.map((m, i) => (
         <text key={m} x={xScale(m)} y={H - PADDING.bottom + 16} textAnchor="middle" fill="#999" fontSize="10">Yr {i + 1}</text>
       ))}
-      <g transform={`translate(${PADDING.left + 10}, ${PADDING.top + 10})`}>
+      {/* Legend — top-right to avoid overlapping breakeven label */}
+      <g transform={`translate(${W - PADDING.right - 193}, ${PADDING.top + 10})`}>
         <line x1="0" y1="6" x2="20" y2="6" stroke="#004FDB" strokeWidth="2" />
         <text x="24" y="10" fill="#555" fontSize="10">Cumulative Savings</text>
         <line x1="130" y1="6" x2="150" y2="6" stroke="#999" strokeWidth="2" strokeDasharray="5,3" />
@@ -88,18 +87,77 @@ function CumulativeChart({ fin, totalGrossAnnual }) {
   );
 }
 
+function SecondaryMetricCard({ label, value, caption, colorClass, badge }) {
+  return (
+    <div className={`bg-white rounded-xl shadow-sm p-4 border-l-4 ${colorClass}`}>
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-xl font-bold text-gray-900">{value}</p>
+      <p className="text-xs text-gray-400 mt-1">{caption}</p>
+      {badge && (
+        <p className="mt-1.5 text-xs text-teal-600 font-medium bg-teal-50 rounded px-1.5 py-0.5 inline-block">{badge}</p>
+      )}
+    </div>
+  );
+}
+
 export default function Step3_FinancialResults({ ops, useCases, fin, setFin, customCategories, onNext, onBack }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
 
   const inputsReady = fin.capex !== '' && fin.monthlyPlatformFee !== '';
-  const dash = (formatted) => inputsReady ? formatted : '—';
+
+  const roiValue = inputsReady ? result.fiveYrRoi - 1 : null;
+  const paybackValue = inputsReady ? result.paybackWeeks : null;
+  const roiBadge = roiValue != null && roiValue >= 2.0 ? 'Xemelgo avg: 200–400%' : null;
+  const paybackBadge = paybackValue != null && paybackValue <= 24 ? 'Xemelgo avg: 18–24 wks' : null;
+  const irrDisplay = !inputsReady ? '—' : result.irrAnnual > 3.0 ? '>300%' : fmtPct(result.irrAnnual);
+
+  const secondaryMetrics = [
+    { label: '5-Year ROI',      value: inputsReady ? fmtPct(roiValue) : '—',              caption: 'Total return over 5 years',           colorClass: 'border-blue-500',   badge: roiBadge },
+    { label: '5-Year NPV',      value: inputsReady ? fmt$(result.npv) : '—',              caption: 'Net present value at your WACC',      colorClass: 'border-green-500' },
+    { label: 'IRR (Annual)',    value: irrDisplay,                                          caption: 'Internal rate of return',             colorClass: 'border-purple-500' },
+    { label: 'Payback Period',  value: inputsReady ? fmtWks(result.paybackWeeks) : '—',   caption: 'Weeks to recover investment',         colorClass: 'border-orange-500', badge: paybackBadge },
+    { label: 'Annual SaaS ROI', value: inputsReady ? fmtPct(result.saasRoi) : '—',        caption: 'Return per dollar of platform fee',   colorClass: 'border-indigo-400' },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Your ROI at a glance</h2>
       <p className="text-sm text-gray-500 mb-6">Based on your inputs, here's what Xemelgo is worth to your facility.</p>
 
+      {/* Hero: Net Annual Value */}
+      <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl shadow-lg px-6 py-8 mb-5 text-white">
+        <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">Net Annual Value</p>
+        {inputsReady ? (
+          <>
+            <p className="text-5xl font-bold mb-3">{fmt$(result.netAnnualValue)}</p>
+            <p className="text-sm text-blue-100 leading-relaxed">
+              At these inputs,{' '}
+              <strong className="text-white">{ops.companyName || 'your facility'}</strong>{' '}
+              recovers its full investment in{' '}
+              <strong className="text-white">{fmtWks(result.paybackWeeks)}</strong>{' '}
+              and generates{' '}
+              <strong className="text-white">{fmt$(result.npv)}</strong>{' '}
+              in net value over 5 years.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-5xl font-bold mb-3 text-blue-300">—</p>
+            <p className="text-sm text-blue-200">Enter CapEx and platform fee below to unlock your results.</p>
+          </>
+        )}
+      </div>
+
+      {/* 5 secondary metric cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+        {secondaryMetrics.map((m) => (
+          <SecondaryMetricCard key={m.label} {...m} />
+        ))}
+      </div>
+
+      {/* Investment inputs + Savings summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl shadow-md p-6">
           <h3 className="text-base font-semibold text-gray-800 mb-4">Investment Inputs</h3>
@@ -125,29 +183,6 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
               <p className="mt-1 text-xs text-gray-500">Use the exact figure quoted by your Xemelgo rep. This is the number your finance team will need.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                Contingency Rate (%)
-                <Tooltip content="A buffer added to CapEx to cover unforeseen installation costs. Typical range is 0–5%.">
-                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
-                </Tooltip>
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={Math.round(fin.contingencyRate * 100)}
-                onChange={(e) => set('contingencyRate')(Number(e.target.value) / 100)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">Buffer for unexpected installation costs. Typical range is 0–5%. Applied to CapEx.</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total CapEx with Contingency</label>
-              <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
-                {dash(fmt$(result.totalCapex))}
-              </div>
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Xemelgo Monthly Platform Fee</label>
               <div className="flex items-center">
                 <span className="text-gray-500 mr-1">$</span>
@@ -162,22 +197,66 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
               </div>
               <p className="mt-1 text-xs text-gray-500">Use the exact fee confirmed with your Xemelgo rep. Actual pricing varies by deployment scope and modules selected.</p>
             </div>
+
+            {/* Advanced assumptions */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                WACC (%)
-                <Tooltip content="Weighted Average Cost of Capital — the minimum return your company requires on investments. Typically 8–12% for manufacturers.">
-                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
-                </Tooltip>
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={Math.round(fin.wacc * 100)}
-                onChange={(e) => set('wacc')(Number(e.target.value) / 100)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">Your weighted average cost of capital, used to discount future cash flows to present value.</p>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                Customize assumptions
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 space-y-4 pl-4 border-l-2 border-gray-100">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      Contingency Rate (%)
+                      <Tooltip content="A buffer added to CapEx to cover unforeseen installation costs. Typical range is 0–5%.">
+                        <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
+                      </Tooltip>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={Math.round(fin.contingencyRate * 100)}
+                      onChange={(e) => set('contingencyRate')(Number(e.target.value) / 100)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Buffer for unexpected installation costs. Typical range is 0–5%. Applied to CapEx.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Total CapEx with Contingency</label>
+                    <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
+                      {fin.capex !== '' ? fmt$(result.totalCapex) : '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      WACC (%)
+                      <Tooltip content="Weighted Average Cost of Capital — the minimum return your company requires on investments. Typically 8–12% for manufacturers.">
+                        <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
+                      </Tooltip>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={Math.round(fin.wacc * 100)}
+                      onChange={(e) => set('wacc')(Number(e.target.value) / 100)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Your weighted average cost of capital, used to discount future cash flows to present value.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -214,55 +293,20 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
               </tr>
               <tr>
                 <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
-                <td className={`text-right ${inputsReady ? 'text-red-600' : 'text-gray-400'}`}>{inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}</td>
+                <td className={`text-right ${inputsReady ? 'text-red-600' : 'text-gray-400'}`}>
+                  {inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}
+                </td>
               </tr>
               <tr className="border-t-2 border-gray-400 font-bold">
                 <td className="py-2 pr-2 text-gray-900">Net Annual Value</td>
-                <td className={`text-right text-base ${inputsReady ? 'text-blue-700' : 'text-gray-400'}`}>{dash(fmt$(result.netAnnualValue))}</td>
+                <td className={`text-right text-base ${inputsReady ? 'text-blue-700' : 'text-gray-400'}`}>
+                  {inputsReady ? fmt$(result.netAnnualValue) : '—'}
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Main metric cards */}
-      {inputsReady ? (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
-            <MetricCard label="5-Year ROI" rawValue={result.fiveYrRoi - 1} formatter={fmtPct} explanation="Total return relative to 5-year total cost" colorClass="border-blue-500" benchmark="Xemelgo avg: 200–400%" />
-            <MetricCard label="5-Year NPV" rawValue={result.npv} formatter={fmt$} explanation="Net present value of all cash flows at your WACC" colorClass="border-green-500" />
-            {result.irrAnnual > 3.0 ? (
-              <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-gray-300">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">IRR (Annual)</p>
-                <p className="text-lg font-semibold text-gray-400 mb-1">&gt;300%</p>
-                <p className="text-xs text-gray-400">IRR above 300% indicates the investment pays back so quickly that the traditional IRR metric loses practical meaning. Focus on payback period and NPV instead.</p>
-              </div>
-            ) : (
-              <MetricCard label="IRR (Annual)" rawValue={result.irrAnnual} formatter={fmtPct} explanation="Internal rate of return on the full investment" colorClass="border-purple-500" />
-            )}
-            <MetricCard label="Payback Period" rawValue={result.paybackWeeks} formatter={fmtWks} explanation="Weeks until cumulative cash flows turn positive" colorClass="border-orange-500" benchmark="Xemelgo avg: 18–24 weeks" />
-            <MetricCard label="Net Annual Value" rawValue={result.netAnnualValue} formatter={fmt$} explanation="Annual savings minus annual platform cost" colorClass="border-teal-500" />
-          </div>
-
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow-sm border-l-4 border-indigo-200 p-4 max-w-xs">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Annual SaaS ROI</p>
-              <p className="text-xl font-bold text-gray-600">{fmtPct(result.saasRoi)}</p>
-              <p className="text-xs text-gray-400 mt-1">Net Annual Value ÷ Annual Platform Fee — dollars recovered per dollar spent on software, before hardware costs.</p>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {['5-Year ROI', '5-Year NPV', 'IRR (Annual)', 'Payback Period', 'Net Annual Value', 'Annual SaaS ROI'].map((label) => (
-            <div key={label} className="bg-white rounded-xl shadow-md p-5 border-l-4 border-gray-200">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{label}</p>
-              <p className="text-lg font-semibold text-gray-300 mb-1">—</p>
-              <p className="text-xs text-gray-400">Enter CapEx and platform fee above to calculate</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* 5-Year Cumulative Outlook Chart */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">

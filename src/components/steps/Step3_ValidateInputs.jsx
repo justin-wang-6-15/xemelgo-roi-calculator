@@ -23,6 +23,21 @@ const SOURCE_NOTES = {
   dockTurnSpeed: 'RFID portal reads accelerate dock throughput. Customers report 75–95% improvement. Default set to 85%.',
 };
 
+const UC_DESCRIPTIONS = {
+  cycleCount:              'Time saved on routine cycle counts via RFID.',
+  audit:                   'Labor savings from faster full physical audits.',
+  locateItems:             'Time eliminated searching for misplaced inventory or assets.',
+  picklistVerification:    'Pick error costs reduced with verification at point of pick.',
+  shipReceiveVerification: 'Dock transaction time cut with portal-based RFID reads.',
+  internalDelivery:        'Internal transfer confirmation time reduced across zones.',
+  expiredProducts:         'Write-offs prevented with proactive expiration alerts.',
+  calibrationReminders:    'Compliance failures avoided via automated calibration tracking.',
+  geofencing:              'Asset loss prevented with real-time zone boundary alerts.',
+  fasterFulfillment:       'Revenue captured from shorter order cycle times.',
+  misShipReduction:        'Chargebacks and returns eliminated at the dock door.',
+  dockTurnSpeed:           'Carrier wait costs reduced with faster dock transactions.',
+};
+
 const ROLE_DEFAULTS = {
   materialHandler: { hoursLostPerDay: 1.5, headcount: 10, rateKey: 'materialHandlerRate', countKey: 'materialHandlerCount' },
   planner:         { hoursLostPerDay: 0.5, headcount: 3,  rateKey: 'plannerRate',         countKey: 'plannerCount' },
@@ -348,8 +363,9 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
   return null;
 }
 
-function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, onInteract }) {
+function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, onInteract, expanded, onToggle }) {
   const annualValue = calcUseCaseValue(ucKey, uc, ops);
+  const description = UC_DESCRIPTIONS[ucKey] || '';
 
   function onUpdate(field, value) {
     onInteract();
@@ -358,23 +374,42 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, o
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
+      {/* Header — always visible */}
+      <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center gap-2 flex-1 min-w-0 mr-3">
           {interacted && (
             <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           )}
-          <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
+            {!expanded && description && (
+              <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-green-700">Annual Value:</span>
+        <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-base font-bold text-green-700">{fmt$(annualValue)}</span>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap flex items-center gap-1 transition-colors"
+          >
+            {expanded ? (
+              <>Collapse <span aria-hidden="true">▲</span></>
+            ) : (
+              <>Adjust <span aria-hidden="true">▼</span></>
+            )}
+          </button>
         </div>
       </div>
-      <div className="px-5 py-4 space-y-4">
-        <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} />
-      </div>
+      {/* Expandable inputs */}
+      {expanded && (
+        <div className="px-5 pb-5 pt-1 space-y-4 border-t border-gray-100">
+          <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} />
+        </div>
+      )}
     </div>
   );
 }
@@ -385,12 +420,22 @@ const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed'];
 
 export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
   const [interacted, setInteracted] = useState(new Set());
+  const [expandedCards, setExpandedCards] = useState(new Set());
 
   function markInteracted(key) {
     setInteracted((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
       next.add(key);
+      return next;
+    });
+  }
+
+  function toggleExpanded(key) {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -422,7 +467,7 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
   ].filter(Boolean).length;
 
   return (
-    <div className="max-w-2xl mx-auto pb-20">
+    <div className="max-w-2xl mx-auto pb-20 lg:pb-0">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Validate your inputs</h2>
       <p className="text-sm text-gray-500 mb-6">
         These are pre-filled with Xemelgo customer benchmarks. Adjust anything that doesn't match your reality.
@@ -482,6 +527,8 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
           setUseCases={setUseCases}
           interacted={interacted.has(key)}
           onInteract={() => markInteracted(key)}
+          expanded={expandedCards.has(key)}
+          onToggle={() => toggleExpanded(key)}
         />
       ))}
 
@@ -516,7 +563,7 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
         </div>
       ))}
 
-      <div className="flex justify-between pb-20 lg:pb-0">
+      <div className="flex justify-between">
         <button
           onClick={onBack}
           className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-colors"
@@ -532,8 +579,8 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
         </button>
       </div>
 
-      {/* Running Total Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 h-14 flex items-center px-6" style={{ backgroundColor: '#004FDB' }}>
+      {/* Running Total Bar — mobile only; desktop sidebar (LivePreviewBar) handles this */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 h-14 flex items-center px-6" style={{ backgroundColor: '#004FDB' }}>
         <span className="text-sm text-blue-200 mr-4">Your total estimated annual opportunity:</span>
         <span className="text-2xl font-bold text-white flex-1">{fmt$(totalGross)}</span>
         <span className="text-sm text-blue-200">{ucCount} use case{ucCount !== 1 ? 's' : ''} across {bucketCount} categor{bucketCount !== 1 ? 'ies' : 'y'}</span>

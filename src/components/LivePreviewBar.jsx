@@ -1,12 +1,19 @@
-import { calcUseCaseTotals } from '../utils/calculations';
-import { fmt$ } from '../utils/format';
+import { calcUseCaseTotals, calcFinancials } from '../utils/calculations';
+import { fmt$, fmtWks } from '../utils/format';
 
-export default function LivePreviewBar({ ops, useCases, customCategories }) {
+export default function LivePreviewBar({ ops, useCases, fin, customCategories }) {
   const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops, customCategories || []);
+
+  const inputsReady = fin && fin.capex !== '' && fin.monthlyPlatformFee !== '';
+  let paybackDisplay = '—';
+  if (inputsReady) {
+    const result = calcFinancials(ops, useCases, fin, customCategories || []);
+    paybackDisplay = result.paybackWeeks != null ? fmtWks(result.paybackWeeks) : '—';
+  }
 
   const metrics = [
     { label: 'Annual Opportunity', value: fmt$(totalGrossAnnual) },
-    { label: 'Est. Payback', value: 'Complete Step 3' },
+    { label: 'Est. Payback', value: paybackDisplay, subdued: !inputsReady },
   ];
 
   return (
@@ -17,7 +24,7 @@ export default function LivePreviewBar({ ops, useCases, customCategories }) {
           {metrics.map((m) => (
             <div key={m.label} className="text-center">
               <p className="text-xs text-blue-200">{m.label}</p>
-              <p className="text-sm font-bold">{m.value}</p>
+              <p className={`text-sm font-bold ${m.subdued ? 'text-blue-300' : ''}`}>{m.value}</p>
             </div>
           ))}
         </div>
@@ -31,7 +38,7 @@ export default function LivePreviewBar({ ops, useCases, customCategories }) {
             {metrics.map((m) => (
               <div key={m.label}>
                 <p className="text-xs text-blue-300">{m.label}</p>
-                <p className={`font-bold ${m.label === 'Est. Payback' ? 'text-sm text-blue-300' : 'text-xl'}`}>{m.value}</p>
+                <p className={`font-bold ${m.subdued ? 'text-sm text-blue-300' : 'text-xl'}`}>{m.value}</p>
               </div>
             ))}
           </div>
