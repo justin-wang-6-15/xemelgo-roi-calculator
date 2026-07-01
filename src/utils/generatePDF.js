@@ -115,6 +115,7 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const now         = new Date();
   const dateDisplay = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const dateISO     = now.toISOString().slice(0, 10);
+  const person      = (first || last) ? `${first} ${last}`.trim() : 'Valued Customer';
 
   const sf  = (...rgb) => doc.setFillColor(...rgb);
   const sc  = (...rgb) => doc.setTextColor(...rgb);
@@ -122,6 +123,16 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const lw  = (w)      => doc.setLineWidth(w);
   const box = (x, y, w, h) => doc.rect(x, y, w, h, 'F');
   const fn  = (style = 'normal', size = 9) => { doc.setFont(fontName, style); doc.setFontSize(size); };
+
+  // Layout constants
+  const SPINE_W  = 110;
+  const CX       = 126;
+  const CR       = 588;
+  const CW       = CR - CX; // 462pt
+
+  // Decorative muted colors for spine elements
+  const SPINEDIV = [50, 65, 90];
+  const TICKGRAY = [70, 90, 120];
 
   function logoOrText(x, y, w, h, fallbackSize = 13) {
     if (logo) {
@@ -132,13 +143,26 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     }
   }
 
-  function footer(pageY = 762) {
-    sf(...NAVY); box(0, pageY, W, 30);
-    logoOrText(24, pageY + 8, 56, 14, 8);
+  function hairline(x1, y, x2, color, weight) {
+    sd(...(color || GRAY99)); lw(weight || 0.4);
+    doc.line(x1, y, x2, y);
+  }
+
+  function sectionHead(label, x, y_text, x_end) {
+    fn('bold', 7.5); sc(...NAVY);
+    doc.text(label, x, y_text);
+    const tw = doc.getTextWidth(label);
+    hairline(x + tw + 8, y_text - 4, x_end);
+  }
+
+  function footer(pageY = 740) {
+    hairline(0, pageY, W, GRAY99, 0.4);
+    fn('bold', 6); sc(...GRAY99);
+    doc.text('xemelgo', 24, pageY + 16);
     fn('italic', 6.5); sc(...GRAY99);
     doc.text(
       'This analysis is based on inputs provided by the user and Xemelgo customer benchmarks. Actual results may vary.',
-      W - 16, pageY + 20, { align: 'right', maxWidth: 380 }
+      W - 16, pageY + 16, { align: 'right', maxWidth: 380 }
     );
   }
 
@@ -146,46 +170,74 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   // PAGE 1
   // ─────────────────────────────────────────────────────────────────────────────
 
-  sf(...NAVY); box(0, 0, W, 220);
-  sf(...BLUE); box(0, 0, W, 6);
-  logoOrText(24, 20, 130, 34, 16);
+  // Left navy spine — full page height
+  sf(...NAVY); box(0, 0, SPINE_W, 756);
 
-  fn('normal', 11); sc(...WHITE);
-  doc.text('ROI Analysis Report', W - 24, 32, { align: 'right' });
-  fn('normal', 9); sc(...LBLUE);
-  doc.text(ctxComp, W - 24, 48, { align: 'right' });
-  fn('normal', 8); sc(...GRAY99);
-  doc.text(dateDisplay, W - 24, 63, { align: 'right' });
+  // Logo in spine
+  logoOrText(16, 20, 60, 18, 8);
 
-  sd(...BLUE); lw(0.5); doc.line(24, 82, W - 24, 82);
+  // Stacked eyebrow labels in spine
+  fn('normal', 6.5); sc(...LBLUE);
+  doc.text('ROI',      55, 54, { align: 'center' });
+  doc.text('ANALYSIS', 55, 65, { align: 'center' });
+  doc.text('REPORT',   55, 76, { align: 'center' });
 
-  const bw = W / 3;
-  const metrics3 = [
-    { label: 'NET ANNUAL VALUE', value: fmt$(result.netAnnualValue),                                desc: 'Annual savings minus platform cost'    },
-    { label: 'PAYBACK PERIOD',   value: result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A', desc: 'Weeks until ROI turns positive'         },
-    { label: '5-YEAR ROI',       value: fmtPct(result.fiveYrRoi - 1),                              desc: 'Total return on full 5-year investment' },
-  ];
-  metrics3.forEach((m, i) => {
-    const cx = i * bw + bw / 2;
-    fn('normal', 8); sc(...GRAY99);
-    doc.text(m.label, cx, 108, { align: 'center' });
-    fn('bold', 44); sc(...WHITE);
-    doc.text(m.value, cx, 162, { align: 'center' });
-    fn('italic', 7); sc(...GRAY99);
-    doc.text(m.desc, cx, 200, { align: 'center' });
+  // Thin muted divider below eyebrow
+  sd(...SPINEDIV); lw(0.5);
+  doc.line(16, 86, 94, 86);
+
+  // Company name — white bold, word-wrapped within spine
+  fn('bold', 7.5); sc(...WHITE);
+  const compLines = doc.splitTextToSize(ctxComp, 88);
+  doc.text(compLines, 55, 100, { align: 'center' });
+
+  // Date — muted gray below company name
+  fn('normal', 6); sc(...GRAY99);
+  const dateY = 100 + compLines.length * 10;
+  doc.text(dateDisplay, 55, dateY, { align: 'center', maxWidth: 88 });
+
+  // Decorative tick marks near bottom of spine
+  [698, 710, 722, 734, 746].forEach((ty, i) => {
+    const len = i % 2 === 0 ? 8 : 14;
+    sd(...TICKGRAY); lw(0.6);
+    doc.line(55 - len / 2, ty, 55 + len / 2, ty);
   });
-  sd(...BGBLUE); lw(0.8);
-  doc.line(204, 90, 204, 212);
-  doc.line(408, 90, 408, 212);
 
-  sf(...WHITE); box(0, 222, W, 30);
+  // ── Hero metric ────────────────────────────────────────────────────────────
+  fn('normal', 6.5); sc(...GRAY99);
+  doc.text('NET ANNUAL VALUE', CX, 40);
+
+  fn('bold', 38); sc(...NAVY);
+  doc.text(fmt$(result.netAnnualValue), CX, 82);
+
+  // Blue accent rule beneath hero number
+  sf(...BLUE); box(CX, 87, 26, 2.5);
+
+  // ── Secondary stats (Payback + 5-Year ROI) ────────────────────────────────
   const payStr = result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A';
+  const S1X = 432, S2X = 536, DIV_X = 484;
+
+  // Thin vertical hairline divider between secondary stats
+  sd(...GRAY99); lw(0.4);
+  doc.line(DIV_X, 42, DIV_X, 80);
+
+  fn('normal', 6); sc(...GRAY99);
+  doc.text('PAYBACK PERIOD', S1X, 50, { align: 'center' });
+  fn('bold', 13); sc(...NAVY);
+  doc.text(payStr, S1X, 70, { align: 'center' });
+
+  fn('normal', 6); sc(...GRAY99);
+  doc.text('5-YEAR ROI', S2X, 50, { align: 'center' });
+  fn('bold', 13); sc(...NAVY);
+  doc.text(fmtPct(result.fiveYrRoi - 1), S2X, 70, { align: 'center' });
+
+  // ── Narrative sentence ────────────────────────────────────────────────────
   const npvStr = fmt$(result.npv);
-  const SENT_Y = 243;
+  const SENT_Y = 112;
   fn('normal', 9); sc(...GRAY66);
   const prefix = 'At these inputs, ';
-  doc.text(prefix, 32, SENT_Y);
-  let sx = 32 + doc.getTextWidth(prefix);
+  doc.text(prefix, CX, SENT_Y);
+  let sx = CX + doc.getTextWidth(prefix);
   fn('bold', 9); sc(...NAVY);
   doc.text(ctxComp, sx, SENT_Y);
   sx += doc.getTextWidth(ctxComp);
@@ -206,98 +258,94 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   fn('normal', 9); sc(...GRAY66);
   doc.text(' in net value over 5 years.', sx, SENT_Y);
 
-  sf(...BLUE); box(0, 254, W, 22);
-  fn('bold', 9); sc(...WHITE);
-  doc.text('HOW YOU GET THERE', 24, 269);
+  // ── "HOW YOU GET THERE" section header ────────────────────────────────────
+  sectionHead('HOW YOU GET THERE', CX, 136, CR);
 
-  const TABLE_W = 310;
-  const CHART_X = 318;
-  const CHART_W = 278;
+  // ── Full-width bucket bar chart ────────────────────────────────────────────
+  const activeBuckets = result.buckets.filter(b => b.subtotal > 0);
+  const sortedBuckets = [...activeBuckets].sort((a, b) => b.subtotal - a.subtotal);
+  const maxVal = Math.max(...sortedBuckets.map(b => b.subtotal), 1);
+  const BAR_H = 15;
+  const BUCKET_SPACING = 42;
 
-  sf(...BGBLUE); box(0, 278, TABLE_W, 20);
-  fn('bold', 7.5); sc(...NAVY);
-  doc.text('USE CASE', 28, 292);
-  doc.text('CATEGORY', 168, 292);
-  doc.text('ANNUAL VALUE', TABLE_W - 8, 292, { align: 'right' });
+  let by = 150;
+  sortedBuckets.forEach(bucket => {
+    const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
+    const barW = Math.max(4, Math.round((bucket.subtotal / maxVal) * CW));
+    fn('normal', 7.5); sc(...NAVY);
+    doc.text(bucket.name, CX, by);
+    fn('bold', 7.5); sc(...NAVY);
+    doc.text(fmt$(bucket.subtotal), CR, by, { align: 'right' });
+    sf(...pillColor); box(CX, by + 4, barW, BAR_H);
+    by += BUCKET_SPACING;
+  });
 
-  let ty = 298;
-  let alt = false;
+  // Hairline after chart
+  hairline(CX, by, CR);
+  by += 10;
+
+  // ── Condensed itemized use case list ──────────────────────────────────────
+  const ROW_H = 11;
   result.buckets.forEach(bucket => {
     if (!bucket.lineItems.length) return;
-    const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
     bucket.lineItems.forEach(li => {
-      sf(...(alt ? BGBLUE : WHITE)); box(0, ty, TABLE_W, 18);
-      sf(...pillColor); box(20, ty + 6, 5, 6);
-      fn('normal', 7.5); sc(...NAVY);
-      doc.text(li.name, 30, ty + 13);
-      sc(...GRAY66);
-      doc.text(bucket.name, 168, ty + 13);
-      sc(...NAVY);
-      doc.text(fmt$(li.annualValue), TABLE_W - 8, ty + 13, { align: 'right' });
-      ty += 18; alt = !alt;
+      fn('normal', 6.5); sc(...GRAY66);
+      doc.text(li.name, CX, by);
+      doc.text(fmt$(li.annualValue), CR, by, { align: 'right' });
+      by += ROW_H;
     });
-    sf(...BGBLUE); box(0, ty, TABLE_W, 19);
-    fn('bold', 7.5); sc(...GRAY66);
-    doc.text(`${bucket.name} subtotal`, 28, ty + 13);
-    sc(...NAVY); doc.text(fmt$(bucket.subtotal), TABLE_W - 8, ty + 13, { align: 'right' });
-    ty += 19; alt = false;
+    hairline(CX, by + 2, CR, GRAY99, 0.3);
+    by += 8;
   });
 
-  sf(...NAVY); box(0, ty, TABLE_W, 20);
-  fn('bold', 8.5); sc(...WHITE);
-  doc.text('Total Gross Annual', 28, ty + 14);
-  doc.text(fmt$(result.totalGrossAnnual), TABLE_W - 8, ty + 14, { align: 'right' });
-  ty += 20;
+  by += 6;
 
-  sf(...WHITE); box(0, ty, TABLE_W, 17);
+  // Total Gross Annual — bold NAVY border line above, no fill
+  hairline(CX, by - 2, CR, NAVY, 0.6);
+  fn('bold', 8); sc(...NAVY);
+  doc.text('Total Gross Annual', CX, by + 9);
+  doc.text(fmt$(result.totalGrossAnnual), CR, by + 9, { align: 'right' });
+  by += 17;
+
+  // Annual Platform Cost — RED text, no fill
   fn('normal', 7.5); sc(...RED);
-  doc.text('Annual Platform Cost', 28, ty + 12);
-  doc.text(`(${fmt$(result.annualSaasFee)})`, TABLE_W - 8, ty + 12, { align: 'right' });
-  ty += 17;
+  doc.text('Annual Platform Cost', CX, by + 9);
+  doc.text(`(${fmt$(result.annualSaasFee)})`, CR, by + 9, { align: 'right' });
+  by += 15;
 
-  sf(...BLUE); box(0, ty, TABLE_W, 21);
-  fn('bold', 8.5); sc(...WHITE);
-  doc.text('Net Annual Value', 28, ty + 15);
-  doc.text(fmt$(result.netAnnualValue), TABLE_W - 8, ty + 15, { align: 'right' });
+  // Net Annual Value — bold BLUE text, BLUE hairlines above and below, no fill
+  hairline(CX, by, CR, BLUE, 0.6);
+  fn('bold', 8.5); sc(...BLUE);
+  doc.text('Net Annual Value', CX, by + 11);
+  doc.text(fmt$(result.netAnnualValue), CR, by + 11, { align: 'right' });
+  hairline(CX, by + 16, CR, BLUE, 0.6);
+  by += 22;
 
-  const activeBuckets = result.buckets.filter(b => b.subtotal > 0);
-  const maxVal = Math.max(...activeBuckets.map(b => b.subtotal), 1);
-  const MAX_BAR_W = 176;
-  const BAR_H = 16;
-  const BAR_GAP = 6;
-  fn('bold', 7); sc(...GRAY66);
-  doc.text('SAVINGS BY CATEGORY', CHART_X + CHART_W / 2, 292, { align: 'center' });
-  const sortedBuckets = [...activeBuckets].sort((a, b) => b.subtotal - a.subtotal);
-  let cy = 304;
-  sortedBuckets.forEach(bucket => {
-    const barW = Math.round((bucket.subtotal / maxVal) * MAX_BAR_W);
-    const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
-    fn('normal', 7); sc(...GRAY66);
-    doc.text(bucket.name, CHART_X, cy + BAR_H - 3, { maxWidth: 100 });
-    sf(...pillColor); box(CHART_X + 100, cy, barW, BAR_H);
-    fn('bold', 7); sc(...NAVY);
-    doc.text(fmt$(bucket.subtotal), CHART_X + 104 + barW, cy + BAR_H - 3);
-    cy += BAR_H + BAR_GAP;
-  });
+  // ── Investment snapshot strip ─────────────────────────────────────────────
+  const INV_TOP = Math.max(by + 22, 660);
+  const invW = CW / 3;
+  hairline(CX, INV_TOP, CR, GRAY99, 0.5);
 
-  sf(...BGBLUE); box(0, 712, W, 42);
-  sd(...BLUE); lw(0.5); doc.line(0, 712, W, 712);
   const invItems = [
     { label: 'CapEx',               value: fmt$(Number(fin.capex) || 0) },
     { label: 'Annual Platform Fee',  value: fmt$(result.annualSaasFee)  },
     { label: 'WACC',                 value: fmtPct(fin.wacc)            },
   ];
   invItems.forEach((item, i) => {
-    const cx = i * bw + bw / 2;
+    const icx = CX + i * invW + invW / 2;
     fn('normal', 7); sc(...GRAY66);
-    doc.text(item.label, cx, 728, { align: 'center' });
-    fn('bold', 9.5); sc(...NAVY);
-    doc.text(item.value, cx, 746, { align: 'center' });
+    doc.text(item.label, icx, INV_TOP + 14, { align: 'center' });
+    fn('bold', 10); sc(...NAVY);
+    doc.text(item.value, icx, INV_TOP + 30, { align: 'center' });
   });
-  sd(...BGBLUE); lw(0.5);
-  doc.line(204, 717, 204, 750);
-  doc.line(408, 717, 408, 750);
-  footer(762);
+
+  // Vertical dividers between investment items
+  sd(...GRAY99); lw(0.4);
+  doc.line(CX + invW,     INV_TOP + 6, CX + invW,     INV_TOP + 38);
+  doc.line(CX + invW * 2, INV_TOP + 6, CX + invW * 2, INV_TOP + 38);
+  hairline(CX, INV_TOP + 42, CR, GRAY99, 0.5);
+
+  footer(740);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PAGE 2
@@ -318,13 +366,10 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const LX = 24, LW = 275, RX = 307, RW = 279;
   const RH = 16;
 
-  sf(...BLUE);
-  box(LX, y, LW, 20);
-  box(RX, y, RW, 20);
-  fn('bold', 8); sc(...WHITE);
-  doc.text('FACILITY OVERVIEW', LX + 10, y + 14);
-  doc.text('TEAM HEADCOUNT & RATES', RX + 10, y + 14);
-  y += 20;
+  // Section headers as eyebrow + hairline rule
+  sectionHead('FACILITY OVERVIEW', LX, y + 12, LX + LW);
+  sectionHead('TEAM HEADCOUNT & RATES', RX, y + 12, RX + RW);
+  y += 18;
 
   const unitsLbl  = UNITS_LABEL[ops.industry] ?? UNITS_LABEL[''];
   const shiftsLbl = ops.industry === 'retail' ? 'Operating hours / day' : 'Shifts per day';
@@ -372,10 +417,8 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
 
   y = Math.max(ly, ry) + 12;
 
-  sf(...BLUE); box(0, y, W, 20);
-  fn('bold', 8); sc(...WHITE);
-  doc.text('USE CASE INPUTS & ASSUMPTIONS', 24, y + 14);
-  y += 20;
+  sectionHead('USE CASE INPUTS & ASSUMPTIONS', 24, y + 12, W - 24);
+  y += 18;
 
   fn('italic', 7); sc(...GRAY66);
   doc.text(
@@ -418,10 +461,8 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   }
 
   y += 8;
-  sf(...BLUE); box(0, y, W, 20);
-  fn('bold', 8); sc(...WHITE);
-  doc.text('INVESTMENT INPUTS', 24, y + 14);
-  y += 20;
+  sectionHead('INVESTMENT INPUTS', 24, y + 12, W - 24);
+  y += 18;
 
   const invRows = [
     ['CapEx (hardware & installation)',  fmt$(Number(fin.capex) || 0)],
@@ -442,7 +483,7 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
 
   footer(762);
 
-  return now.toISOString().slice(0, 10); // return dateISO for filename
+  return dateISO;
 }
 
 export async function generatePDF(ops, useCases, fin, result, contactInfo, customCategories) {
