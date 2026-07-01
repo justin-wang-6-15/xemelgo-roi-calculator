@@ -5,7 +5,7 @@ import MetricCard from './MetricCard';
 import { generatePDF } from '../utils/generatePDF';
 import { generateExcel } from '../utils/generateExcel';
 
-export default function ThankYou({ ops, useCases, fin, customCategories, contactInfo, scenarioMode }) {
+export default function ThankYou({ ops, useCases, fin, customCategories, contactInfo }) {
   const result = calcFinancials(ops, useCases, fin, customCategories);
   const [pdfState, setPdfState] = useState('idle');
   const [xlsxState, setXlsxState] = useState('idle');
@@ -13,7 +13,7 @@ export default function ThankYou({ ops, useCases, fin, customCategories, contact
   async function handlePDF() {
     setPdfState('loading');
     try {
-      await generatePDF(ops, useCases, fin, result, contactInfo, customCategories, scenarioMode);
+      await generatePDF(ops, useCases, fin, result, contactInfo, customCategories);
       setPdfState('idle');
     } catch (e) {
       console.error(e);

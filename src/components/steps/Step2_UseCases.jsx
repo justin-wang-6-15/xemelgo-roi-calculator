@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BUCKET_CONFIG } from '../../utils/calculations';
 
 const INDUSTRY_RECOMMENDATIONS = {
@@ -112,6 +112,24 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, customCateg
   const [exploreOpen, setExploreOpen] = useState(false);
 
   const industry = ops.industry || '';
+  const prevIndustryRef = useRef(null);
+
+  // Auto-enable recommended use cases when industry is set or changes
+  useEffect(() => {
+    if (prevIndustryRef.current === industry) return;
+    prevIndustryRef.current = industry;
+    const rec = INDUSTRY_RECOMMENDATIONS[industry] ?? INDUSTRY_RECOMMENDATIONS[''];
+    if (rec.length === 0) return;
+    setUseCases((prev) => {
+      const next = { ...prev };
+      // Disable use cases from the previous industry's recommended set that weren't manually enabled by the user
+      // then enable the new industry's recommended set
+      rec.forEach((key) => {
+        if (next[key]) next[key] = { ...next[key], enabled: true };
+      });
+      return next;
+    });
+  }, [industry, setUseCases]);
   const industryDisplay = INDUSTRY_DISPLAY[industry];
   const recommended = INDUSTRY_RECOMMENDATIONS[industry] ?? INDUSTRY_RECOMMENDATIONS[''];
   const isOther = industry === 'other';

@@ -44,18 +44,18 @@ const defaultOperationDetails = {
 // All use cases disabled by default — user selects on Step 2
 function makeAllDisabledUseCases() {
   return {
-    cycleCount:              { enabled: false, hoursPerSession: 2, sessionsPerWeek: 3, peoplePerSession: 2, burdenedRate: 35, reductionPct: 0.95 },
-    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 35, reductionPct: 0.85, downtimeCostPerDay: '' },
-    locateItems:             { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.85 },
-    picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 2, costPerError: 50, reductionPct: 0.85 },
-    shipReceiveVerification: { enabled: false, minutesSavedPerTransaction: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.85 },
-    internalDelivery:        { enabled: false, minutesPerTransfer: 8, transfersPerDay: 30, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.85 },
-    expiredProducts:         { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.85 },
-    calibrationReminders:    { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.85 },
-    geofencing:              { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.85 },
+    cycleCount:              { enabled: false, hoursPerSession: 2, sessionsPerWeek: 3, peoplePerSession: 2, burdenedRate: 35, reductionPct: 0.98 },
+    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 35, reductionPct: 0.90, downtimeCostPerDay: '' },
+    locateItems:             { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.90 },
+    picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 2, costPerError: 50, reductionPct: 0.95 },
+    shipReceiveVerification: { enabled: false, minutesSavedPerTransaction: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.95 },
+    internalDelivery:        { enabled: false, minutesPerTransfer: 8, transfersPerDay: 30, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.90 },
+    expiredProducts:         { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.95 },
+    calibrationReminders:    { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.95 },
+    geofencing:              { enabled: false, incidentsPerYear: 20, costPerIncident: 1000, reductionPct: 0.90 },
     fasterFulfillment:       { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
-    misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.85 },
-    dockTurnSpeed:           { enabled: false, minutesSaved: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.85 },
+    misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.95 },
+    dockTurnSpeed:           { enabled: false, minutesSaved: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.95 },
   };
 }
 
@@ -121,7 +121,6 @@ export default function App() {
   const [done, setDone] = useState(false);
   const [visitedSteps, setVisitedSteps] = useState(new Set([1]));
   const [showResetModal, setShowResetModal] = useState(false);
-  const [scenarioMode, setScenarioMode] = useState('typical');
   const dirRef = useRef('forward');
 
   function markVisited(stepNum) {
@@ -181,7 +180,6 @@ export default function App() {
     setContactInfo(null);
     setDone(false);
     setVisitedSteps(new Set([1]));
-    setScenarioMode('typical');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -262,7 +260,7 @@ export default function App() {
             {analyzing ? (
               <AnalyzingScreen />
             ) : done ? (
-              <ThankYou ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} contactInfo={contactInfo} scenarioMode={scenarioMode} />
+              <ThankYou ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} contactInfo={contactInfo} />
             ) : step === 1 ? (
               <Step1_OperationProfile ops={ops} setOps={setOps} onNext={handleStep1Next} />
             ) : step === 2 ? (
@@ -285,8 +283,6 @@ export default function App() {
                 setOperationDetails={setOperationDetails}
                 customCategories={customCategories}
                 setCustomCategories={setCustomCategories}
-                scenarioMode={scenarioMode}
-                setScenarioMode={setScenarioMode}
                 onNext={() => goTo(4)}
                 onBack={() => goTo(2, 'back')}
               />
@@ -297,7 +293,6 @@ export default function App() {
                 fin={fin}
                 setFin={setFin}
                 customCategories={customCategories}
-                scenarioMode={scenarioMode}
                 onNext={() => goTo(5)}
                 onBack={() => goTo(3, 'back')}
               />
@@ -313,7 +308,7 @@ export default function App() {
           </div>
 
           {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
-          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} scenarioMode={scenarioMode} />}
+          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} />}
         </div>
       </main>
     </div>

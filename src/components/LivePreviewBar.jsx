@@ -1,8 +1,7 @@
 import { calcUseCaseTotals, calcFinancials } from '../utils/calculations';
 import { fmt$, fmtWks } from '../utils/format';
-import { SCENARIO_LABEL } from '../utils/casePresets';
 
-export default function LivePreviewBar({ ops, useCases, fin, customCategories, scenarioMode }) {
+export default function LivePreviewBar({ ops, useCases, fin, customCategories }) {
   const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops, customCategories || []);
 
   const inputsReady = fin && fin.capex !== '' && fin.monthlyPlatformFee !== '';
@@ -44,17 +43,6 @@ export default function LivePreviewBar({ ops, useCases, fin, customCategories, s
             ))}
           </div>
           <p className="mt-4 text-xs text-blue-300 leading-relaxed">Updates as you toggle use cases.</p>
-          {scenarioMode && (
-            <div className="mt-3 pt-3 border-t border-blue-600">
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                scenarioMode === 'best'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-blue-800 text-blue-200'
-              }`}>
-                {SCENARIO_LABEL[scenarioMode]}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </>

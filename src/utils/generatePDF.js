@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { fmt$, fmtPct, fmtWks } from './format';
-import { SCENARIO_LABEL } from './casePresets';
 
 // Brand colors [R, G, B]
 const NAVY   = [11,  16,  40 ];  // #0B1028
@@ -103,7 +102,7 @@ async function loadImg(path) {
   } catch { return null; }
 }
 
-export async function generatePDF(ops, useCases, fin, result, contactInfo, customCategories, scenarioMode = 'typical') {
+export async function generatePDF(ops, useCases, fin, result, contactInfo, customCategories) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
 
   const company     = ops.companyName?.trim() || 'Your Facility';
@@ -167,11 +166,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   doc.text(ctxComp, W - 24, 48, { align: 'right' });
   fn('normal', 8); sc(...GRAY99);
   doc.text(dateDisplay, W - 24, 63, { align: 'right' });
-
-  // Scenario mode label (small pill in hero band)
-  const scLabel = SCENARIO_LABEL[scenarioMode] ?? SCENARIO_LABEL.typical;
-  fn('normal', 7); sc(...GRAY99);
-  doc.text(`Assumptions: ${scLabel}`, W - 24, 76, { align: 'right' });
 
   // Horizontal rule at y=82
   sd(...BLUE); lw(0.5); doc.line(24, 82, W - 24, 82);
