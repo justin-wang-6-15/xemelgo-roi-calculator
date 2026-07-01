@@ -45,7 +45,7 @@ const defaultOperationDetails = {
 function makeAllDisabledUseCases() {
   return {
     cycleCount:              { enabled: false, hoursPerSession: 2, sessionsPerWeek: 3, peoplePerSession: 2, burdenedRate: 35, reductionPct: 0.95 },
-    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 28, reductionPct: 0.85, downtimeCostPerDay: '' },
+    audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 35, reductionPct: 0.85, downtimeCostPerDay: '' },
     locateItems:             { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.85 },
     picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 2, costPerError: 50, reductionPct: 0.85 },
     shipReceiveVerification: { enabled: false, minutesSavedPerTransaction: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.85 },

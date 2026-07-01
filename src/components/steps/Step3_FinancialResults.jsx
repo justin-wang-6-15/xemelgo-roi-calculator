@@ -214,11 +214,11 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
               </tr>
               <tr>
                 <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
-                <td className="text-right text-red-600">{inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}</td>
+                <td className={`text-right ${inputsReady ? 'text-red-600' : 'text-gray-400'}`}>{inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}</td>
               </tr>
               <tr className="border-t-2 border-gray-400 font-bold">
                 <td className="py-2 pr-2 text-gray-900">Net Annual Value</td>
-                <td className="text-right text-blue-700 text-base">{dash(fmt$(result.netAnnualValue))}</td>
+                <td className={`text-right text-base ${inputsReady ? 'text-blue-700' : 'text-gray-400'}`}>{dash(fmt$(result.netAnnualValue))}</td>
               </tr>
             </tbody>
           </table>

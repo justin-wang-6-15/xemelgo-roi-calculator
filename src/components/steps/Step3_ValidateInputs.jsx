@@ -57,10 +57,20 @@ function ReductionInput({ ucKey, uc, onUpdate }) {
   );
 }
 
-function NumField({ label, value, onChange, prefix, suffix }) {
+const RATE_LABEL = 'Fully-loaded hourly rate (wages + benefits + overhead)';
+const RATE_TOOLTIP = 'Your fully-loaded rate includes base wage plus benefits, payroll taxes, and overhead. Typically 1.3–1.5× base wage. Example: a $20/hr employee costs roughly $26–$30/hr fully loaded.';
+
+function NumField({ label, value, onChange, prefix, suffix, tooltip }) {
   return (
     <div>
-      <label className={labelCls}>{label}</label>
+      <label className={labelCls}>
+        {label}
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <span className="ml-1 text-blue-400 cursor-help text-xs">ⓘ</span>
+          </Tooltip>
+        )}
+      </label>
       <div className="flex items-center">
         {prefix && <span className="text-gray-400 mr-1 text-sm">{prefix}</span>}
         <input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} className={inputCls} />
@@ -76,8 +86,8 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       <div className={grid2}>
         <NumField label="Hours per count session" value={uc.hoursPerSession} onChange={(v) => onUpdate('hoursPerSession', v)} />
         <NumField label="Count sessions per week" value={uc.sessionsPerWeek} onChange={(v) => onUpdate('sessionsPerWeek', v)} />
-        <NumField label="People per session" value={uc.peoplePerSession} onChange={(v) => onUpdate('peoplePerSession', v)} />
-        <NumField label="Burdened hourly rate ($/hr)" value={uc.burdenedRate} prefix="$" suffix="/hr"
+        <NumField label="People counting simultaneously per session" value={uc.peoplePerSession} onChange={(v) => onUpdate('peoplePerSession', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr"
           onChange={(v) => { onUpdate('burdenedRate', v); setOps((prev) => ({ ...prev, plannerRate: v })); }} />
       </div>
       <div>
@@ -94,7 +104,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
         <NumField label="Days per audit" value={uc.daysPerAudit} onChange={(v) => onUpdate('daysPerAudit', v)} />
         <NumField label="Hours per day" value={uc.hoursPerDay} onChange={(v) => onUpdate('hoursPerDay', v)} />
         <NumField label="Audits per year" value={uc.auditsPerYear} onChange={(v) => onUpdate('auditsPerYear', v)} />
-        <NumField label="Burdened hourly rate ($/hr)" value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
         <div>
           <label className={labelCls}>Production downtime cost per audit day <span className="text-gray-400 font-normal">(optional)</span></label>
           <div className="flex items-center">
@@ -104,7 +114,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
               value={uc.downtimeCostPerDay}
               onChange={(e) => onUpdate('downtimeCostPerDay', e.target.value === '' ? '' : Number(e.target.value))}
               className={inputCls}
-              placeholder="0"
+              placeholder="e.g. 5000"
             />
           </div>
           <p className="text-xs text-gray-400 mt-0.5">If your facility pauses production during audits, enter the estimated cost per day. Leave blank if not applicable.</p>
@@ -156,7 +166,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
               </div>
               <NumField label="Hours lost searching per day" value={row.hoursLostPerDay} onChange={(v) => updateRow(row.id, 'hoursLostPerDay', v)} />
               <NumField label="Number of people" value={row.headcount} onChange={(v) => updateRow(row.id, 'headcount', v)} />
-              <NumField label="Burdened hourly rate ($/hr)" value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
+              <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
             </div>
           </div>
         ))}
@@ -197,7 +207,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
         <NumField label="Minutes saved per dock transaction" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
         <NumField label="Dock transactions per day" value={uc.transactionsPerDay} onChange={(v) => onUpdate('transactionsPerDay', v)} />
         <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
-        <NumField label="Burdened hourly rate ($/hr)" value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
       <div>
         <label className={labelCls}>Expected time reduction with RFID</label>
@@ -212,7 +222,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
         <NumField label="Minutes per internal transfer" value={uc.minutesPerTransfer} onChange={(v) => onUpdate('minutesPerTransfer', v)} />
         <NumField label="Internal transfers per day" value={uc.transfersPerDay} onChange={(v) => onUpdate('transfersPerDay', v)} />
         <NumField label="People per transfer" value={uc.peoplePerTransfer} onChange={(v) => onUpdate('peoplePerTransfer', v)} />
-        <NumField label="Burdened hourly rate ($/hr)" value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
       <div>
         <label className={labelCls}>Expected time reduction with RFID</label>
@@ -311,7 +321,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
         <NumField label="Minutes saved per dock transaction" value={uc.minutesSaved} onChange={(v) => onUpdate('minutesSaved', v)} />
         <NumField label="Dock transactions per day" value={uc.transactionsPerDay} onChange={(v) => onUpdate('transactionsPerDay', v)} />
         <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
-        <NumField label="Burdened hourly rate ($/hr)" value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
       <div>
         <label className={labelCls}>Expected improvement with RFID</label>

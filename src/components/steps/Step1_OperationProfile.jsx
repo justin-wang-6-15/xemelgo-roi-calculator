@@ -24,7 +24,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 mb-6">
         <p className="text-sm text-blue-900 leading-relaxed">
-          <span className="font-semibold">Xemelgo is an RFID-powered operations platform</span> that gives manufacturers real-time visibility into inventory, WIP, and assets. This calculator estimates the financial impact for an operation like yours — complete the steps below to see your personalized ROI.
+          <span className="font-semibold">Xemelgo is an RFID-powered operations platform</span> that gives operations teams real-time visibility into inventory, WIP, and assets. This calculator estimates the financial impact for an operation like yours — complete the steps below to see your personalized ROI.
         </p>
       </div>
 
