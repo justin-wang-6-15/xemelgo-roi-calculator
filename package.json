@@ -12,6 +12,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
