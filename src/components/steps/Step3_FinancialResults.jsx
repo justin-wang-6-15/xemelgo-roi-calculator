@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { calcFinancials } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import Tooltip from '../Tooltip';
+import { SCENARIO_LABEL } from '../../utils/casePresets';
 
 function CumulativeChart({ fin, totalGrossAnnual }) {
   const W = 600, H = 300;
@@ -100,7 +101,7 @@ function SecondaryMetricCard({ label, value, caption, colorClass, badge }) {
   );
 }
 
-export default function Step3_FinancialResults({ ops, useCases, fin, setFin, customCategories, onNext, onBack }) {
+export default function Step3_FinancialResults({ ops, useCases, fin, setFin, customCategories, scenarioMode, onNext, onBack }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
@@ -128,7 +129,16 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
 
       {/* Hero: Net Annual Value */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl shadow-lg px-6 py-8 mb-5 text-white">
-        <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">Net Annual Value</p>
+        <div className="flex items-center gap-3 mb-2">
+          <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Net Annual Value</p>
+          {scenarioMode && (
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              scenarioMode === 'best' ? 'bg-white/20 text-white' : 'bg-white/10 text-blue-200'
+            }`}>
+              {SCENARIO_LABEL[scenarioMode]}
+            </span>
+          )}
+        </div>
         {inputsReady ? (
           <>
             <p className="text-5xl font-bold mb-3">{fmt$(result.netAnnualValue)}</p>

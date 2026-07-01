@@ -3,6 +3,7 @@ import RangeSlider from '../RangeSlider';
 import Tooltip from '../Tooltip';
 import { fmt$ } from '../../utils/format';
 import { calcUseCaseValue, BUCKET_CONFIG } from '../../utils/calculations';
+import { CASE_PRESETS, SCENARIO_LABEL } from '../../utils/casePresets';
 
 const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1';
@@ -45,8 +46,12 @@ const ROLE_DEFAULTS = {
   direct:          { hoursLostPerDay: 1.0, headcount: 50, rateKey: 'directRate',           countKey: 'directCount' },
 };
 
-function ReductionInput({ ucKey, uc, onUpdate }) {
+function ReductionInput({ ucKey, uc, onUpdate, onTouch }) {
   const note = SOURCE_NOTES[ucKey];
+  function handleChange(val) {
+    onTouch?.();
+    onUpdate('reductionPct', val / 100);
+  }
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -54,7 +59,7 @@ function ReductionInput({ ucKey, uc, onUpdate }) {
           min={0}
           max={100}
           value={Math.round(uc.reductionPct * 100)}
-          onChange={(val) => onUpdate('reductionPct', val / 100)}
+          onChange={(val) => handleChange(val)}
           className="flex-1"
         />
         <input
@@ -62,7 +67,7 @@ function ReductionInput({ ucKey, uc, onUpdate }) {
           min={0}
           max={100}
           value={Math.round(uc.reductionPct * 100)}
-          onChange={(e) => onUpdate('reductionPct', Number(e.target.value) / 100)}
+          onChange={(e) => handleChange(Number(e.target.value))}
           className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <span className="text-sm text-gray-500">%</span>
@@ -95,7 +100,7 @@ function NumField({ label, value, onChange, prefix, suffix, tooltip }) {
   );
 }
 
-function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
+function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, onTouch }) {
   if (ucKey === 'cycleCount') return (
     <>
       <div className={grid2}>
@@ -107,7 +112,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected time reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -137,7 +142,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected labor reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -188,7 +193,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
         <button type="button" onClick={addRow} className="text-sm font-medium text-blue-600 hover:text-blue-700">+ Add Role</button>
         <div>
           <label className={labelCls}>Expected reduction with RFID</label>
-          <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+          <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
         </div>
       </>
     );
@@ -211,7 +216,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected error reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -226,7 +231,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected time reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -241,7 +246,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected time reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -262,7 +267,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -283,7 +288,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -304,7 +309,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -325,7 +330,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -340,7 +345,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
       </div>
       <div>
         <label className={labelCls}>Expected improvement with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} onTouch={onTouch} />
       </div>
     </>
   );
@@ -363,7 +368,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
   return null;
 }
 
-function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, onInteract, expanded, onToggle }) {
+function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, onInteract, onSliderTouch, expanded, onToggle }) {
   const annualValue = calcUseCaseValue(ucKey, uc, ops);
   const description = UC_DESCRIPTIONS[ucKey] || '';
 
@@ -407,7 +412,7 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, o
       {/* Expandable inputs */}
       {expanded && (
         <div className="px-5 pb-5 pt-1 space-y-4 border-t border-gray-100">
-          <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} />
+          <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} onTouch={() => onSliderTouch?.(ucKey)} />
         </div>
       )}
     </div>
@@ -418,9 +423,33 @@ const LABOR_KEYS = ['cycleCount', 'audit', 'locateItems', 'picklistVerification'
 const LOSS_KEYS = ['expiredProducts', 'calibrationReminders', 'geofencing'];
 const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed'];
 
-export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
+export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, customCategories, setCustomCategories, scenarioMode, setScenarioMode, onNext, onBack }) {
   const [interacted, setInteracted] = useState(new Set());
   const [expandedCards, setExpandedCards] = useState(new Set());
+  const [touchedSliders, setTouchedSliders] = useState(new Set());
+
+  function markSliderTouched(ucKey) {
+    setTouchedSliders((prev) => {
+      if (prev.has(ucKey)) return prev;
+      const next = new Set(prev);
+      next.add(ucKey);
+      return next;
+    });
+  }
+
+  function handleModeChange(mode) {
+    setScenarioMode(mode);
+    const presets = CASE_PRESETS[mode];
+    setUseCases((prev) => {
+      const next = { ...prev };
+      Object.keys(presets).forEach((key) => {
+        if (next[key] && !touchedSliders.has(key)) {
+          next[key] = { ...next[key], reductionPct: presets[key] };
+        }
+      });
+      return next;
+    });
+  }
 
   function markInteracted(key) {
     setInteracted((prev) => {
@@ -472,6 +501,32 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
       <p className="text-sm text-gray-500 mb-6">
         These are pre-filled with Xemelgo customer benchmarks. Adjust anything that doesn't match your reality.
       </p>
+
+      {/* Scenario toggle */}
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-sm text-gray-500">Assumptions:</span>
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+          {['typical', 'best'].map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => handleModeChange(mode)}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                scenarioMode === mode
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {SCENARIO_LABEL[mode]}
+            </button>
+          ))}
+        </div>
+        {scenarioMode === 'best' && (
+          <span className="text-xs text-blue-600 bg-blue-50 rounded-full px-2.5 py-0.5">
+            Using top-end customer benchmarks
+          </span>
+        )}
+      </div>
 
       {/* Operating Schedule */}
       <div className="bg-white rounded-xl shadow-md p-5 mb-6">
@@ -527,6 +582,7 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
           setUseCases={setUseCases}
           interacted={interacted.has(key)}
           onInteract={() => markInteracted(key)}
+          onSliderTouch={markSliderTouched}
           expanded={expandedCards.has(key)}
           onToggle={() => toggleExpanded(key)}
         />

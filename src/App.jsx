@@ -121,6 +121,7 @@ export default function App() {
   const [done, setDone] = useState(false);
   const [visitedSteps, setVisitedSteps] = useState(new Set([1]));
   const [showResetModal, setShowResetModal] = useState(false);
+  const [scenarioMode, setScenarioMode] = useState('typical');
   const dirRef = useRef('forward');
 
   function markVisited(stepNum) {
@@ -180,6 +181,7 @@ export default function App() {
     setContactInfo(null);
     setDone(false);
     setVisitedSteps(new Set([1]));
+    setScenarioMode('typical');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
@@ -260,7 +262,7 @@ export default function App() {
             {analyzing ? (
               <AnalyzingScreen />
             ) : done ? (
-              <ThankYou ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} contactInfo={contactInfo} />
+              <ThankYou ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} contactInfo={contactInfo} scenarioMode={scenarioMode} />
             ) : step === 1 ? (
               <Step1_OperationProfile ops={ops} setOps={setOps} onNext={handleStep1Next} />
             ) : step === 2 ? (
@@ -283,6 +285,8 @@ export default function App() {
                 setOperationDetails={setOperationDetails}
                 customCategories={customCategories}
                 setCustomCategories={setCustomCategories}
+                scenarioMode={scenarioMode}
+                setScenarioMode={setScenarioMode}
                 onNext={() => goTo(4)}
                 onBack={() => goTo(2, 'back')}
               />
@@ -293,6 +297,7 @@ export default function App() {
                 fin={fin}
                 setFin={setFin}
                 customCategories={customCategories}
+                scenarioMode={scenarioMode}
                 onNext={() => goTo(5)}
                 onBack={() => goTo(3, 'back')}
               />
@@ -308,7 +313,7 @@ export default function App() {
           </div>
 
           {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
-          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} />}
+          {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} scenarioMode={scenarioMode} />}
         </div>
       </main>
     </div>
