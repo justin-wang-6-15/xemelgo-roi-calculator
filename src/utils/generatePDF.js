@@ -12,7 +12,6 @@ const RED    = [204, 0,   0  ];  // #CC0000
 const GRAY66 = [102, 102, 102];  // #666666
 const GRAY99 = [153, 153, 153];  // #999999
 
-// Bucket pill colors by name
 const BUCKET_COLORS = {
   'Labor Efficiency':              BLUE,
   'Loss Prevention & Compliance':  GREEN,
@@ -45,7 +44,6 @@ const UC_NAMES = {
   dockTurnSpeed:           'Receiving and Shipping Throughput',
 };
 
-// Plain-English field labels
 const UC_DEFS = {
   cycleCount:              [['Hours per session','hoursPerSession','n'],['Sessions per week','sessionsPerWeek','n'],['People per session','peoplePerSession','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
   audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
@@ -75,18 +73,24 @@ function arrayBufferToBase64(buf) {
   return btoa(binary);
 }
 
+// Load Inter TTF from locally-bundled files in /public/fonts/.
+// Falls back to Helvetica if the fetch fails or the font can't be embedded.
 async function loadInterFont(doc) {
   try {
-    const [boldBuf, regBuf] = await Promise.all([
-      fetch('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff').then(r => r.arrayBuffer()),
-      fetch('https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff').then(r => r.arrayBuffer()),
+    const [boldRes, regRes] = await Promise.all([
+      fetch('/fonts/Inter-Bold.ttf'),
+      fetch('/fonts/Inter-Regular.ttf'),
     ]);
+    if (!boldRes.ok || !regRes.ok) throw new Error('font fetch failed');
+    const [boldBuf, regBuf] = await Promise.all([boldRes.arrayBuffer(), regRes.arrayBuffer()]);
     doc.addFileToVFS('Inter-Bold.ttf', arrayBufferToBase64(boldBuf));
     doc.addFont('Inter-Bold.ttf', 'Inter', 'bold');
     doc.addFileToVFS('Inter-Regular.ttf', arrayBufferToBase64(regBuf));
     doc.addFont('Inter-Regular.ttf', 'Inter', 'normal');
     return 'Inter';
-  } catch { return 'Helvetica'; }
+  } catch {
+    return 'Helvetica';
+  }
 }
 
 async function loadImg(path) {
@@ -102,24 +106,16 @@ async function loadImg(path) {
   } catch { return null; }
 }
 
-export async function generatePDF(ops, useCases, fin, result, contactInfo, customCategories) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
-
+// Core drawing function — builds all pages onto `doc` with the given font and logo.
+function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, customCategories) {
   const company     = ops.companyName?.trim() || 'Your Facility';
   const ctxComp     = contactInfo?.company?.trim() || company;
   const first       = contactInfo?.firstName?.trim() || '';
   const last        = contactInfo?.lastName?.trim() || '';
-  const person      = (first || last) ? `${first} ${last}`.trim() : 'Valued Customer';
   const now         = new Date();
   const dateDisplay = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const dateISO     = now.toISOString().slice(0, 10);
 
-  const [fontName, logo] = await Promise.all([
-    loadInterFont(doc),
-    loadImg('/xemelgo_logo_light.png'),
-  ]);
-
-  // ── Helpers ──────────────────────────────────────────────────────────────────
   const sf  = (...rgb) => doc.setFillColor(...rgb);
   const sc  = (...rgb) => doc.setTextColor(...rgb);
   const sd  = (...rgb) => doc.setDrawColor(...rgb);
@@ -150,16 +146,10 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   // PAGE 1
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Hero band (0–220, navy) ──────────────────────────────────────────────────
   sf(...NAVY); box(0, 0, W, 220);
-
-  // 6pt blue accent strip at very top
   sf(...BLUE); box(0, 0, W, 6);
-
-  // Logo (left)
   logoOrText(24, 20, 130, 34, 16);
 
-  // Identity (right)
   fn('normal', 11); sc(...WHITE);
   doc.text('ROI Analysis Report', W - 24, 32, { align: 'right' });
   fn('normal', 9); sc(...LBLUE);
@@ -167,15 +157,13 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   fn('normal', 8); sc(...GRAY99);
   doc.text(dateDisplay, W - 24, 63, { align: 'right' });
 
-  // Horizontal rule at y=82
   sd(...BLUE); lw(0.5); doc.line(24, 82, W - 24, 82);
 
-  // Hero metrics (3 columns)
   const bw = W / 3;
   const metrics3 = [
-    { label: 'NET ANNUAL VALUE', value: fmt$(result.netAnnualValue),                                 desc: 'Annual savings minus platform cost'    },
-    { label: 'PAYBACK PERIOD',   value: result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A',  desc: 'Weeks until ROI turns positive'         },
-    { label: '5-YEAR ROI',       value: fmtPct(result.fiveYrRoi - 1),                               desc: 'Total return on full 5-year investment' },
+    { label: 'NET ANNUAL VALUE', value: fmt$(result.netAnnualValue),                                desc: 'Annual savings minus platform cost'    },
+    { label: 'PAYBACK PERIOD',   value: result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A', desc: 'Weeks until ROI turns positive'         },
+    { label: '5-YEAR ROI',       value: fmtPct(result.fiveYrRoi - 1),                              desc: 'Total return on full 5-year investment' },
   ];
   metrics3.forEach((m, i) => {
     const cx = i * bw + bw / 2;
@@ -186,59 +174,46 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     fn('italic', 7); sc(...GRAY99);
     doc.text(m.desc, cx, 200, { align: 'center' });
   });
-  // Column dividers inside hero
   sd(...BGBLUE); lw(0.8);
   doc.line(204, 90, 204, 212);
   doc.line(408, 90, 408, 212);
 
-  // ── Narrative block (222–252) ─────────────────────────────────────────────────
   sf(...WHITE); box(0, 222, W, 30);
   const payStr = result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A';
   const npvStr = fmt$(result.npv);
-
-  // Build inline sentence with bold variables: track x position
   const SENT_Y = 243;
   fn('normal', 9); sc(...GRAY66);
   const prefix = 'At these inputs, ';
   doc.text(prefix, 32, SENT_Y);
   let sx = 32 + doc.getTextWidth(prefix);
-
   fn('bold', 9); sc(...NAVY);
   doc.text(ctxComp, sx, SENT_Y);
   sx += doc.getTextWidth(ctxComp);
-
   fn('normal', 9); sc(...GRAY66);
   const mid1 = ' would recover its full investment in ';
   doc.text(mid1, sx, SENT_Y);
   sx += doc.getTextWidth(mid1);
-
   fn('bold', 9); sc(...NAVY);
   doc.text(payStr, sx, SENT_Y);
   sx += doc.getTextWidth(payStr);
-
   fn('normal', 9); sc(...GRAY66);
   const mid2 = ' and generate ';
   doc.text(mid2, sx, SENT_Y);
   sx += doc.getTextWidth(mid2);
-
   fn('bold', 9); sc(...NAVY);
   doc.text(npvStr, sx, SENT_Y);
   sx += doc.getTextWidth(npvStr);
-
   fn('normal', 9); sc(...GRAY66);
   doc.text(' in net value over 5 years.', sx, SENT_Y);
 
-  // ── Section header bar (254–276) ──────────────────────────────────────────────
   sf(...BLUE); box(0, 254, W, 22);
   fn('bold', 9); sc(...WHITE);
   doc.text('HOW YOU GET THERE', 24, 269);
 
-  // ── Table + Chart zone (278–710) ──────────────────────────────────────────────
   const TABLE_W = 310;
   const CHART_X = 318;
   const CHART_W = 278;
 
-  // Table column headers
   sf(...BGBLUE); box(0, 278, TABLE_W, 20);
   fn('bold', 7.5); sc(...NAVY);
   doc.text('USE CASE', 28, 292);
@@ -247,14 +222,11 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
 
   let ty = 298;
   let alt = false;
-
   result.buckets.forEach(bucket => {
     if (!bucket.lineItems.length) return;
     const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
-
     bucket.lineItems.forEach(li => {
       sf(...(alt ? BGBLUE : WHITE)); box(0, ty, TABLE_W, 18);
-      // Bucket color pill
       sf(...pillColor); box(20, ty + 6, 5, 6);
       fn('normal', 7.5); sc(...NAVY);
       doc.text(li.name, 30, ty + 13);
@@ -264,8 +236,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
       doc.text(fmt$(li.annualValue), TABLE_W - 8, ty + 13, { align: 'right' });
       ty += 18; alt = !alt;
     });
-
-    // Bucket subtotal
     sf(...BGBLUE); box(0, ty, TABLE_W, 19);
     fn('bold', 7.5); sc(...GRAY66);
     doc.text(`${bucket.name} subtotal`, 28, ty + 13);
@@ -273,63 +243,49 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     ty += 19; alt = false;
   });
 
-  // Total Gross
   sf(...NAVY); box(0, ty, TABLE_W, 20);
   fn('bold', 8.5); sc(...WHITE);
   doc.text('Total Gross Annual', 28, ty + 14);
   doc.text(fmt$(result.totalGrossAnnual), TABLE_W - 8, ty + 14, { align: 'right' });
   ty += 20;
 
-  // Platform Cost
   sf(...WHITE); box(0, ty, TABLE_W, 17);
   fn('normal', 7.5); sc(...RED);
   doc.text('Annual Platform Cost', 28, ty + 12);
   doc.text(`(${fmt$(result.annualSaasFee)})`, TABLE_W - 8, ty + 12, { align: 'right' });
   ty += 17;
 
-  // Net Annual Value
   sf(...BLUE); box(0, ty, TABLE_W, 21);
   fn('bold', 8.5); sc(...WHITE);
   doc.text('Net Annual Value', 28, ty + 15);
   doc.text(fmt$(result.netAnnualValue), TABLE_W - 8, ty + 15, { align: 'right' });
 
-  // ── Horizontal Bar Chart (right side) ─────────────────────────────────────────
   const activeBuckets = result.buckets.filter(b => b.subtotal > 0);
   const maxVal = Math.max(...activeBuckets.map(b => b.subtotal), 1);
   const MAX_BAR_W = 176;
   const BAR_H = 16;
   const BAR_GAP = 6;
-
   fn('bold', 7); sc(...GRAY66);
   doc.text('SAVINGS BY CATEGORY', CHART_X + CHART_W / 2, 292, { align: 'center' });
-
-  // Sort by subtotal descending
   const sortedBuckets = [...activeBuckets].sort((a, b) => b.subtotal - a.subtotal);
   let cy = 304;
   sortedBuckets.forEach(bucket => {
     const barW = Math.round((bucket.subtotal / maxVal) * MAX_BAR_W);
     const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
-
     fn('normal', 7); sc(...GRAY66);
     doc.text(bucket.name, CHART_X, cy + BAR_H - 3, { maxWidth: 100 });
-
-    // Bar
     sf(...pillColor); box(CHART_X + 100, cy, barW, BAR_H);
-
-    // Value
     fn('bold', 7); sc(...NAVY);
     doc.text(fmt$(bucket.subtotal), CHART_X + 104 + barW, cy + BAR_H - 3);
-
     cy += BAR_H + BAR_GAP;
   });
 
-  // ── Investment snapshot strip (712–754) ──────────────────────────────────────
   sf(...BGBLUE); box(0, 712, W, 42);
   sd(...BLUE); lw(0.5); doc.line(0, 712, W, 712);
   const invItems = [
     { label: 'CapEx',               value: fmt$(Number(fin.capex) || 0) },
-    { label: 'Annual Platform Fee',  value: fmt$(result.annualSaasFee)},
-    { label: 'WACC',                 value: fmtPct(fin.wacc)          },
+    { label: 'Annual Platform Fee',  value: fmt$(result.annualSaasFee)  },
+    { label: 'WACC',                 value: fmtPct(fin.wacc)            },
   ];
   invItems.forEach((item, i) => {
     const cx = i * bw + bw / 2;
@@ -341,7 +297,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   sd(...BGBLUE); lw(0.5);
   doc.line(204, 717, 204, 750);
   doc.line(408, 717, 408, 750);
-
   footer(762);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -349,7 +304,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   // ─────────────────────────────────────────────────────────────────────────────
   doc.addPage();
 
-  // Header band (0–60)
   sf(...NAVY); box(0, 0, W, 60);
   sf(...BLUE); box(0, 0, W, 6);
   logoOrText(24, 14, 108, 32, 14);
@@ -364,7 +318,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   const LX = 24, LW = 275, RX = 307, RW = 279;
   const RH = 16;
 
-  // Side-by-side section headers
   sf(...BLUE);
   box(LX, y, LW, 20);
   box(RX, y, RW, 20);
@@ -375,7 +328,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
 
   const unitsLbl  = UNITS_LABEL[ops.industry] ?? UNITS_LABEL[''];
   const shiftsLbl = ops.industry === 'retail' ? 'Operating hours / day' : 'Shifts per day';
-
   const facRows = [
     ['Industry',             ops.industry ? ops.industry.charAt(0).toUpperCase() + ops.industry.slice(1) : '—'],
     [unitsLbl,               (ops.unitsPerMonth || 0).toLocaleString()],
@@ -420,7 +372,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
 
   y = Math.max(ly, ry) + 12;
 
-  // Use Case section header
   sf(...BLUE); box(0, y, W, 20);
   fn('bold', 8); sc(...WHITE);
   doc.text('USE CASE INPUTS & ASSUMPTIONS', 24, y + 14);
@@ -433,28 +384,23 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   );
   y += 22;
 
-  // 2-column card grid
   const enabledUcs = Object.entries(useCases).filter(([, uc]) => uc.enabled);
   const CARD_W = 270, CARD_GAP = 14;
   const CL_X = 24, CR_X = 24 + CARD_W + CARD_GAP;
 
   for (let i = 0; i < enabledUcs.length; i += 2) {
     const pair = enabledUcs.slice(i, i + 2);
-
     const heights = pair.map(([key, uc]) => {
       const defs = UC_DEFS[key] || [];
       const cnt  = defs.filter(([, f]) => uc[f] !== undefined).length;
       return 12 + 13 + cnt * 11 + 6;
     });
     const rowH = Math.max(...heights, 50);
-
     pair.forEach(([key, uc], col) => {
       const cx   = col === 0 ? CL_X : CR_X;
       const defs = UC_DEFS[key] || [];
-
       fn('bold', 8); sc(...BLUE);
       doc.text(UC_NAMES[key] || key, cx + 10, y + 14);
-
       let iy = y + 26;
       defs.forEach(([label, field, type]) => {
         if (uc[field] === undefined) return;
@@ -465,17 +411,13 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
         doc.text(fmtVal(uc[field], type), cx + 128, iy);
         iy += 11;
       });
-
       sd(...BGBLUE); lw(0.5);
       doc.line(cx, y + rowH, cx + CARD_W, y + rowH);
     });
-
     y += rowH + 6;
   }
 
   y += 8;
-
-  // Investment Inputs
   sf(...BLUE); box(0, y, W, 20);
   fn('bold', 8); sc(...WHITE);
   doc.text('INVESTMENT INPUTS', 24, y + 14);
@@ -500,6 +442,33 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
 
   footer(762);
 
-  const fname = `Xemelgo_ROI_Report_${company.replace(/\s+/g, '_')}_${dateISO}.pdf`;
-  doc.save(fname);
+  return now.toISOString().slice(0, 10); // return dateISO for filename
+}
+
+export async function generatePDF(ops, useCases, fin, result, contactInfo, customCategories) {
+  const company = ops.companyName?.trim() || 'Your Facility';
+  const logo    = await loadImg('/xemelgo_logo_light.png');
+
+  // First attempt: Inter font loaded from bundled TTF files
+  try {
+    const doc      = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+    const fontName = await loadInterFont(doc);
+    const dateISO  = buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, customCategories);
+    const fname    = `Xemelgo_ROI_Report_${company.replace(/\s+/g, '_')}_${dateISO}.pdf`;
+    doc.save(fname);
+    return;
+  } catch (err) {
+    console.error('[generatePDF] First attempt failed (font embedding or save). Retrying with Helvetica fallback.', err);
+  }
+
+  // Fallback: rebuild with Helvetica — user still gets a usable PDF
+  try {
+    const doc     = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
+    const dateISO = buildDoc(doc, 'Helvetica', logo, ops, useCases, fin, result, contactInfo, customCategories);
+    const fname   = `Xemelgo_ROI_Report_${company.replace(/\s+/g, '_')}_${dateISO}.pdf`;
+    doc.save(fname);
+  } catch (fallbackErr) {
+    console.error('[generatePDF] Helvetica fallback also failed. doc.save() threw:', fallbackErr);
+    throw fallbackErr;
+  }
 }
