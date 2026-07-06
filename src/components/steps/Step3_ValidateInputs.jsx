@@ -9,18 +9,35 @@ const labelCls = 'block text-xs font-medium text-gray-600 mb-1';
 const grid2 = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
 const sourceNote = (text) => <p className="text-xs text-gray-400 italic mt-1">{text}</p>;
 
+// Single source of truth for default reduction percentages (integer, 0–100).
+// These must match the reductionPct values in makeAllDisabledUseCases() in App.jsx.
+const UC_REDUCTION_DEFAULTS = {
+  cycleCount:              98,
+  audit:                   90,
+  locateItems:             90,
+  picklistVerification:    95,
+  shipReceiveVerification: 95,
+  internalDelivery:        90,
+  expiredProducts:         95,
+  calibrationReminders:    95,
+  geofencing:              90,
+  misShipReduction:        95,
+  dockTurnSpeed:           95,
+};
+
+const d = UC_REDUCTION_DEFAULTS;
 const SOURCE_NOTES = {
-  cycleCount: 'Xemelgo customers report 90–98% reduction in cycle count time. Default set to 95% — adjust down if you want to be conservative.',
-  audit: 'Xemelgo customers report 75–90% reduction in full audit labor. Default set to 85%.',
-  locateItems: 'Xemelgo customers report 70–90% reduction in search time across all roles. Default set to 85%.',
-  picklistVerification: 'Xemelgo customers see 80–95% reduction in pick errors. Default set to 85%.',
-  shipReceiveVerification: 'RFID portal reads replace manual dock scanning. Customers report 75–95% time reduction per transaction. Default set to 85%.',
-  internalDelivery: 'RFID eliminates manual confirmation steps at each hand-off point. Customers report 75–90% time reduction. Default set to 85%.',
-  expiredProducts: 'Proactive expiration alerts eliminate most write-offs before they happen. Customers report 80–95% reduction. Default set to 85%.',
-  calibrationReminders: 'Automated calibration alerts prevent most missed events. Customers report 80–95% reduction. Default set to 85%.',
-  geofencing: 'Real-time zone alerts prevent most unauthorized asset movements. Customers report 75–90% reduction. Default set to 85%.',
-  misShipReduction: 'Outbound RFID verification eliminates most mis-ships at the dock door. Customers report 80–95% reduction. Default set to 85%.',
-  dockTurnSpeed: 'RFID portal reads accelerate dock throughput. Customers report 75–95% improvement. Default set to 85%.',
+  cycleCount:              `Xemelgo customers report 90–98% reduction in cycle count time. Default set to ${d.cycleCount}% — adjust down if you want to be conservative.`,
+  audit:                   `Xemelgo customers report 75–90% reduction in full audit labor. Default set to ${d.audit}%.`,
+  locateItems:             `Xemelgo customers report 70–90% reduction in search time across all roles. Default set to ${d.locateItems}%.`,
+  picklistVerification:    `Xemelgo customers see 80–95% reduction in pick errors. Default set to ${d.picklistVerification}%.`,
+  shipReceiveVerification: `RFID portal reads replace manual dock scanning. Customers report 75–95% time reduction per transaction. Default set to ${d.shipReceiveVerification}%.`,
+  internalDelivery:        `RFID eliminates manual confirmation steps at each hand-off point. Customers report 75–90% time reduction. Default set to ${d.internalDelivery}%.`,
+  expiredProducts:         `Proactive expiration alerts eliminate most write-offs before they happen. Customers report 80–95% reduction. Default set to ${d.expiredProducts}%.`,
+  calibrationReminders:    `Automated calibration alerts prevent most missed events. Customers report 80–95% reduction. Default set to ${d.calibrationReminders}%.`,
+  geofencing:              `Real-time zone alerts prevent most unauthorized asset movements. Customers report 75–90% reduction. Default set to ${d.geofencing}%.`,
+  misShipReduction:        `Outbound RFID verification eliminates most mis-ships at the dock door. Customers report 80–95% reduction. Default set to ${d.misShipReduction}%.`,
+  dockTurnSpeed:           `RFID portal reads accelerate dock throughput. Customers report 75–95% improvement. Default set to ${d.dockTurnSpeed}%.`,
 };
 
 const UC_DESCRIPTIONS = {
