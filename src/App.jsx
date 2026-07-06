@@ -75,7 +75,7 @@ const defaultFin = {
   capex: '',
   contingencyRate: 0.025,
   monthlyPlatformFee: '',
-  wacc: 0.10,
+  wacc: 0.085,
 };
 
 

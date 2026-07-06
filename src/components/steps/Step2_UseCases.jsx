@@ -35,6 +35,7 @@ const SOLUTIONS = [
     description: 'Automate internal delivery confirmation between zones.',
     defaults: ['internalDelivery'],
     extras:   [],
+    status: 'comingSoon',
   },
 ];
 
@@ -168,14 +169,20 @@ export default function Step2_UseCases({ useCases, setUseCases, customCategories
       <div className="space-y-3 mb-8">
         {SOLUTIONS.map((sol) => {
           const on = selectedSolutions.has(sol.id);
+          const disabled = sol.status === 'comingSoon';
           return (
             <div
               key={sol.id}
-              onClick={() => toggleSolution(sol)}
-              className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-colors
-                ${on ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}
+              onClick={() => !disabled && toggleSolution(sol)}
+              title={disabled ? 'Coming soon.' : undefined}
+              className={`flex items-start gap-4 p-4 rounded-xl border transition-colors
+                ${disabled
+                  ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                  : on
+                    ? 'border-blue-300 bg-blue-50 cursor-pointer'
+                    : 'border-gray-200 bg-white cursor-pointer'}`}
             >
-              <Toggle checked={on} onChange={() => toggleSolution(sol)} />
+              <Toggle checked={on} onChange={() => !disabled && toggleSolution(sol)} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${on ? 'text-gray-900' : 'text-gray-700'}`}>{sol.name}</p>
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{sol.description}</p>

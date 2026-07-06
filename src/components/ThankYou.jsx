@@ -189,7 +189,7 @@ export default function ThankYou({ ops, useCases, fin, customCategories, contact
             href="#"
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-10 py-3.5 rounded-lg text-center transition-colors text-base"
           >
-            Schedule a Demo
+            Schedule a Project Deep Dive
           </a>
           <p className="mt-1.5 text-xs text-gray-400">Free 30-min call with a solutions engineer</p>
         </div>
