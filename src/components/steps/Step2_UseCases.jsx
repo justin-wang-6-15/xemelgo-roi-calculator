@@ -1,58 +1,76 @@
-import { useState, useEffect, useRef } from 'react';
-import { BUCKET_CONFIG } from '../../utils/calculations';
+import { useState } from 'react';
 
-const INDUSTRY_RECOMMENDATIONS = {
-  manufacturing: ['locateItems', 'cycleCount', 'audit', 'calibrationReminders', 'picklistVerification', 'internalDelivery'],
-  retail:        ['misShipReduction', 'picklistVerification', 'cycleCount', 'audit', 'dockTurnSpeed'],
-  supplychain:   ['dockTurnSpeed', 'locateItems', 'cycleCount', 'misShipReduction', 'internalDelivery', 'picklistVerification'],
-  healthcare:    ['expiredProducts', 'audit', 'cycleCount', 'calibrationReminders', 'locateItems', 'geofencing'],
-  other:         [],
-  '':            ['locateItems', 'cycleCount', 'audit', 'shipReceiveVerification', 'picklistVerification'],
+const SOLUTIONS = [
+  {
+    id: 'inventory',
+    name: 'Inventory management',
+    description: 'Cycle counting, locate items, full audits, and expiry tracking.',
+    defaults: ['cycleCount', 'locateItems', 'audit'],
+    extras:   ['expiredProducts', 'goodsReceipt', 'inventoryRequests', 'returnsTransfers', 'shrinkage', 'rfidTracking'],
+  },
+  {
+    id: 'asset',
+    name: 'Asset tracking',
+    description: 'Locate assets, track calibration status, and enforce zone boundaries.',
+    defaults: ['locateItems', 'calibrationReminders', 'geofencing'],
+    extras:   ['cycleCount', 'productionEquipment', 'rtiTracking'],
+  },
+  {
+    id: 'wip',
+    name: 'Work in process',
+    description: 'Track work orders and in-progress materials across your facility.',
+    defaults: ['locateItems', 'workOrderTracking'],
+    extras:   ['rtiTracking'],
+  },
+  {
+    id: 'shipment',
+    name: 'Shipment tracking',
+    description: 'Verify picks, reduce mis-ships, and accelerate dock throughput.',
+    defaults: ['picklistVerification', 'shipReceiveVerification', 'misShipReduction'],
+    extras:   ['automatedPackCount', 'outboundAudit', 'fasterFulfillment', 'proofOfDelivery'],
+  },
+  {
+    id: 'delivery',
+    name: 'Package delivery',
+    description: 'Automate internal delivery confirmation between zones.',
+    defaults: ['internalDelivery'],
+    extras:   [],
+  },
+];
+
+const UC_LABELS = {
+  cycleCount:              'Cycle counting',
+  locateItems:             'Locate items',
+  audit:                   'Full inventory audit',
+  expiredProducts:         'Expired products',
+  goodsReceipt:            'Goods receipt',
+  inventoryRequests:       'Inventory requests',
+  returnsTransfers:        'Returns and transfers',
+  shrinkage:               'Shrinkage and loss prevention',
+  rfidTracking:            'RFID inventory tracking',
+  calibrationReminders:    'Calibration reminders',
+  geofencing:              'Geofencing',
+  productionEquipment:     'Production equipment tracking',
+  rtiTracking:             'RTI tracking',
+  workOrderTracking:       'Work order tracking',
+  picklistVerification:    'Picklist verification',
+  shipReceiveVerification: 'Shipment throughput',
+  misShipReduction:        'Mis-ship reduction',
+  automatedPackCount:      'Automated pack count',
+  outboundAudit:           'Outbound shipment audit',
+  fasterFulfillment:       'Faster order fulfillment',
+  proofOfDelivery:         'Proof of delivery',
+  internalDelivery:        'Internal delivery verification',
 };
 
-const UC_REASON = {
-  cycleCount:              'Cuts the hours spent on routine cycle counts by 90–98% — RFID reads replace manual scanning.',
-  audit:                   'Reduces full physical audit labor by 75–90%, turning multi-day shutdowns into hours.',
-  locateItems:             'Eliminates time wasted searching for misplaced inventory or assets.',
-  shipReceiveVerification: 'Replaces manual scanning at the dock door, cutting verification time by 50–70%.',
-  picklistVerification:    'Reduces pick errors and the cost of returns, re-ships, and production delays.',
-  internalDelivery:        'Automates transfer confirmation between zones, reducing manual handling.',
-  expiredProducts:         'Prevents write-offs by flagging at-risk inventory before it expires.',
-  calibrationReminders:    'Keeps calibrated assets compliant, preventing audit failures and re-work.',
-  geofencing:              'Alerts your team when assets leave authorized zones, preventing loss and shrinkage.',
-  misShipReduction:        'Catches shipment errors before they leave your dock, reducing returns and chargebacks.',
-  dockTurnSpeed:           'Accelerates dock throughput with instant RFID reads, reducing carrier wait costs.',
-  fasterFulfillment:       'Cuts order cycle time to capture revenue from orders you\'re currently turning away.',
-};
-
-const UC_VALUE_RANGE = {
-  cycleCount:              '$10K–$50K / yr',
-  audit:                   '$5K–$30K / yr',
-  locateItems:             '$15K–$60K / yr',
-  picklistVerification:    '$20K–$90K / yr',
-  shipReceiveVerification: '$25K–$120K / yr',
-  internalDelivery:        '$10K–$40K / yr',
-  expiredProducts:         '$10K–$50K / yr',
-  calibrationReminders:    '$15K–$75K / yr',
-  geofencing:              '$5K–$30K / yr',
-  fasterFulfillment:       '$20K–$100K / yr',
-  misShipReduction:        '$10K–$40K / yr',
-  dockTurnSpeed:           '$15K–$60K / yr',
-};
-
-const INDUSTRY_DISPLAY = {
-  manufacturing: 'Manufacturing',
-  retail:        'Retail',
-  supplychain:   'Supply Chain / Distribution',
-  healthcare:    'Healthcare / Life Sciences',
-  other:         'your industry',
-  '':            'your industry',
-};
-
-// Flat key → label lookup from BUCKET_CONFIG
-const UC_LABELS = Object.fromEntries(
-  BUCKET_CONFIG.flatMap((b) => Object.entries(b.labels))
-);
+// Map ucKey → solution names that list it as a default (for "also under" label)
+const UC_DEFAULT_IN = {};
+SOLUTIONS.forEach((sol) => {
+  sol.defaults.forEach((key) => {
+    if (!UC_DEFAULT_IN[key]) UC_DEFAULT_IN[key] = [];
+    UC_DEFAULT_IN[key].push(sol.name);
+  });
+});
 
 function Toggle({ checked, onChange }) {
   return (
@@ -69,174 +87,125 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-function RecommendedCard({ ucKey, enabled, onToggle }) {
-  return (
-    <div className={`flex items-start gap-4 p-4 rounded-xl border transition-colors cursor-pointer
-      ${enabled ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}
-      onClick={() => onToggle(ucKey)}
-    >
-      <Toggle checked={enabled} onChange={() => onToggle(ucKey)} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 flex-wrap">
-          <span className={`text-sm font-semibold ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>
-            {UC_LABELS[ucKey] || ucKey}
-          </span>
-          <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 whitespace-nowrap flex-shrink-0">
-            {UC_VALUE_RANGE[ucKey]}
-          </span>
-        </div>
-        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_REASON[ucKey]}</p>
-      </div>
-    </div>
-  );
-}
+export default function Step2_UseCases({ useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
+  const [selectedSolutions, setSelectedSolutions] = useState(new Set());
 
-function ExploreCard({ ucKey, enabled, onToggle }) {
-  return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors cursor-pointer
-      ${enabled ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}
-      onClick={() => onToggle(ucKey)}
-    >
-      <Toggle checked={enabled} onChange={() => onToggle(ucKey)} />
-      <span className={`text-sm font-medium flex-1 ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>
-        {UC_LABELS[ucKey] || ucKey}
-      </span>
-      <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 whitespace-nowrap">
-        {UC_VALUE_RANGE[ucKey]}
-      </span>
-    </div>
-  );
-}
-
-export default function Step2_UseCases({ ops, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
-  const [exploreOpen, setExploreOpen] = useState(false);
-
-  const industry = ops.industry || '';
-  const prevIndustryRef = useRef(null);
-
-  // Auto-enable recommended use cases when industry is set or changes
-  useEffect(() => {
-    if (prevIndustryRef.current === industry) return;
-    prevIndustryRef.current = industry;
-    const rec = INDUSTRY_RECOMMENDATIONS[industry] ?? INDUSTRY_RECOMMENDATIONS[''];
-    if (rec.length === 0) return;
-    setUseCases((prev) => {
-      const next = { ...prev };
-      // Disable use cases from the previous industry's recommended set that weren't manually enabled by the user
-      // then enable the new industry's recommended set
-      rec.forEach((key) => {
-        if (next[key]) next[key] = { ...next[key], enabled: true };
-      });
+  function toggleSolution(sol) {
+    setSelectedSolutions((prev) => {
+      const next = new Set(prev);
+      if (next.has(sol.id)) {
+        next.delete(sol.id);
+        // Disable this solution's defaults unless another selected solution also lists them
+        setUseCases((ucs) => {
+          const updated = { ...ucs };
+          sol.defaults.forEach((key) => {
+            const stillNeeded = [...next].some((sid) => {
+              const s = SOLUTIONS.find((x) => x.id === sid);
+              return s?.defaults.includes(key);
+            });
+            if (!stillNeeded) {
+              updated[key] = { ...updated[key], enabled: false };
+            }
+          });
+          return updated;
+        });
+      } else {
+        next.add(sol.id);
+        // Enable this solution's defaults
+        setUseCases((ucs) => {
+          const updated = { ...ucs };
+          sol.defaults.forEach((key) => {
+            if (updated[key]) updated[key] = { ...updated[key], enabled: true };
+          });
+          return updated;
+        });
+      }
       return next;
     });
-  }, [industry, setUseCases]);
-  const industryDisplay = INDUSTRY_DISPLAY[industry];
-  const recommended = INDUSTRY_RECOMMENDATIONS[industry] ?? INDUSTRY_RECOMMENDATIONS[''];
-  const isOther = industry === 'other';
+  }
 
-  const remainingByBucket = BUCKET_CONFIG.map((bucket) => ({
-    ...bucket,
-    keys: bucket.keys.filter((k) => !recommended.includes(k)),
-  })).filter((b) => b.keys.length > 0);
-
-  const allByBucket = BUCKET_CONFIG.filter((b) => b.keys.length > 0);
-
-  function toggle(key) {
-    setUseCases((prev) => ({ ...prev, [key]: { ...prev[key], enabled: !prev[key].enabled } }));
+  function toggleUseCase(key) {
+    setUseCases((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], enabled: !prev[key]?.enabled },
+    }));
   }
 
   const selectedCount = Object.values(useCases).filter((uc) => uc.enabled).length;
+  const anySelected = selectedSolutions.size > 0;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Which of these sound like you?</h2>
-      <p className="text-sm text-gray-500 mb-6">
-        {isOther
-          ? 'Browse all use cases below and select any that apply to your operation.'
-          : 'Select all that apply. You\'ll review and adjust the numbers in the next step.'}
-      </p>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Which Xemelgo solutions apply to you?</h2>
+      <p className="text-sm text-gray-500 mb-6">Select all that apply. We'll pre-select the most relevant use cases for each solution.</p>
 
-      {!isOther && (
+      {/* Stage 1: Solution toggles */}
+      <div className="space-y-3 mb-8">
+        {SOLUTIONS.map((sol) => {
+          const on = selectedSolutions.has(sol.id);
+          return (
+            <div
+              key={sol.id}
+              onClick={() => toggleSolution(sol)}
+              className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-colors
+                ${on ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}
+            >
+              <Toggle checked={on} onChange={() => toggleSolution(sol)} />
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold ${on ? 'text-gray-900' : 'text-gray-700'}`}>{sol.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{sol.description}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stage 2: Use case groups — visible once at least one solution is selected */}
+      {anySelected && (
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            Recommended for {industryDisplay}
-          </h3>
-          <div className="space-y-3">
-            {recommended.map((key) => (
-              <RecommendedCard
-                key={key}
-                ucKey={key}
-                enabled={useCases[key]?.enabled ?? false}
-                onToggle={toggle}
-              />
-            ))}
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Customize your use cases</h3>
+          <div className="space-y-6">
+            {SOLUTIONS.filter((sol) => selectedSolutions.has(sol.id)).map((sol) => {
+              const allKeys = [...sol.defaults, ...sol.extras];
+              return (
+                <div key={sol.id}>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{sol.name}</p>
+                  <div className="space-y-2">
+                    {allKeys.map((key) => {
+                      const enabled = useCases[key]?.enabled ?? false;
+                      const isDefault = sol.defaults.includes(key);
+                      const alsoIn = (UC_DEFAULT_IN[key] || []).filter((n) => n !== sol.name);
+                      return (
+                        <div
+                          key={key}
+                          onClick={() => toggleUseCase(key)}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors
+                            ${enabled ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                        >
+                          <Toggle checked={enabled} onChange={() => toggleUseCase(key)} />
+                          <span className={`text-sm font-medium flex-1 ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>
+                            {UC_LABELS[key] || key}
+                          </span>
+                          {alsoIn.length > 0 && (
+                            <span className="text-xs text-gray-400 italic flex-shrink-0">
+                              also under {alsoIn.join(', ')}
+                            </span>
+                          )}
+                          {isDefault && (
+                            <span className="text-xs text-blue-500 font-medium flex-shrink-0 ml-1">default</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="mb-6">
-        {isOther ? (
-          <div className="space-y-6">
-            {allByBucket.map((bucket) => (
-              <div key={bucket.name}>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                  {bucket.name}
-                </p>
-                <div className="space-y-2">
-                  {bucket.keys.map((key) => (
-                    <ExploreCard
-                      key={key}
-                      ucKey={key}
-                      enabled={useCases[key]?.enabled ?? false}
-                      onToggle={toggle}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
-            <button
-              onClick={() => setExploreOpen((v) => !v)}
-              className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              <svg
-                className={`w-4 h-4 transition-transform ${exploreOpen ? 'rotate-90' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              {exploreOpen ? 'Hide other use cases' : 'Explore all use cases →'}
-            </button>
-
-            {exploreOpen && (
-              <div className="mt-4 space-y-6">
-                {remainingByBucket.map((bucket) => (
-                  <div key={bucket.name}>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                      {bucket.name}
-                    </p>
-                    <div className="space-y-2">
-                      {bucket.keys.map((key) => (
-                        <ExploreCard
-                          key={key}
-                          ucKey={key}
-                          enabled={useCases[key]?.enabled ?? false}
-                          onToggle={toggle}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
+      {/* Custom categories */}
       {customCategories.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Custom Categories</h3>
@@ -252,7 +221,7 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, customCateg
                 />
                 <button
                   type="button"
-                  onClick={() => setCustomCategories((prev) => prev.filter((c) => c.id !== cat.id))}
+                  onClick={(e) => { e.stopPropagation(); setCustomCategories((prev) => prev.filter((c) => c.id !== cat.id)); }}
                   className="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
                   aria-label="Remove custom category"
                 >
@@ -274,6 +243,7 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, customCateg
         </button>
       </div>
 
+      {/* Selected count bar */}
       <div className={`rounded-xl px-5 py-3 mb-6 border ${selectedCount > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
         <p className="text-sm text-gray-700">
           <span className={`font-semibold ${selectedCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -282,7 +252,7 @@ export default function Step2_UseCases({ ops, useCases, setUseCases, customCateg
           use case{selectedCount !== 1 ? 's' : ''} selected
         </p>
         {selectedCount === 0 && (
-          <p className="text-xs text-gray-400 mt-0.5">Select at least one use case to continue.</p>
+          <p className="text-xs text-gray-400 mt-0.5">Select at least one solution to continue.</p>
         )}
       </div>
 

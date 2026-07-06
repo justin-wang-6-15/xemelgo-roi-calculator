@@ -56,6 +56,18 @@ function makeAllDisabledUseCases() {
     fasterFulfillment:       { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
     misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.95 },
     dockTurnSpeed:           { enabled: false, minutesSaved: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.95 },
+    // New keys — placeholders until formulas are added to calculations.js
+    goodsReceipt:            { enabled: false },
+    inventoryRequests:       { enabled: false },
+    returnsTransfers:        { enabled: false },
+    shrinkage:               { enabled: false },
+    rfidTracking:            { enabled: false },
+    productionEquipment:     { enabled: false },
+    rtiTracking:             { enabled: false },
+    workOrderTracking:       { enabled: false },
+    automatedPackCount:      { enabled: false },
+    outboundAudit:           { enabled: false },
+    proofOfDelivery:         { enabled: false },
   };
 }
 
@@ -66,32 +78,6 @@ const defaultFin = {
   wacc: 0.10,
 };
 
-function StaticBenchmarkCard() {
-  return (
-    <div className="hidden lg:block">
-      <div className="sticky top-8 bg-white border border-gray-200 rounded-xl shadow-md p-5">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Your Estimate</p>
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs text-gray-400">Estimated annual opportunity</p>
-            <p className="text-lg font-bold text-blue-700">$150K–$700K</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">Payback period</p>
-            <p className="text-lg font-bold text-gray-900">18–24 weeks</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400">5-Year ROI</p>
-            <p className="text-lg font-bold text-gray-900">200–400%</p>
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-gray-400 leading-relaxed">
-          Select your use cases next to see your personalized estimate.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function AnalyzingScreen() {
   return (
@@ -190,8 +176,7 @@ export default function App() {
     goTo(stepNum, stepNum < step ? 'back' : 'forward');
   }
 
-  // Sidebar appears on step 1 (static benchmarks) and step 3 (live preview)
-  const showGrid = !done && !analyzing && (step === 1 || step === 3);
+  const showGrid = !done && !analyzing && step === 3;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -307,7 +292,6 @@ export default function App() {
             ) : null}
           </div>
 
-          {!done && !analyzing && step === 1 && <StaticBenchmarkCard />}
           {!done && !analyzing && step === 3 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} />}
         </div>
       </main>

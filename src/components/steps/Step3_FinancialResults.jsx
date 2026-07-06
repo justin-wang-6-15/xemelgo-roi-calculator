@@ -3,87 +3,104 @@ import { calcFinancials } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import Tooltip from '../Tooltip';
 
-function CumulativeChart({ fin, totalGrossAnnual }) {
-  const W = 600, H = 300;
-  const PADDING = { top: 30, right: 30, bottom: 40, left: 70 };
-
+function buildCumulativeData(fin, totalGrossAnnual) {
   const capex = Number(fin.capex) || 0;
   const monthlyFee = Number(fin.monthlyPlatformFee) || 0;
   const totalCapex = capex * (1 + fin.contingencyRate);
   const monthlyBase = totalGrossAnnual / 12;
   const ramp = [0, 0.25, 0.50, 0.75, 1.0];
 
-  const cumSavings = [0];
   const netPosition = [-totalCapex];
-
   for (let m = 1; m <= 60; m++) {
     const mSavings = monthlyBase * (m <= 4 ? ramp[m] : 1.0);
-    cumSavings.push(cumSavings[m - 1] + mSavings);
     netPosition.push(netPosition[m - 1] + mSavings - monthlyFee);
   }
 
   let breakEvenMonth = null;
   for (let m = 1; m <= 60; m++) {
-    if (netPosition[m - 1] < 0 && netPosition[m] >= 0) {
-      breakEvenMonth = m;
-      break;
-    }
+    if (netPosition[m - 1] < 0 && netPosition[m] >= 0) { breakEvenMonth = m; break; }
   }
 
-  const yMin = Math.min(...netPosition, 0);
-  const yMax = Math.max(...cumSavings, 0);
-  const chartW = W - PADDING.left - PADDING.right;
-  const chartH = H - PADDING.top - PADDING.bottom;
+  return { netPosition, breakEvenMonth };
+}
 
-  const xScale = (m) => PADDING.left + (m / 60) * chartW;
-  const yScale = (v) => PADDING.top + chartH - ((v - yMin) / (yMax - yMin || 1)) * chartH;
+function MilestoneOutlook({ fin, totalGrossAnnual }) {
+  const { netPosition, breakEvenMonth } = buildCumulativeData(fin, totalGrossAnnual);
 
-  const savingsPath = cumSavings.map((v, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
-  const netPath = netPosition.map((v, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(' ');
+  // 6 chart points: initial investment + years 1–5
+  const chartPoints = [0, 12, 24, 36, 48, 60].map((m) => netPosition[m]);
+  const yMin = Math.min(...chartPoints, 0);
+  const yMax = Math.max(...chartPoints, 0);
+  const range = yMax - yMin || 1;
 
-  const yTicks = [0, 1, 2, 3, 4].map((i) => yMin + (i / 4) * (yMax - yMin));
-  const xLabels = [12, 24, 36, 48, 60];
-  const zero_y = yScale(0);
+  const SVG_W = 500, SVG_H = 120;
+  const PAD_L = 8, PAD_R = 8, PAD_T = 12, PAD_B = 8;
+  const cw = SVG_W - PAD_L - PAD_R;
+  const ch = SVG_H - PAD_T - PAD_B;
 
-  function fmtAxis(v) {
-    if (Math.abs(v) >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
-    if (Math.abs(v) >= 1000) return `$${(v / 1000).toFixed(0)}K`;
+  const px = (i) => PAD_L + (i / 5) * cw;
+  const py = (v) => PAD_T + ch - ((v - yMin) / range) * ch;
+
+  const pathD = chartPoints.map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
+  const zero_y = py(0);
+
+  function fmtShort(v) {
+    if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
     return `$${v.toFixed(0)}`;
   }
 
+  const breakEvenWeeks = breakEvenMonth != null ? Math.round(breakEvenMonth * (52 / 12)) : null;
+
+  const milestones = [
+    { label: 'Year 1', value: netPosition[12], emphasis: false },
+    { label: 'Year 3', value: netPosition[36], emphasis: false },
+    { label: 'Year 5', value: netPosition[60], emphasis: true  },
+  ];
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 300 }}>
-      {xLabels.map((m) => (
-        <line key={m} x1={xScale(m)} y1={PADDING.top} x2={xScale(m)} y2={H - PADDING.bottom} stroke="#EDF5FF" strokeWidth="1" />
-      ))}
-      <line x1={PADDING.left} y1={zero_y} x2={W - PADDING.right} y2={zero_y} stroke="#999999" strokeWidth="1" />
-      <path d={netPath} fill="none" stroke="#999999" strokeWidth="2" strokeDasharray="6,4" />
-      <path d={savingsPath} fill="none" stroke="#004FDB" strokeWidth="2" />
-      {breakEvenMonth != null && (
-        <>
-          <line x1={xScale(breakEvenMonth)} y1={PADDING.top} x2={xScale(breakEvenMonth)} y2={H - PADDING.bottom} stroke="#0D8CFF" strokeWidth="1.5" strokeDasharray="4,3" />
-          <text x={xScale(breakEvenMonth) + 4} y={PADDING.top + 14} fill="#0D8CFF" fontSize="10" fontWeight="600">
-            Breakeven — Wk {Math.round(breakEvenMonth * (52 / 12))}
-          </text>
-        </>
-      )}
-      {yTicks.map((v, i) => (
-        <g key={i}>
-          <line x1={PADDING.left - 4} y1={yScale(v)} x2={PADDING.left} y2={yScale(v)} stroke="#999" strokeWidth="1" />
-          <text x={PADDING.left - 6} y={yScale(v) + 4} textAnchor="end" fill="#999" fontSize="10">{fmtAxis(v)}</text>
-        </g>
-      ))}
-      {xLabels.map((m, i) => (
-        <text key={m} x={xScale(m)} y={H - PADDING.bottom + 16} textAnchor="middle" fill="#999" fontSize="10">Yr {i + 1}</text>
-      ))}
-      {/* Legend — top-right to avoid overlapping breakeven label */}
-      <g transform={`translate(${W - PADDING.right - 193}, ${PADDING.top + 10})`}>
-        <line x1="0" y1="6" x2="20" y2="6" stroke="#004FDB" strokeWidth="2" />
-        <text x="24" y="10" fill="#555" fontSize="10">Cumulative Savings</text>
-        <line x1="130" y1="6" x2="150" y2="6" stroke="#999" strokeWidth="2" strokeDasharray="5,3" />
-        <text x="154" y="10" fill="#555" fontSize="10">Net Position</text>
-      </g>
-    </svg>
+    <div>
+      {/* Milestone cards */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {milestones.map(({ label, value, emphasis }) => (
+          <div
+            key={label}
+            className={`rounded-xl p-4 border-l-4 ${
+              emphasis
+                ? 'bg-blue-600 border-blue-800 shadow-md'
+                : 'bg-white shadow-sm border-blue-300'
+            }`}
+          >
+            <p className={`text-xs font-medium uppercase tracking-wide mb-1 ${emphasis ? 'text-blue-100' : 'text-gray-500'}`}>{label}</p>
+            <p className={`font-bold ${emphasis ? 'text-2xl text-white' : 'text-xl text-gray-900'}`}>
+              {fmtShort(value)}
+            </p>
+            <p className={`text-xs mt-1 ${emphasis ? 'text-blue-200' : 'text-gray-400'}`}>Net position</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Simplified SVG line */}
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full overflow-visible" style={{ height: SVG_H }}>
+        {/* Zero line */}
+        {zero_y >= PAD_T && zero_y <= PAD_T + ch && (
+          <line x1={PAD_L} y1={zero_y} x2={SVG_W - PAD_R} y2={zero_y} stroke="#e5e7eb" strokeWidth="1" />
+        )}
+        {/* Net position line */}
+        <path d={pathD} fill="none" stroke="#004FDB" strokeWidth="2" strokeLinejoin="round" />
+        {/* Dots */}
+        {chartPoints.map((v, i) => (
+          <circle key={i} cx={px(i)} cy={py(v)} r="3" fill={v >= 0 ? '#004FDB' : '#999'} />
+        ))}
+      </svg>
+
+      {/* Caption */}
+      <p className="text-xs text-gray-400 text-center mt-2">
+        {breakEvenWeeks != null
+          ? `Break-even at week ${breakEvenWeeks} — net position turns positive and grows from there.`
+          : 'Net position over 5 years. Enter CapEx and platform fee to see break-even.'}
+      </p>
+    </div>
   );
 }
 
@@ -308,18 +325,18 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
         </div>
       </div>
 
-      {/* 5-Year Cumulative Outlook Chart */}
+      {/* 5-Year Cumulative Outlook */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-6">
         <h3 className="text-base font-semibold text-gray-800 mb-1">5-Year Cumulative Outlook</h3>
-        <p className="text-xs text-gray-500 mb-4">Cumulative savings and net position over 5 years.</p>
+        <p className="text-xs text-gray-500 mb-4">Net position at key milestones over 5 years.</p>
         {!inputsReady ? (
-          <div className="bg-gray-100 rounded-xl flex items-center justify-center" style={{ height: 300 }}>
+          <div className="bg-gray-100 rounded-xl flex items-center justify-center" style={{ height: 160 }}>
             <p className="text-sm text-gray-400 text-center max-w-xs">
-              Enter your CapEx and monthly platform fee above to see your 5-year cumulative outlook.
+              Enter your CapEx and monthly platform fee above to see your 5-year outlook.
             </p>
           </div>
         ) : (
-          <CumulativeChart fin={fin} totalGrossAnnual={result.totalGrossAnnual} />
+          <MilestoneOutlook fin={fin} totalGrossAnnual={result.totalGrossAnnual} />
         )}
       </div>
 
