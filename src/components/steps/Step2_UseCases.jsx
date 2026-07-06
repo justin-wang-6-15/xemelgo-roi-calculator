@@ -5,15 +5,15 @@ const SOLUTIONS = [
     id: 'inventory',
     name: 'Inventory management',
     description: 'Cycle counting, locate items, full audits, and expiry tracking.',
-    defaults: ['cycleCount', 'locateItems', 'audit'],
-    extras:   ['expiredProducts', 'goodsReceipt', 'inventoryRequests', 'returnsTransfers', 'shrinkage', 'rfidTracking'],
+    defaults: ['cycleCount', 'locateItems', 'audit', 'shrinkage', 'rfidTracking'],
+    extras:   ['expiredProducts', 'goodsReceipt', 'inventoryRequests', 'returnsTransfers'],
   },
   {
     id: 'asset',
     name: 'Asset tracking',
     description: 'Locate assets, track calibration status, and enforce zone boundaries.',
-    defaults: ['locateItems', 'calibrationReminders', 'geofencing'],
-    extras:   ['cycleCount', 'productionEquipment', 'rtiTracking'],
+    defaults: ['locateItems', 'calibrationReminders', 'cycleCount', 'productionEquipment', 'rtiTracking'],
+    extras:   ['geofencing'],
   },
   {
     id: 'wip',
@@ -26,8 +26,8 @@ const SOLUTIONS = [
     id: 'shipment',
     name: 'Shipment tracking',
     description: 'Verify picks, reduce mis-ships, and accelerate dock throughput.',
-    defaults: ['picklistVerification', 'shipReceiveVerification', 'misShipReduction'],
-    extras:   ['automatedPackCount', 'outboundAudit', 'fasterFulfillment', 'proofOfDelivery'],
+    defaults: ['picklistVerification', 'shipReceiveVerification', 'misShipReduction', 'fasterFulfillment', 'proofOfDelivery'],
+    extras:   ['automatedPackCount', 'outboundAudit'],
   },
   {
     id: 'delivery',
@@ -156,7 +156,7 @@ export default function Step2_UseCases({ useCases, setUseCases, customCategories
     }));
   }
 
-  const selectedCount = Object.values(useCases).filter((uc) => uc.enabled).length;
+  const selectedCount = Object.values(useCases).filter((uc) => uc?.enabled).length;
   const anySelected = selectedSolutions.size > 0;
 
   return (
