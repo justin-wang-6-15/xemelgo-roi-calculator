@@ -63,6 +63,31 @@ const UC_LABELS = {
   internalDelivery:        'Internal delivery verification',
 };
 
+const UC_DESCRIPTIONS = {
+  cycleCount:              'Replace manual counting shifts with automatic RFID reads.',
+  locateItems:             'Find misplaced inventory instantly instead of searching manually.',
+  audit:                   'Complete a full stock count in hours instead of days.',
+  expiredProducts:         'Flag near-expiration inventory before it becomes a write-off.',
+  goodsReceipt:            'Confirm inbound shipments against purchase orders automatically.',
+  inventoryRequests:       'Trigger replenishment automatically when stock runs low.',
+  returnsTransfers:        'Track inventory moving between locations without manual logging.',
+  shrinkage:               'Catch unexplained inventory loss as it happens.',
+  rfidTracking:            'Get real-time visibility into every tagged item on the floor.',
+  calibrationReminders:    'Get notified before a calibrated asset falls out of compliance.',
+  geofencing:              'Alert your team when an asset leaves an authorized zone.',
+  productionEquipment:     'Track jigs, fixtures, and tooling to prevent downtime.',
+  rtiTracking:             'Track totes and containers to cut loss and replacement costs.',
+  workOrderTracking:       'Track how long a job sits at each station.',
+  picklistVerification:    'Catch picking errors before an order ships.',
+  shipReceiveVerification: 'Move trucks through the dock faster with instant reads.',
+  misShipReduction:        'Catch the wrong item before it leaves the building.',
+  automatedPackCount:      'Verify case contents against the shipment notice without scanning each item.',
+  outboundAudit:           'Certify every dock door before a truck leaves.',
+  fasterFulfillment:       "Cut order cycle time to capture orders you're currently turning away.",
+  proofOfDelivery:         'Verify tag authenticity to cut fraudulent returns.',
+  internalDelivery:        'Confirm internal deliveries with photo and signature proof.',
+};
+
 // Map ucKey → solution names that list it as a default (for "also under" label)
 const UC_DEFAULT_IN = {};
 SOLUTIONS.forEach((sol) => {
@@ -183,17 +208,24 @@ export default function Step2_UseCases({ useCases, setUseCases, customCategories
                             ${enabled ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}
                         >
                           <Toggle checked={enabled} onChange={() => toggleUseCase(key)} />
-                          <span className={`text-sm font-medium flex-1 ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>
-                            {UC_LABELS[key] || key}
-                          </span>
-                          {alsoIn.length > 0 && (
-                            <span className="text-xs text-gray-400 italic flex-shrink-0">
-                              also under {alsoIn.join(', ')}
-                            </span>
-                          )}
-                          {isDefault && (
-                            <span className="text-xs text-blue-500 font-medium flex-shrink-0 ml-1">default</span>
-                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>
+                                {UC_LABELS[key] || key}
+                              </span>
+                              {alsoIn.length > 0 && (
+                                <span className="text-xs text-gray-400 italic flex-shrink-0">
+                                  also under {alsoIn.join(', ')}
+                                </span>
+                              )}
+                              {isDefault && (
+                                <span className="text-xs text-blue-500 font-medium flex-shrink-0">default</span>
+                              )}
+                            </div>
+                            {UC_DESCRIPTIONS[key] && (
+                              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_DESCRIPTIONS[key]}</p>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
