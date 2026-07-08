@@ -20,6 +20,12 @@ export function calcUseCaseValue(key, uc, ops) {
       }, 0);
     }
 
+    case 'workOrderTracking': {
+      return (uc.roleRows || []).reduce((sum, row) => {
+        return sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct;
+      }, 0);
+    }
+
     case 'picklistVerification':
       return uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct;
 
@@ -57,11 +63,12 @@ export function calcUseCaseValue(key, uc, ops) {
 export const BUCKET_CONFIG = [
   {
     name: 'Labor Efficiency',
-    keys: ['cycleCount', 'audit', 'locateItems', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'],
+    keys: ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'],
     labels: {
       cycleCount: 'Cycle Counting',
       audit: 'Full Inventory Audit',
       locateItems: 'Locate Items',
+      workOrderTracking: 'Work Order Cycle Time Tracking',
       picklistVerification: 'Picklist Verification',
       shipReceiveVerification: 'Ship & Receive Verification',
       internalDelivery: 'Internal Delivery Verification',

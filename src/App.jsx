@@ -64,7 +64,7 @@ function makeAllDisabledUseCases() {
     rfidTracking:            { enabled: false },
     productionEquipment:     { enabled: false },
     rtiTracking:             { enabled: false },
-    workOrderTracking:       { enabled: false },
+    workOrderTracking:       { enabled: false, roleRows: [{ id: 1, role: 'indirect', customRoleName: '', hoursLostPerDay: 0.5, headcount: defaultOps.indirectCount, burdenedRate: defaultOps.indirectRate }], reductionPct: 0.85 },
     automatedPackCount:      { enabled: false },
     outboundAudit:           { enabled: false },
     proofOfDelivery:         { enabled: false },

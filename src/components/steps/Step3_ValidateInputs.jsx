@@ -15,6 +15,7 @@ const UC_REDUCTION_DEFAULTS = {
   cycleCount:              98,
   audit:                   90,
   locateItems:             90,
+  workOrderTracking:       85,
   picklistVerification:    95,
   shipReceiveVerification: 95,
   internalDelivery:        90,
@@ -30,6 +31,7 @@ const SOURCE_NOTES = {
   cycleCount:              `Xemelgo customers report 90–98% reduction in cycle count time. Default set to ${d.cycleCount}% — adjust down if you want to be conservative.`,
   audit:                   `Xemelgo customers report 75–90% reduction in full audit labor. Default set to ${d.audit}%.`,
   locateItems:             `Xemelgo customers report 70–90% reduction in search time across all roles. Default set to ${d.locateItems}%.`,
+  workOrderTracking:       `RFID dwell time flags remove most manual status checking. Customers report 75–90% reduction. Default set to ${d.workOrderTracking}%.`,
   picklistVerification:    `Xemelgo customers see 80–95% reduction in pick errors. Default set to ${d.picklistVerification}%.`,
   shipReceiveVerification: `RFID portal reads replace manual dock scanning. Customers report 75–95% time reduction per transaction. Default set to ${d.shipReceiveVerification}%.`,
   internalDelivery:        `RFID eliminates manual confirmation steps at each hand-off point. Customers report 75–90% time reduction. Default set to ${d.internalDelivery}%.`,
@@ -44,6 +46,7 @@ const UC_DESCRIPTIONS = {
   cycleCount:              'Time saved on routine cycle counts via RFID.',
   audit:                   'Labor savings from faster full physical audits.',
   locateItems:             'Time eliminated searching for misplaced inventory or assets.',
+  workOrderTracking:       'Supervisor and planner hours reclaimed by automating stalled job flagging.',
   picklistVerification:    'Pick error costs reduced with verification at point of pick.',
   shipReceiveVerification: 'Dock transaction time cut with portal-based RFID reads.',
   internalDelivery:        'Internal transfer confirmation time reduced across zones.',
@@ -206,6 +209,58 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
         <div>
           <label className={labelCls}>Expected reduction with RFID</label>
           <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate}  />
+        </div>
+      </>
+    );
+  }
+
+  if (ucKey === 'workOrderTracking') {
+    const rows = uc.roleRows || [];
+    const updateRow = (id, field, value) => {
+      onUpdate('roleRows', rows.map((r) => r.id === id ? { ...r, [field]: value } : r));
+    };
+    const changeRole = (id, role) => {
+      onUpdate('roleRows', rows.map((r) => {
+        if (r.id !== id) return r;
+        if (role === 'custom') return { ...r, role, customRoleName: r.customRoleName || '' };
+        const d = ROLE_DEFAULTS[role];
+        return { ...r, role, headcount: ops[d.countKey], burdenedRate: ops[d.rateKey], hoursLostPerDay: d.hoursLostPerDay };
+      }));
+    };
+    const addRow = () => onUpdate('roleRows', [...rows, { id: Date.now(), role: 'indirect', customRoleName: '', hoursLostPerDay: 0.5, headcount: 5, burdenedRate: 45 }]);
+    const removeRow = (id) => onUpdate('roleRows', rows.filter((r) => r.id !== id));
+    return (
+      <>
+        {rows.map((row) => (
+          <div key={row.id} className="relative border border-gray-100 rounded-lg p-3 bg-gray-50/50">
+            {rows.length > 1 && (
+              <button type="button" onClick={() => removeRow(row.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-sm leading-none" aria-label="Remove role">×</button>
+            )}
+            <div className={grid2}>
+              <div>
+                <label className={labelCls}>Role</label>
+                <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} className={inputCls}>
+                  <option value="materialHandler">Material Handlers</option>
+                  <option value="planner">Planners</option>
+                  <option value="indirect">Indirect / Leadership</option>
+                  <option value="direct">Direct Employees</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {row.role === 'custom' && (
+                  <input type="text" value={row.customRoleName} placeholder="Custom role name"
+                    onChange={(e) => updateRow(row.id, 'customRoleName', e.target.value)} className={`${inputCls} mt-2`} />
+                )}
+              </div>
+              <NumField label="Hours spent checking status per day" value={row.hoursLostPerDay} onChange={(v) => updateRow(row.id, 'hoursLostPerDay', v)} />
+              <NumField label="Number of people" value={row.headcount} onChange={(v) => updateRow(row.id, 'headcount', v)} />
+              <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
+            </div>
+          </div>
+        ))}
+        <button type="button" onClick={addRow} className="text-sm font-medium text-blue-600 hover:text-blue-700">+ Add Role</button>
+        <div>
+          <label className={labelCls}>Expected reduction in status checking time</label>
+          <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
         </div>
       </>
     );
@@ -431,7 +486,7 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, o
   );
 }
 
-const LABOR_KEYS = ['cycleCount', 'audit', 'locateItems', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'];
+const LABOR_KEYS = ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'];
 const LOSS_KEYS = ['expiredProducts', 'calibrationReminders', 'geofencing'];
 const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed'];
 

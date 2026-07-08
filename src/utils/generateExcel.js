@@ -48,12 +48,13 @@ function accentBar(ws, endCol, row) {
   c(ws, `A${row}`, '', BLUE);
 }
 
-const LABOR_BUCKET_KEYS = ['cycleCount','audit','locateItems','picklistVerification','shipReceiveVerification','internalDelivery'];
+const LABOR_BUCKET_KEYS = ['cycleCount','audit','locateItems','workOrderTracking','picklistVerification','shipReceiveVerification','internalDelivery'];
 
 const UC_NAMES = {
   cycleCount:              'Cycle Counting',
   audit:                   'Full Inventory Audit',
   locateItems:             'Locate Items',
+  workOrderTracking:       'Work Order Cycle Time Tracking',
   picklistVerification:    'Picklist Verification',
   shipReceiveVerification: 'Ship & Receive Verification',
   internalDelivery:        'Internal Delivery Verification',
@@ -87,6 +88,14 @@ function getLaborHours(key, uc, ops) {
       return { timeSavedPerDay: ah / dpy, peopleAffected: uc.people, weeklyHrs: ah / ops.workWeeksPerYear, annualHrs: ah, rate: uc.burdenedRate };
     }
     case 'locateItems': {
+      const rows = uc.roleRows || [];
+      const annualHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpy * uc.reductionPct, 0);
+      const weeklyHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpw * uc.reductionPct, 0);
+      const peopleAffected = rows.reduce((s, row) => s + (Number(row.headcount) || 0), 0);
+      const avgRate = rows.length ? rows.reduce((s, row) => s + (Number(row.burdenedRate) || 0), 0) / rows.length : 0;
+      return { timeSavedPerDay: annualHrs / dpy, peopleAffected, weeklyHrs, annualHrs, rate: avgRate };
+    }
+    case 'workOrderTracking': {
       const rows = uc.roleRows || [];
       const annualHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpy * uc.reductionPct, 0);
       const weeklyHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpw * uc.reductionPct, 0);
@@ -356,7 +365,7 @@ function buildSavingsAnalysis(ws, ops, useCases, result, dateISO) {
     if (!h) return;
     const wkVal   = h.weeklyHrs * h.rate;
     const liResult = result.buckets.find(b => b.name === 'Labor Efficiency')?.lineItems.find(l => l.key === key);
-    const annValFinal = (key === 'picklistVerification' || key === 'locateItems') ? (liResult?.annualValue ?? 0) : h.annualHrs * h.rate;
+    const annValFinal = (key === 'picklistVerification' || key === 'locateItems' || key === 'workOrderTracking') ? (liResult?.annualValue ?? 0) : h.annualHrs * h.rate;
 
     ws.getRow(r).height = 18;
     const bg = key === 'picklistVerification' ? LGRAY : WHITE;
