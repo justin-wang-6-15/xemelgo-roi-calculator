@@ -16,7 +16,7 @@ export default function Step4_EmailGate({ ops, useCases, fin, onSubmit, onBack }
   const [loading, setLoading] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
-  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops);
+  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops, undefined, fin);
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {

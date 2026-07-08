@@ -1,6 +1,6 @@
 // src/utils/calculations.js
 
-export function calcUseCaseValue(key, uc, ops) {
+export function calcUseCaseValue(key, uc, ops, fin = {}) {
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
   switch (key) {
     case 'cycleCount':
@@ -76,6 +76,15 @@ export function calcUseCaseValue(key, uc, ops) {
     case 'proofOfDelivery':
       return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
 
+    case 'qualityExceptionTracking':
+      return uc.exceptionsPerYear * uc.reductionPct * (uc.reworkCostPerException + (Number(uc.scrapCostPerException) || 0));
+
+    case 'expeditedExceptionTracking':
+      return uc.lateShipmentsPerMonth * 12 * uc.costPerLateShipment * uc.reductionPct;
+
+    case 'workingCapitalImprovement':
+      return uc.wipInventoryValue * uc.reductionPct * (fin.wacc ?? 0.085);
+
     default:
       return 0;
   }
@@ -102,7 +111,7 @@ export const BUCKET_CONFIG = [
   },
   {
     name: 'Loss Prevention & Compliance',
-    keys: ['expiredProducts', 'calibrationReminders', 'geofencing', 'shrinkage', 'productionEquipment', 'rtiTracking', 'proofOfDelivery'],
+    keys: ['expiredProducts', 'calibrationReminders', 'geofencing', 'shrinkage', 'productionEquipment', 'rtiTracking', 'proofOfDelivery', 'qualityExceptionTracking'],
     labels: {
       expiredProducts: 'Expired Products',
       calibrationReminders: 'Calibration Reminders',
@@ -111,15 +120,24 @@ export const BUCKET_CONFIG = [
       productionEquipment: 'Production Equipment Tracking',
       rtiTracking: 'Totes and Containers Tracking',
       proofOfDelivery: 'Proof of Delivery',
+      qualityExceptionTracking: 'Quality Exception Path Tracking',
     },
   },
   {
     name: 'Revenue & Throughput',
-    keys: ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed'],
+    keys: ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed', 'expeditedExceptionTracking'],
     labels: {
       fasterFulfillment: 'Faster Order Fulfillment',
       misShipReduction: 'Mis-Ship Reduction',
       dockTurnSpeed: 'Receiving and Shipping Throughput',
+      expeditedExceptionTracking: 'Expedited Exception Path Tracking',
+    },
+  },
+  {
+    name: 'Capital Efficiency',
+    keys: ['workingCapitalImprovement'],
+    labels: {
+      workingCapitalImprovement: 'Working Capital Improvement',
     },
   },
 ];
@@ -128,14 +146,14 @@ export function calcCustomCategoryTotal(customCategories) {
   return (customCategories || []).reduce((sum, c) => sum + (Number(c.annualSavings) || 0), 0);
 }
 
-export function calcUseCaseTotals(useCases, ops, customCategories) {
+export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
   const buckets = BUCKET_CONFIG.map((bucket) => {
     const lineItems = bucket.keys
       .filter((key) => useCases[key]?.enabled)
       .map((key) => ({
         key,
         name: bucket.labels[key],
-        annualValue: calcUseCaseValue(key, useCases[key], ops),
+        annualValue: calcUseCaseValue(key, useCases[key], ops, fin),
       }));
     const subtotal = lineItems.reduce((sum, li) => sum + li.annualValue, 0);
     return { name: bucket.name, subtotal, lineItems };
@@ -158,7 +176,7 @@ export function calcUseCaseTotals(useCases, ops, customCategories) {
 }
 
 export function calcFinancials(ops, useCases, fin, customCategories) {
-  const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops, customCategories);
+  const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops, customCategories, fin);
   const totalCapex = fin.capex * (1 + fin.contingencyRate);
   const annualSaasFee = fin.monthlyPlatformFee * 12;
   const netAnnualValue = totalGrossAnnual - annualSaasFee;

@@ -19,8 +19,8 @@ const SOLUTIONS = [
     id: 'wip',
     name: 'Work in process',
     description: 'Track work orders and in-progress materials across your facility.',
-    defaults: ['locateItems', 'workOrderTracking'],
-    extras:   ['rtiTracking'],
+    defaults: ['cycleCount', 'locateItems', 'workOrderTracking', 'qualityExceptionTracking', 'expeditedExceptionTracking'],
+    extras:   ['rtiTracking', 'workingCapitalImprovement'],
   },
   {
     id: 'shipment',
@@ -53,6 +53,9 @@ const UC_LABELS = {
   productionEquipment:     'Production equipment tracking',
   rtiTracking:             'RTI tracking',
   workOrderTracking:       'Work order cycle time tracking',
+  qualityExceptionTracking:    'Quality exception path tracking',
+  expeditedExceptionTracking:  'Expedited exception path tracking',
+  workingCapitalImprovement:   'Working capital improvement',
   picklistVerification:    'Picklist verification',
   shipReceiveVerification: 'Shipment throughput',
   misShipReduction:        'Mis-ship reduction',
@@ -64,7 +67,7 @@ const UC_LABELS = {
 };
 
 const UC_DESCRIPTIONS = {
-  cycleCount:              'Replace manual counting shifts with automatic RFID reads.',
+  cycleCount:              'Reconcile system records against actual counts with automatic RFID reads.',
   locateItems:             'Find misplaced inventory instantly instead of searching manually.',
   audit:                   'Complete a full stock count in hours instead of days.',
   expiredProducts:         'Flag near-expiration inventory before it becomes a write-off.',
@@ -77,6 +80,9 @@ const UC_DESCRIPTIONS = {
   productionEquipment:     'Track jigs, fixtures, and tooling to prevent downtime.',
   rtiTracking:             'Track totes and containers to cut loss and replacement costs.',
   workOrderTracking:       'Free up supervisor and planner hours spent manually checking on stalled work orders.',
+  qualityExceptionTracking:    'Catch parts headed for rework or scrap before they reach the next step.',
+  expeditedExceptionTracking:  'Flag priority orders at risk of missing their delivery window.',
+  workingCapitalImprovement:   'Free up cash by carrying less work in process inventory.',
   picklistVerification:    'Catch picking errors before an order ships.',
   shipReceiveVerification: 'Move trucks through the dock faster with instant reads.',
   misShipReduction:        'Catch the wrong item before it leaves the building.',

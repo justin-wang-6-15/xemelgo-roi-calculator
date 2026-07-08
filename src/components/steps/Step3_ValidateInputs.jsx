@@ -33,6 +33,9 @@ const UC_REDUCTION_DEFAULTS = {
   proofOfDelivery:         90,
   misShipReduction:        95,
   dockTurnSpeed:           95,
+  qualityExceptionTracking:   85,
+  expeditedExceptionTracking: 90,
+  workingCapitalImprovement:  15,
 };
 
 const d = UC_REDUCTION_DEFAULTS;
@@ -58,6 +61,9 @@ const SOURCE_NOTES = {
   proofOfDelivery:         `RFID tag verification at delivery prevents most fraudulent return claims. Customers report 75–90% reduction. Default set to ${d.proofOfDelivery}%.`,
   misShipReduction:        `Outbound RFID verification eliminates most mis-ships at the dock door. Customers report 80–95% reduction. Default set to ${d.misShipReduction}%.`,
   dockTurnSpeed:           `RFID portal reads accelerate dock throughput. Customers report 75–95% improvement. Default set to ${d.dockTurnSpeed}%.`,
+  qualityExceptionTracking:   `Xemelgo customers report 75–90% reduction in quality exceptions reaching rework. Default set to ${d.qualityExceptionTracking}%.`,
+  expeditedExceptionTracking: `RFID exception flags catch at-risk priority orders before they miss their window. Customers report 85–95% reduction. Default set to ${d.expeditedExceptionTracking}%.`,
+  workingCapitalImprovement:  `Facilities with real-time WIP visibility typically report 10–30% reductions in average work in process inventory. Default set to ${d.workingCapitalImprovement}%, the conservative end of that range.`,
 };
 
 const UC_DESCRIPTIONS = {
@@ -76,6 +82,9 @@ const UC_DESCRIPTIONS = {
   outboundAudit:           'Outbound dock time cut with portal reads instead of manual scanning.',
   returnsTransfers:        'Transfer logging time eliminated across all internal hand-off points.',
   inventoryRequests:       'Manual replenishment request hours reclaimed with automated triggers.',
+  qualityExceptionTracking:   'Rework labor, materials, and scrap avoided by catching quality issues at the source.',
+  expeditedExceptionTracking: 'Rush freight and penalty costs avoided by catching at-risk priority orders early.',
+  workingCapitalImprovement:  'Cash freed up by carrying less work in process inventory at any given moment.',
   shrinkage:               'Unexplained inventory loss reduced with real-time RFID visibility.',
   productionEquipment:     'Tool downtime incidents prevented with RFID location tracking.',
   rtiTracking:             'Tote and container loss reduced with RFID tracking.',
@@ -142,7 +151,7 @@ function NumField({ label, value, onChange, prefix, suffix, tooltip }) {
   );
 }
 
-function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
+function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
   if (ucKey === 'cycleCount') return (
     <>
       <div className={grid2}>
@@ -602,6 +611,69 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
     </>
   );
 
+  if (ucKey === 'qualityExceptionTracking') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Quality exceptions per year" value={uc.exceptionsPerYear} onChange={(v) => onUpdate('exceptionsPerYear', v)} />
+        <NumField label="Avg rework cost per exception ($)" value={uc.reworkCostPerException} prefix="$" onChange={(v) => onUpdate('reworkCostPerException', v)} />
+        <div>
+          <label className={labelCls}>Avg scrap cost per exception ($) <span className="text-gray-400 font-normal">(optional)</span></label>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-1 text-sm">$</span>
+            <input
+              type="number"
+              value={uc.scrapCostPerException}
+              onChange={(e) => onUpdate('scrapCostPerException', e.target.value === '' ? '' : Number(e.target.value))}
+              className={inputCls}
+              placeholder="e.g. 500"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5">Include if defective parts are scrapped rather than reworked. Leave blank if not applicable.</p>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'expeditedExceptionTracking') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Late or missed shipments per month" value={uc.lateShipmentsPerMonth} onChange={(v) => onUpdate('lateShipmentsPerMonth', v)} />
+        <div>
+          <label className={`${labelCls} flex items-center gap-1`}>
+            Avg cost per late shipment ($)
+            <Tooltip content="Include expedited freight cost, customer penalty or chargeback, and any labor to reroute or expedite the order. Typical range is $200–$2,000 depending on your operation.">
+              <span className="text-blue-400 cursor-help">ⓘ</span>
+            </Tooltip>
+          </label>
+          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerLateShipment} onChange={(e) => onUpdate('costPerLateShipment', Number(e.target.value))} className={inputCls} /></div>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'workingCapitalImprovement') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Average WIP inventory value ($)" value={uc.wipInventoryValue} prefix="$" onChange={(v) => onUpdate('wipInventoryValue', v)} />
+      </div>
+      <div>
+        <label className={labelCls}>Expected WIP reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+      <p className="text-xs text-gray-400 italic mt-1">
+        Uses your cost of capital assumption from Step 4 (currently {fin?.wacc != null ? `${(fin.wacc * 100).toFixed(1)}%` : '8.5%'}).
+      </p>
+    </>
+  );
+
   if (ucKey === 'fasterFulfillment') return (
     <div className={grid2}>
       <NumField label="Current fulfillment cycle time (hrs)" value={uc.currentCycleTime} onChange={(v) => onUpdate('currentCycleTime', v)} />
@@ -620,8 +692,8 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
   return null;
 }
 
-function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, onInteract, expanded, onToggle }) {
-  const annualValue = calcUseCaseValue(ucKey, uc, ops);
+function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, fin, interacted, onInteract, expanded, onToggle }) {
+  const annualValue = calcUseCaseValue(ucKey, uc, ops, fin);
   const description = UC_DESCRIPTIONS[ucKey] || '';
 
   function onUpdate(field, value) {
@@ -664,7 +736,7 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, o
       {/* Expandable inputs */}
       {expanded && (
         <div className="px-5 pb-5 pt-1 space-y-4 border-t border-gray-100">
-          <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} />
+          <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} fin={fin} />
         </div>
       )}
     </div>
@@ -672,10 +744,11 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, o
 }
 
 const LABOR_KEYS = ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery', 'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers', 'inventoryRequests'];
-const LOSS_KEYS = ['expiredProducts', 'calibrationReminders', 'geofencing', 'shrinkage', 'productionEquipment', 'rtiTracking', 'proofOfDelivery'];
-const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed'];
+const LOSS_KEYS = ['expiredProducts', 'calibrationReminders', 'geofencing', 'shrinkage', 'productionEquipment', 'rtiTracking', 'proofOfDelivery', 'qualityExceptionTracking'];
+const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed', 'expeditedExceptionTracking'];
+const CAPITAL_KEYS = ['workingCapitalImprovement'];
 
-export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
+export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, fin, customCategories, setCustomCategories, onNext, onBack }) {
   const [interacted, setInteracted] = useState(new Set());
   const [expandedCards, setExpandedCards] = useState(new Set());
 
@@ -712,7 +785,7 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
 
   const cats = customCategories || [];
 
-  const totalGross = enabledCards.reduce((sum, { key }) => sum + calcUseCaseValue(key, useCases[key], ops), 0)
+  const totalGross = enabledCards.reduce((sum, { key }) => sum + calcUseCaseValue(key, useCases[key], ops, fin), 0)
     + cats.reduce((sum, c) => sum + (Number(c.annualSavings) || 0), 0);
 
   const ucCount = enabledCards.length + cats.length;
@@ -720,6 +793,7 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
     enabledCards.some(({ key }) => LABOR_KEYS.includes(key)),
     enabledCards.some(({ key }) => LOSS_KEYS.includes(key)),
     enabledCards.some(({ key }) => REVENUE_KEYS.includes(key)),
+    enabledCards.some(({ key }) => CAPITAL_KEYS.includes(key)),
     cats.length > 0,
   ].filter(Boolean).length;
 
@@ -782,6 +856,7 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
           ops={ops}
           setOps={setOps}
           setUseCases={setUseCases}
+          fin={fin}
           interacted={interacted.has(key)}
           onInteract={() => markInteracted(key)}
           expanded={expandedCards.has(key)}

@@ -66,6 +66,9 @@ function makeAllDisabledUseCases() {
     productionEquipment:     { enabled: false, incidentsPerYear: 10,  costPerIncident: 3000, reductionPct: 0.85 },
     rtiTracking:             { enabled: false, incidentsPerYear: 200, costPerIncident: 75,   reductionPct: 0.85 },
     proofOfDelivery:         { enabled: false, incidentsPerYear: 25,  costPerIncident: 400,  reductionPct: 0.90 },
+    qualityExceptionTracking:   { enabled: false, exceptionsPerYear: 200, reworkCostPerException: 150, scrapCostPerException: '', reductionPct: 0.85 },
+    expeditedExceptionTracking: { enabled: false, lateShipmentsPerMonth: 5, costPerLateShipment: 500, reductionPct: 0.90 },
+    workingCapitalImprovement:  { enabled: false, wipInventoryValue: 500000, reductionPct: 0.15 },
   };
 }
 
@@ -262,6 +265,7 @@ export default function App() {
                 setOps={setOps}
                 useCases={useCases}
                 setUseCases={setUseCases}
+                fin={fin}
                 operationDetails={operationDetails}
                 setOperationDetails={setOperationDetails}
                 customCategories={customCategories}

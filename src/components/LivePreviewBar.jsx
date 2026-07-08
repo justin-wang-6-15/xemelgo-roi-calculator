@@ -2,7 +2,7 @@ import { calcUseCaseTotals, calcFinancials } from '../utils/calculations';
 import { fmt$, fmtWks } from '../utils/format';
 
 export default function LivePreviewBar({ ops, useCases, fin, customCategories }) {
-  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops, customCategories || []);
+  const { totalGrossAnnual } = calcUseCaseTotals(useCases, ops, customCategories || [], fin);
 
   const inputsReady = fin && fin.capex !== '' && fin.monthlyPlatformFee !== '';
   let paybackDisplay = '—';
