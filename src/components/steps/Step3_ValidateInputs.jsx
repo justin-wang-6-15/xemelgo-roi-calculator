@@ -19,9 +19,18 @@ const UC_REDUCTION_DEFAULTS = {
   picklistVerification:    95,
   shipReceiveVerification: 95,
   internalDelivery:        90,
+  goodsReceipt:            90,
+  automatedPackCount:      90,
+  outboundAudit:           90,
+  returnsTransfers:        90,
+  inventoryRequests:       90,
   expiredProducts:         95,
   calibrationReminders:    95,
   geofencing:              90,
+  shrinkage:               85,
+  productionEquipment:     85,
+  rtiTracking:             85,
+  proofOfDelivery:         90,
   misShipReduction:        95,
   dockTurnSpeed:           95,
 };
@@ -38,6 +47,15 @@ const SOURCE_NOTES = {
   expiredProducts:         `Proactive expiration alerts eliminate most write-offs before they happen. Customers report 80–95% reduction. Default set to ${d.expiredProducts}%.`,
   calibrationReminders:    `Automated calibration alerts prevent most missed events. Customers report 80–95% reduction. Default set to ${d.calibrationReminders}%.`,
   geofencing:              `Real-time zone alerts prevent most unauthorized asset movements. Customers report 75–90% reduction. Default set to ${d.geofencing}%.`,
+  goodsReceipt:            `RFID portal reads replace manual receiving checks. Customers report 75–90% time reduction per transaction. Default set to ${d.goodsReceipt}%.`,
+  automatedPackCount:      `RFID case reads replace manual scan-per-item counting. Customers report 75–90% time reduction. Default set to ${d.automatedPackCount}%.`,
+  outboundAudit:           `RFID portal reads certify shipments without manual scanning. Customers report 75–90% time reduction. Default set to ${d.outboundAudit}%.`,
+  returnsTransfers:        `RFID eliminates manual logging at each transfer point. Customers report 75–90% time reduction. Default set to ${d.returnsTransfers}%.`,
+  inventoryRequests:       `Automated replenishment triggers eliminate most manual request work. Customers report 75–90% reduction. Default set to ${d.inventoryRequests}%.`,
+  shrinkage:               `Real-time RFID visibility catches unexplained losses before write-off. Customers report 70–85% reduction. Default set to ${d.shrinkage}%.`,
+  productionEquipment:     `RFID location tracking prevents most tool downtime incidents. Customers report 70–85% reduction. Default set to ${d.productionEquipment}%.`,
+  rtiTracking:             `RFID tracking of totes and containers prevents most losses and replacement costs. Customers report 70–85% reduction. Default set to ${d.rtiTracking}%.`,
+  proofOfDelivery:         `RFID tag verification at delivery prevents most fraudulent return claims. Customers report 75–90% reduction. Default set to ${d.proofOfDelivery}%.`,
   misShipReduction:        `Outbound RFID verification eliminates most mis-ships at the dock door. Customers report 80–95% reduction. Default set to ${d.misShipReduction}%.`,
   dockTurnSpeed:           `RFID portal reads accelerate dock throughput. Customers report 75–95% improvement. Default set to ${d.dockTurnSpeed}%.`,
 };
@@ -53,6 +71,15 @@ const UC_DESCRIPTIONS = {
   expiredProducts:         'Write-offs prevented with proactive expiration alerts.',
   calibrationReminders:    'Compliance failures avoided via automated calibration tracking.',
   geofencing:              'Asset loss prevented with real-time zone boundary alerts.',
+  goodsReceipt:            'Receiving time reduced with portal-based RFID reads on inbound shipments.',
+  automatedPackCount:      'Pack count time eliminated with RFID case-level reads.',
+  outboundAudit:           'Outbound dock time cut with portal reads instead of manual scanning.',
+  returnsTransfers:        'Transfer logging time eliminated across all internal hand-off points.',
+  inventoryRequests:       'Manual replenishment request hours reclaimed with automated triggers.',
+  shrinkage:               'Unexplained inventory loss reduced with real-time RFID visibility.',
+  productionEquipment:     'Tool downtime incidents prevented with RFID location tracking.',
+  rtiTracking:             'Tote and container loss reduced with RFID tracking.',
+  proofOfDelivery:         'Fraudulent return claims prevented with RFID tag verification at delivery.',
   fasterFulfillment:       'Revenue captured from shorter order cycle times.',
   misShipReduction:        'Chargebacks and returns eliminated at the dock door.',
   dockTurnSpeed:           'Carrier wait costs reduced with faster dock transactions.',
@@ -417,6 +444,164 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate }) {
     </>
   );
 
+  if (ucKey === 'goodsReceipt') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Minutes saved per receiving transaction" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
+        <NumField label="Receiving transactions per day" value={uc.transactionsPerDay} onChange={(v) => onUpdate('transactionsPerDay', v)} />
+        <NumField label="Number of receiving staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+      </div>
+      <div>
+        <label className={labelCls}>Expected time reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'automatedPackCount') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Minutes saved per pack count" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
+        <NumField label="Pack counts per day" value={uc.transactionsPerDay} onChange={(v) => onUpdate('transactionsPerDay', v)} />
+        <NumField label="Number of staff performing counts" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+      </div>
+      <div>
+        <label className={labelCls}>Expected time reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'outboundAudit') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Minutes saved per outbound shipment" value={uc.minutesSaved} onChange={(v) => onUpdate('minutesSaved', v)} />
+        <NumField label="Outbound shipments per day" value={uc.transactionsPerDay} onChange={(v) => onUpdate('transactionsPerDay', v)} />
+        <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+      </div>
+      <div>
+        <label className={labelCls}>Expected time reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'returnsTransfers') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Minutes per return or transfer" value={uc.minutesPerTransfer} onChange={(v) => onUpdate('minutesPerTransfer', v)} />
+        <NumField label="Returns and transfers per day" value={uc.transfersPerDay} onChange={(v) => onUpdate('transfersPerDay', v)} />
+        <NumField label="People per transfer" value={uc.peoplePerTransfer} onChange={(v) => onUpdate('peoplePerTransfer', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+      </div>
+      <div>
+        <label className={labelCls}>Expected time reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'inventoryRequests') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Hours per week spent managing requests" value={uc.hoursPerWeek} onChange={(v) => onUpdate('hoursPerWeek', v)} />
+        <NumField label="People involved" value={uc.peopleInvolved} onChange={(v) => onUpdate('peopleInvolved', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'shrinkage') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Unexplained loss incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
+        <div>
+          <label className={`${labelCls} flex items-center gap-1`}>
+            Avg cost per incident ($)
+            <Tooltip content="Include the value of lost inventory plus any investigation or compliance costs associated with each shrinkage event.">
+              <span className="text-blue-400 cursor-help">ⓘ</span>
+            </Tooltip>
+          </label>
+          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'productionEquipment') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Tool downtime incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
+        <div>
+          <label className={`${labelCls} flex items-center gap-1`}>
+            Avg cost per incident ($)
+            <Tooltip content="Include production downtime cost, labor to locate the missing tool, and any expedite or rework costs caused by the delay.">
+              <span className="text-blue-400 cursor-help">ⓘ</span>
+            </Tooltip>
+          </label>
+          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'rtiTracking') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Lost or untracked container incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
+        <div>
+          <label className={`${labelCls} flex items-center gap-1`}>
+            Avg cost per incident ($)
+            <Tooltip content="Include the cost to replace the container plus any disruption to production flow caused by the missing tote or carrier.">
+              <span className="text-blue-400 cursor-help">ⓘ</span>
+            </Tooltip>
+          </label>
+          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
+  if (ucKey === 'proofOfDelivery') return (
+    <>
+      <div className={grid2}>
+        <NumField label="Disputed or fraudulent delivery claims per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
+        <div>
+          <label className={`${labelCls} flex items-center gap-1`}>
+            Avg cost per claim ($)
+            <Tooltip content="Include the cost of replacement shipment, customer credit or chargeback, and labor to investigate and resolve each disputed delivery.">
+              <span className="text-blue-400 cursor-help">ⓘ</span>
+            </Tooltip>
+          </label>
+          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Expected reduction with RFID</label>
+        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+      </div>
+    </>
+  );
+
   if (ucKey === 'fasterFulfillment') return (
     <div className={grid2}>
       <NumField label="Current fulfillment cycle time (hrs)" value={uc.currentCycleTime} onChange={(v) => onUpdate('currentCycleTime', v)} />
@@ -486,8 +671,8 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, interacted, o
   );
 }
 
-const LABOR_KEYS = ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'];
-const LOSS_KEYS = ['expiredProducts', 'calibrationReminders', 'geofencing'];
+const LABOR_KEYS = ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery', 'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers', 'inventoryRequests'];
+const LOSS_KEYS = ['expiredProducts', 'calibrationReminders', 'geofencing', 'shrinkage', 'productionEquipment', 'rtiTracking', 'proofOfDelivery'];
 const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed'];
 
 export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {

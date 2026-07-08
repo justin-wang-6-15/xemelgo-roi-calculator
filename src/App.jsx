@@ -56,18 +56,16 @@ function makeAllDisabledUseCases() {
     fasterFulfillment:       { enabled: false, currentCycleTime: 48, targetCycleTime: 36, ordersPerMonth: 200, revenuePerOrder: 500 },
     misShipReduction:        { enabled: false, misShipsPerMonth: 10, costPerMisShip: 300, reductionPct: 0.95 },
     dockTurnSpeed:           { enabled: false, minutesSaved: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.95 },
-    // New keys — placeholders until formulas are added to calculations.js
-    goodsReceipt:            { enabled: false },
-    inventoryRequests:       { enabled: false },
-    returnsTransfers:        { enabled: false },
-    shrinkage:               { enabled: false },
-    rfidTracking:            { enabled: false },
-    productionEquipment:     { enabled: false },
-    rtiTracking:             { enabled: false },
     workOrderTracking:       { enabled: false, roleRows: [{ id: 1, role: 'indirect', customRoleName: '', hoursLostPerDay: 0.5, headcount: defaultOps.indirectCount, burdenedRate: defaultOps.indirectRate }], reductionPct: 0.85 },
-    automatedPackCount:      { enabled: false },
-    outboundAudit:           { enabled: false },
-    proofOfDelivery:         { enabled: false },
+    goodsReceipt:            { enabled: false, minutesSavedPerTransaction: 6,  transactionsPerDay: 15,  dockStaff: 3, burdenedRate: 25, reductionPct: 0.90 },
+    automatedPackCount:      { enabled: false, minutesSavedPerTransaction: 4,  transactionsPerDay: 100, dockStaff: 3, burdenedRate: 25, reductionPct: 0.90 },
+    outboundAudit:           { enabled: false, minutesSaved: 10, transactionsPerDay: 8, dockStaff: 2, burdenedRate: 25, reductionPct: 0.90 },
+    returnsTransfers:        { enabled: false, minutesPerTransfer: 6, transfersPerDay: 20, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.90 },
+    inventoryRequests:       { enabled: false, hoursPerWeek: 3, peopleInvolved: 2, burdenedRate: 35, reductionPct: 0.90 },
+    shrinkage:               { enabled: false, incidentsPerYear: 15,  costPerIncident: 1500, reductionPct: 0.85 },
+    productionEquipment:     { enabled: false, incidentsPerYear: 10,  costPerIncident: 3000, reductionPct: 0.85 },
+    rtiTracking:             { enabled: false, incidentsPerYear: 200, costPerIncident: 75,   reductionPct: 0.85 },
+    proofOfDelivery:         { enabled: false, incidentsPerYear: 25,  costPerIncident: 400,  reductionPct: 0.90 },
   };
 }
 

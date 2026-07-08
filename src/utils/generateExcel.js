@@ -48,7 +48,7 @@ function accentBar(ws, endCol, row) {
   c(ws, `A${row}`, '', BLUE);
 }
 
-const LABOR_BUCKET_KEYS = ['cycleCount','audit','locateItems','workOrderTracking','picklistVerification','shipReceiveVerification','internalDelivery'];
+const LABOR_BUCKET_KEYS = ['cycleCount','audit','locateItems','workOrderTracking','picklistVerification','shipReceiveVerification','internalDelivery','goodsReceipt','automatedPackCount','outboundAudit','returnsTransfers','inventoryRequests'];
 
 const UC_NAMES = {
   cycleCount:              'Cycle Counting',
@@ -61,6 +61,15 @@ const UC_NAMES = {
   expiredProducts:         'Expired Products',
   calibrationReminders:    'Calibration Reminders',
   geofencing:              'Geofencing',
+  goodsReceipt:            'Goods Receipt',
+  automatedPackCount:      'Automated Pack Count',
+  outboundAudit:           'Outbound Shipment Audit',
+  returnsTransfers:        'Returns and Transfers',
+  inventoryRequests:       'Inventory Requests',
+  shrinkage:               'Shrinkage and Loss Prevention',
+  productionEquipment:     'Production Equipment Tracking',
+  rtiTracking:             'Totes and Containers Tracking',
+  proofOfDelivery:         'Proof of Delivery',
   fasterFulfillment:       'Faster Order Fulfillment',
   misShipReduction:        'Mis-Ship Reduction',
   dockTurnSpeed:           'Receiving and Shipping Throughput',
@@ -112,6 +121,23 @@ function getLaborHours(key, uc, ops) {
     case 'internalDelivery': {
       const tpd = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * uc.reductionPct;
       return { timeSavedPerDay: tpd, peopleAffected: uc.peoplePerTransfer, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: uc.burdenedRate };
+    }
+    case 'goodsReceipt':
+    case 'automatedPackCount': {
+      const tpd = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * uc.reductionPct;
+      return { timeSavedPerDay: tpd, peopleAffected: uc.dockStaff, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: uc.burdenedRate };
+    }
+    case 'outboundAudit': {
+      const tpd = (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * uc.reductionPct;
+      return { timeSavedPerDay: tpd, peopleAffected: uc.dockStaff, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: uc.burdenedRate };
+    }
+    case 'returnsTransfers': {
+      const tpd = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * uc.reductionPct;
+      return { timeSavedPerDay: tpd, peopleAffected: uc.peoplePerTransfer, weeklyHrs: tpd * dpw, annualHrs: tpd * dpy, rate: uc.burdenedRate };
+    }
+    case 'inventoryRequests': {
+      const weeklyHrs = uc.hoursPerWeek * uc.peopleInvolved * uc.reductionPct;
+      return { timeSavedPerDay: weeklyHrs / dpw, peopleAffected: uc.peopleInvolved, weeklyHrs, annualHrs: weeklyHrs * ops.workWeeksPerYear, rate: uc.burdenedRate };
     }
     default: return null;
   }
@@ -365,7 +391,7 @@ function buildSavingsAnalysis(ws, ops, useCases, result, dateISO) {
     if (!h) return;
     const wkVal   = h.weeklyHrs * h.rate;
     const liResult = result.buckets.find(b => b.name === 'Labor Efficiency')?.lineItems.find(l => l.key === key);
-    const annValFinal = (key === 'picklistVerification' || key === 'locateItems' || key === 'workOrderTracking') ? (liResult?.annualValue ?? 0) : h.annualHrs * h.rate;
+    const annValFinal = (key === 'picklistVerification' || key === 'locateItems' || key === 'workOrderTracking' || key === 'goodsReceipt' || key === 'automatedPackCount' || key === 'outboundAudit' || key === 'returnsTransfers') ? (liResult?.annualValue ?? 0) : h.annualHrs * h.rate;
 
     ws.getRow(r).height = 18;
     const bg = key === 'picklistVerification' ? LGRAY : WHITE;

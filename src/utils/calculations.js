@@ -55,6 +55,27 @@ export function calcUseCaseValue(key, uc, ops) {
     case 'dockTurnSpeed':
       return (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
 
+    case 'goodsReceipt':
+      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
+    case 'automatedPackCount':
+      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
+    case 'outboundAudit':
+      return (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
+    case 'returnsTransfers':
+      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct;
+
+    case 'inventoryRequests':
+      return uc.hoursPerWeek * uc.peopleInvolved * ops.workWeeksPerYear * uc.burdenedRate * uc.reductionPct;
+
+    case 'shrinkage':
+    case 'productionEquipment':
+    case 'rtiTracking':
+    case 'proofOfDelivery':
+      return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
+
     default:
       return 0;
   }
@@ -63,7 +84,7 @@ export function calcUseCaseValue(key, uc, ops) {
 export const BUCKET_CONFIG = [
   {
     name: 'Labor Efficiency',
-    keys: ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery'],
+    keys: ['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery', 'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers', 'inventoryRequests'],
     labels: {
       cycleCount: 'Cycle Counting',
       audit: 'Full Inventory Audit',
@@ -72,15 +93,24 @@ export const BUCKET_CONFIG = [
       picklistVerification: 'Picklist Verification',
       shipReceiveVerification: 'Ship & Receive Verification',
       internalDelivery: 'Internal Delivery Verification',
+      goodsReceipt: 'Goods Receipt',
+      automatedPackCount: 'Automated Pack Count',
+      outboundAudit: 'Outbound Shipment Audit',
+      returnsTransfers: 'Returns and Transfers',
+      inventoryRequests: 'Inventory Requests',
     },
   },
   {
     name: 'Loss Prevention & Compliance',
-    keys: ['expiredProducts', 'calibrationReminders', 'geofencing'],
+    keys: ['expiredProducts', 'calibrationReminders', 'geofencing', 'shrinkage', 'productionEquipment', 'rtiTracking', 'proofOfDelivery'],
     labels: {
       expiredProducts: 'Expired Products',
       calibrationReminders: 'Calibration Reminders',
       geofencing: 'Geofencing',
+      shrinkage: 'Shrinkage and Loss Prevention',
+      productionEquipment: 'Production Equipment Tracking',
+      rtiTracking: 'Totes and Containers Tracking',
+      proofOfDelivery: 'Proof of Delivery',
     },
   },
   {
