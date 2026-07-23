@@ -20,19 +20,25 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
     }
 
     case 'locateItems': {
-      return (uc.roleRows || []).reduce((sum, row) => {
-        return sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct;
-      }, 0);
+      const d1 = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0);
+      const d2 = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct;
+      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1 : d2;
+      return d1 + d2;
     }
 
     case 'workOrderTracking': {
-      return (uc.roleRows || []).reduce((sum, row) => {
-        return sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct;
-      }, 0);
+      const d1 = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0);
+      const d2 = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct;
+      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1 : d2;
+      return d1 + d2;
     }
 
-    case 'picklistVerification':
-      return uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct;
+    case 'picklistVerification': {
+      const d1 = uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct;
+      const d2 = ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * (uc.burdenedRate || 0) * uc.reductionPct;
+      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1 : d2;
+      return d1 + d2;
+    }
 
     case 'shipReceiveVerification':
       return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
@@ -116,12 +122,23 @@ export function calcUseCaseHours(key, uc, ops) {
       return uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.reductionPct;
     case 'audit':
       return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
-    case 'locateItems':
-      return (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
-    case 'workOrderTracking':
-      return (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
-    case 'picklistVerification':
-      return 0;
+    case 'locateItems': {
+      const d1Hrs = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
+      const d2Hrs = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct;
+      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1Hrs : d2Hrs;
+      return d1Hrs + d2Hrs;
+    }
+    case 'workOrderTracking': {
+      const d1Hrs = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
+      const d2Hrs = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct;
+      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1Hrs : d2Hrs;
+      return d1Hrs + d2Hrs;
+    }
+    case 'picklistVerification': {
+      const d2Hrs = ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * uc.reductionPct;
+      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? 0 : d2Hrs;
+      return d2Hrs;
+    }
     case 'shipReceiveVerification':
       return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.reductionPct;
     case 'internalDelivery':

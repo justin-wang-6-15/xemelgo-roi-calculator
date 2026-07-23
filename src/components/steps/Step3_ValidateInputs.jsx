@@ -236,6 +236,8 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
 
   if (ucKey === 'locateItems') {
     const rows = uc.roleRows || [];
+    const driverMode = uc.driverMode || 'and';
+    const activeDriver = uc.activeDriver || 1;
     const updateRow = (id, field, value) => {
       onUpdate('roleRows', rows.map((r) => r.id === id ? { ...r, [field]: value } : r));
     };
@@ -249,38 +251,65 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
     };
     const addRow = () => onUpdate('roleRows', [...rows, { id: Date.now(), role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }]);
     const removeRow = (id) => onUpdate('roleRows', rows.filter((r) => r.id !== id));
+    const d1Inactive = driverMode === 'or' && activeDriver !== 1;
+    const d2Inactive = driverMode === 'or' && activeDriver !== 2;
     return (
       <>
-        {rows.map((row) => (
-          <div key={row.id} className="relative border border-gray-100 rounded-lg p-3 bg-gray-50/50">
-            {rows.length > 1 && (
-              <button type="button" onClick={() => removeRow(row.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-sm leading-none" aria-label="Remove role">×</button>
-            )}
-            <div className={grid2}>
-              <div>
-                <label className={labelCls}>Role</label>
-                <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} className={inputCls}>
-                  <option value="materialHandler">Material Handlers</option>
-                  <option value="planner">Planners</option>
-                  <option value="indirect">Indirect / Leadership</option>
-                  <option value="direct">Direct Employees</option>
-                  <option value="custom">Custom</option>
-                </select>
-                {row.role === 'custom' && (
-                  <input type="text" value={row.customRoleName} placeholder="Custom role name"
-                    onChange={(e) => updateRow(row.id, 'customRoleName', e.target.value)} className={`${inputCls} mt-2`} />
-                )}
-              </div>
-              <NumField label="Hours lost searching per day" value={row.hoursLostPerDay} onChange={(v) => updateRow(row.id, 'hoursLostPerDay', v)} />
-              <NumField label="Number of people" value={row.headcount} onChange={(v) => updateRow(row.id, 'headcount', v)} />
-              <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
-            </div>
+        <div className="mb-1">
+          <label className={labelCls}>Savings drivers</label>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+            <button type="button" onClick={() => onUpdate('driverMode', 'and')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${driverMode === 'and' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Stack both</button>
+            <button type="button" onClick={() => onUpdate('driverMode', 'or')} className={`px-4 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 ${driverMode === 'or' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Pick one</button>
           </div>
-        ))}
-        <button type="button" onClick={addRow} className="text-sm font-medium text-blue-600 hover:text-blue-700">+ Add Role</button>
+        </div>
+        {driverMode === 'or' && (
+          <div className="flex gap-6 text-sm mb-1">
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="radio" checked={activeDriver === 1} onChange={() => onUpdate('activeDriver', 1)} /> Search time (floor workers)</label>
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="radio" checked={activeDriver === 2} onChange={() => onUpdate('activeDriver', 2)} /> Supervisory visibility time</label>
+          </div>
+        )}
+        <div className={d1Inactive ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <p className="text-xs font-medium text-gray-500 mb-2">Driver 1 — Floor worker search time</p>
+          {rows.map((row) => (
+            <div key={row.id} className="relative border border-gray-100 rounded-lg p-3 bg-gray-50/50 mb-3">
+              {rows.length > 1 && (
+                <button type="button" onClick={() => removeRow(row.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-sm leading-none" aria-label="Remove role">×</button>
+              )}
+              <div className={grid2}>
+                <div>
+                  <label className={labelCls}>Role</label>
+                  <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} className={inputCls}>
+                    <option value="materialHandler">Material Handlers</option>
+                    <option value="planner">Planners</option>
+                    <option value="indirect">Indirect / Leadership</option>
+                    <option value="direct">Direct Employees</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  {row.role === 'custom' && (
+                    <input type="text" value={row.customRoleName} placeholder="Custom role name"
+                      onChange={(e) => updateRow(row.id, 'customRoleName', e.target.value)} className={`${inputCls} mt-2`} />
+                  )}
+                </div>
+                <NumField label="Hours lost searching per day" value={row.hoursLostPerDay} onChange={(v) => updateRow(row.id, 'hoursLostPerDay', v)} />
+                <NumField label="Number of people" value={row.headcount} onChange={(v) => updateRow(row.id, 'headcount', v)} />
+                <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={addRow} className="text-sm font-medium text-blue-600 hover:text-blue-700">+ Add Role</button>
+        </div>
+        <div className={d2Inactive ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <p className="text-xs font-medium text-gray-500 mb-2">Driver 2 — Supervisory visibility time</p>
+          {sourceNote('Hours supervisors spend manually checking on inventory locations each week. RFID dashboards eliminate most of this overhead.')}
+          <div className={grid2}>
+            <NumField label="Supervisor hours spent locating per week" value={uc.supervisorHoursPerWeek ?? 2} onChange={(v) => onUpdate('supervisorHoursPerWeek', v)} />
+            <NumField label="Number of supervisors" value={uc.supervisorHeadcount ?? 2} onChange={(v) => onUpdate('supervisorHeadcount', v)} />
+            <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.supervisorBurdenedRate ?? 45} prefix="$" suffix="/hr" onChange={(v) => onUpdate('supervisorBurdenedRate', v)} />
+          </div>
+        </div>
         <div>
           <label className={labelCls}>Expected reduction with RFID</label>
-          <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate}  />
+          <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
         </div>
       </>
     );
@@ -288,6 +317,8 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
 
   if (ucKey === 'workOrderTracking') {
     const rows = uc.roleRows || [];
+    const driverMode = uc.driverMode || 'or';
+    const activeDriver = uc.activeDriver || 1;
     const updateRow = (id, field, value) => {
       onUpdate('roleRows', rows.map((r) => r.id === id ? { ...r, [field]: value } : r));
     };
@@ -301,35 +332,62 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
     };
     const addRow = () => onUpdate('roleRows', [...rows, { id: Date.now(), role: 'indirect', customRoleName: '', hoursLostPerDay: 0.5, headcount: 5, burdenedRate: 45 }]);
     const removeRow = (id) => onUpdate('roleRows', rows.filter((r) => r.id !== id));
+    const d1Inactive = driverMode === 'or' && activeDriver !== 1;
+    const d2Inactive = driverMode === 'or' && activeDriver !== 2;
     return (
       <>
-        {rows.map((row) => (
-          <div key={row.id} className="relative border border-gray-100 rounded-lg p-3 bg-gray-50/50">
-            {rows.length > 1 && (
-              <button type="button" onClick={() => removeRow(row.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-sm leading-none" aria-label="Remove role">×</button>
-            )}
-            <div className={grid2}>
-              <div>
-                <label className={labelCls}>Role</label>
-                <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} className={inputCls}>
-                  <option value="materialHandler">Material Handlers</option>
-                  <option value="planner">Planners</option>
-                  <option value="indirect">Indirect / Leadership</option>
-                  <option value="direct">Direct Employees</option>
-                  <option value="custom">Custom</option>
-                </select>
-                {row.role === 'custom' && (
-                  <input type="text" value={row.customRoleName} placeholder="Custom role name"
-                    onChange={(e) => updateRow(row.id, 'customRoleName', e.target.value)} className={`${inputCls} mt-2`} />
-                )}
-              </div>
-              <NumField label="Hours spent checking status per day" value={row.hoursLostPerDay} onChange={(v) => updateRow(row.id, 'hoursLostPerDay', v)} />
-              <NumField label="Number of people" value={row.headcount} onChange={(v) => updateRow(row.id, 'headcount', v)} />
-              <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
-            </div>
+        <div className="mb-1">
+          <label className={labelCls}>Savings drivers</label>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+            <button type="button" onClick={() => onUpdate('driverMode', 'and')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${driverMode === 'and' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Stack both</button>
+            <button type="button" onClick={() => onUpdate('driverMode', 'or')} className={`px-4 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 ${driverMode === 'or' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Pick one</button>
           </div>
-        ))}
-        <button type="button" onClick={addRow} className="text-sm font-medium text-blue-600 hover:text-blue-700">+ Add Role</button>
+        </div>
+        {driverMode === 'or' && (
+          <div className="flex gap-6 text-sm mb-1">
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="radio" checked={activeDriver === 1} onChange={() => onUpdate('activeDriver', 1)} /> Labor time lost tracking</label>
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="radio" checked={activeDriver === 2} onChange={() => onUpdate('activeDriver', 2)} /> Expediting visibility time</label>
+          </div>
+        )}
+        <div className={d1Inactive ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <p className="text-xs font-medium text-gray-500 mb-2">Driver 1 — Labor time lost tracking work orders</p>
+          {rows.map((row) => (
+            <div key={row.id} className="relative border border-gray-100 rounded-lg p-3 bg-gray-50/50 mb-3">
+              {rows.length > 1 && (
+                <button type="button" onClick={() => removeRow(row.id)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-sm leading-none" aria-label="Remove role">×</button>
+              )}
+              <div className={grid2}>
+                <div>
+                  <label className={labelCls}>Role</label>
+                  <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} className={inputCls}>
+                    <option value="materialHandler">Material Handlers</option>
+                    <option value="planner">Planners</option>
+                    <option value="indirect">Indirect / Leadership</option>
+                    <option value="direct">Direct Employees</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  {row.role === 'custom' && (
+                    <input type="text" value={row.customRoleName} placeholder="Custom role name"
+                      onChange={(e) => updateRow(row.id, 'customRoleName', e.target.value)} className={`${inputCls} mt-2`} />
+                  )}
+                </div>
+                <NumField label="Hours spent checking status per day" value={row.hoursLostPerDay} onChange={(v) => updateRow(row.id, 'hoursLostPerDay', v)} />
+                <NumField label="Number of people" value={row.headcount} onChange={(v) => updateRow(row.id, 'headcount', v)} />
+                <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={row.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => updateRow(row.id, 'burdenedRate', v)} />
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={addRow} className="text-sm font-medium text-blue-600 hover:text-blue-700">+ Add Role</button>
+        </div>
+        <div className={d2Inactive ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <p className="text-xs font-medium text-gray-500 mb-2">Driver 2 — Supervisor expediting visibility time</p>
+          {sourceNote('Hours supervisors spend manually checking on stalled or late work orders each week. RFID dwell-time flags automate this detection.')}
+          <div className={grid2}>
+            <NumField label="Supervisor hours spent expediting per week" value={uc.supervisorHoursPerWeek ?? 2} onChange={(v) => onUpdate('supervisorHoursPerWeek', v)} />
+            <NumField label="Number of supervisors" value={uc.supervisorHeadcount ?? 2} onChange={(v) => onUpdate('supervisorHeadcount', v)} />
+            <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.supervisorBurdenedRate ?? 45} prefix="$" suffix="/hr" onChange={(v) => onUpdate('supervisorBurdenedRate', v)} />
+          </div>
+        </div>
         <div>
           <label className={labelCls}>Expected reduction in status checking time</label>
           <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
@@ -338,27 +396,59 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
     );
   }
 
-  if (ucKey === 'picklistVerification') return (
-    <>
-      <div className={grid2}>
-        <NumField label="Picks per day" value={uc.picksPerDay} onChange={(v) => onUpdate('picksPerDay', v)} />
-        <NumField label="Error rate today (%)" value={uc.errorRate} onChange={(v) => onUpdate('errorRate', v)} />
-        <div>
-          <label className={`${labelCls} flex items-center gap-1`}>
-            Cost per error ($)
-            <Tooltip content="Include: labor to re-pick, return processing, replacement shipment cost, and any customer credit or chargeback. Typical range is $25–$200 per error depending on your operation.">
-              <span className="text-blue-400 cursor-help">ⓘ</span>
-            </Tooltip>
-          </label>
-          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerError} onChange={(e) => onUpdate('costPerError', Number(e.target.value))} className={inputCls} /></div>
+  if (ucKey === 'picklistVerification') {
+    const driverMode = uc.driverMode || 'and';
+    const activeDriver = uc.activeDriver || 1;
+    const d1Inactive = driverMode === 'or' && activeDriver !== 1;
+    const d2Inactive = driverMode === 'or' && activeDriver !== 2;
+    return (
+      <>
+        <div className="mb-1">
+          <label className={labelCls}>Savings drivers</label>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+            <button type="button" onClick={() => onUpdate('driverMode', 'and')} className={`px-4 py-1.5 text-xs font-medium transition-colors ${driverMode === 'and' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Stack both</button>
+            <button type="button" onClick={() => onUpdate('driverMode', 'or')} className={`px-4 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 ${driverMode === 'or' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Pick one</button>
+          </div>
         </div>
-      </div>
-      <div>
-        <label className={labelCls}>Expected error reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate}  />
-      </div>
-    </>
-  );
+        {driverMode === 'or' && (
+          <div className="flex gap-6 text-sm mb-1">
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="radio" checked={activeDriver === 1} onChange={() => onUpdate('activeDriver', 1)} /> Error cost reduction</label>
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="radio" checked={activeDriver === 2} onChange={() => onUpdate('activeDriver', 2)} /> Time saved per pick</label>
+          </div>
+        )}
+        <div className={grid2}>
+          <NumField label="Picks per day" value={uc.picksPerDay} onChange={(v) => onUpdate('picksPerDay', v)} />
+        </div>
+        <div className={d1Inactive ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <p className="text-xs font-medium text-gray-500 mb-2">Driver 1 — Error cost reduction</p>
+          <div className={grid2}>
+            <NumField label="Error rate today (%)" value={uc.errorRate} onChange={(v) => onUpdate('errorRate', v)} />
+            <div>
+              <label className={`${labelCls} flex items-center gap-1`}>
+                Cost per error ($)
+                <Tooltip content="Include: labor to re-pick, return processing, replacement shipment cost, and any customer credit or chargeback. Typical range is $25–$200 per error depending on your operation.">
+                  <span className="text-blue-400 cursor-help">ⓘ</span>
+                </Tooltip>
+              </label>
+              <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerError} onChange={(e) => onUpdate('costPerError', Number(e.target.value))} className={inputCls} /></div>
+            </div>
+          </div>
+        </div>
+        <div className={d2Inactive ? 'opacity-40 pointer-events-none select-none' : ''}>
+          <p className="text-xs font-medium text-gray-500 mb-2">Driver 2 — Time saved per pick</p>
+          {sourceNote('RFID scan-and-go verification removes manual barcode scanning per pick. Customers report 0.5–2 min saved per pick depending on operation.')}
+          <div className={grid2}>
+            <NumField label="Minutes saved per pick" value={uc.minutesSavedPerPick ?? 1} onChange={(v) => onUpdate('minutesSavedPerPick', v)} />
+            <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate ?? 25} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>Expected error / time reduction with RFID</label>
+          <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+        </div>
+      </>
+    );
+  }
 
   if (ucKey === 'shipReceiveVerification') return (
     <>

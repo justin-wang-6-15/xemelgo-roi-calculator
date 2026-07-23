@@ -116,14 +116,29 @@ function getLaborHours(key, uc, ops) {
     case 'locateItems':
     case 'workOrderTracking': {
       const rows = uc.roleRows || [];
-      const annualHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpy * uc.reductionPct, 0);
-      const weeklyHrs = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpw * uc.reductionPct, 0);
-      const peopleAffected = rows.reduce((s, row) => s + (Number(row.headcount) || 0), 0);
-      const avgRate = rows.length ? rows.reduce((s, row) => s + (Number(row.burdenedRate) || 0), 0) / rows.length : 0;
+      const d1Ann = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpy * uc.reductionPct, 0);
+      const d1Wk  = rows.reduce((s, row) => s + row.hoursLostPerDay * row.headcount * dpw * uc.reductionPct, 0);
+      const d2Ann = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct;
+      const d2Wk  = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * uc.reductionPct;
+      const mode  = uc.driverMode || 'and';
+      const active = uc.activeDriver || 1;
+      let annualHrs, weeklyHrs;
+      if (mode === 'or') { annualHrs = active === 1 ? d1Ann : d2Ann; weeklyHrs = active === 1 ? d1Wk : d2Wk; }
+      else { annualHrs = d1Ann + d2Ann; weeklyHrs = d1Wk + d2Wk; }
+      const d1People = rows.reduce((s, row) => s + (Number(row.headcount) || 0), 0);
+      const d2People = (uc.supervisorHeadcount || 0);
+      const peopleAffected = mode === 'or' ? (active === 1 ? d1People : d2People) : d1People + d2People;
+      const avgRate = rows.length ? rows.reduce((s, row) => s + (Number(row.burdenedRate) || 0), 0) / rows.length : (uc.supervisorBurdenedRate || 0);
       return { timeSavedPerDay: annualHrs / dpy, peopleAffected, weeklyHrs, annualHrs, rate: avgRate };
     }
-    case 'picklistVerification':
-      return { timeSavedPerDay: 0, peopleAffected: 0, weeklyHrs: 0, annualHrs: 0, rate: 0 };
+    case 'picklistVerification': {
+      const d2Ann = ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * dpy * uc.reductionPct;
+      const d2Wk  = ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * dpw * uc.reductionPct;
+      const mode  = uc.driverMode || 'and';
+      const annualHrs = (mode === 'or' && (uc.activeDriver || 1) === 1) ? 0 : d2Ann;
+      const weeklyHrs = (mode === 'or' && (uc.activeDriver || 1) === 1) ? 0 : d2Wk;
+      return { timeSavedPerDay: annualHrs / dpy, peopleAffected: 0, weeklyHrs, annualHrs, rate: uc.burdenedRate || 0 };
+    }
     case 'shipReceiveVerification':
     case 'goodsReceipt':
     case 'automatedPackCount': {
@@ -288,30 +303,70 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
           break;
         case 'locateItems':
         case 'workOrderTracking': {
+          const ucMode = uc.driverMode || 'and';
+          const ucActive = uc.activeDriver || 1;
           ucCells[key].roleRows = [];
           const roleRows = (uc.roleRows || []).filter(row => Number(row.headcount) > 0);
+          // Driver 1 header
+          ws.getRow(r).height = 14;
+          c(ws, `B${r}`, '  Driver 1 — Labor time lost tracking', LGRAY, font({ size: 9, italic: true, color: { argb: NAVY } }), align('left'));
+          r++;
+          const d1Muted = ucMode === 'or' && ucActive !== 1;
           roleRows.forEach((row, i) => {
             ws.getRow(r).height = 16;
-            c(ws, `B${r}`, `  Role ${i + 1}: ${row.role || 'Team Member'}`, LGRAY, font({ size: 10, italic: true, color: { argb: NAVY } }), align('left'));
+            c(ws, `B${r}`, `    Role ${i + 1}: ${row.role || 'Team Member'}`, d1Muted ? DGRAY : LGRAY, font({ size: 10, italic: true, color: { argb: d1Muted ? 'FF999999' : NAVY } }), align('left'));
             r++;
             const rr = {};
-            writeField(key, '  Hours lost per day', row.hoursLostPerDay, `r${i}_hld`, '0.00');
+            writeField(key, '    Hours lost per day', row.hoursLostPerDay, `r${i}_hld`, '0.00');
+            if (d1Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
             rr.hld = ucCells[key][`r${i}_hld`];
-            writeField(key, '  Headcount', row.headcount, `r${i}_hc`, '0');
+            writeField(key, '    Headcount', row.headcount, `r${i}_hc`, '0');
+            if (d1Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
             rr.hc = ucCells[key][`r${i}_hc`];
-            writeField(key, '  Burdened rate ($/hr)', row.burdenedRate, `r${i}_br`, '$#,##0');
+            writeField(key, '    Burdened rate ($/hr)', row.burdenedRate, `r${i}_br`, '$#,##0');
+            if (d1Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
             rr.br = ucCells[key][`r${i}_br`];
             ucCells[key].roleRows.push(rr);
           });
+          // Driver 2 header
+          ws.getRow(r).height = 14;
+          const d2Muted = ucMode === 'or' && ucActive !== 2;
+          c(ws, `B${r}`, '  Driver 2 — Supervisory visibility time', d2Muted ? DGRAY : LGRAY, font({ size: 9, italic: true, color: { argb: d2Muted ? 'FF999999' : NAVY } }), align('left'));
+          r++;
+          writeField(key, '    Supervisor hours/week', uc.supervisorHoursPerWeek || 0, 'supervisorHoursPerWeek', '0.0');
+          if (d2Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
+          writeField(key, '    Supervisor headcount', uc.supervisorHeadcount || 0, 'supervisorHeadcount', '0');
+          if (d2Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
+          writeField(key, '    Supervisor burdened rate ($/hr)', uc.supervisorBurdenedRate || 0, 'supervisorBurdenedRate', '$#,##0');
+          if (d2Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
           writePct(key, 'Efficiency improvement', uc.reductionPct, 'reductionPct');
           break;
         }
-        case 'picklistVerification':
+        case 'picklistVerification': {
+          const ucMode = uc.driverMode || 'and';
+          const ucActive = uc.activeDriver || 1;
+          const d1Muted = ucMode === 'or' && ucActive !== 1;
+          const d2Muted = ucMode === 'or' && ucActive !== 2;
           writeField(key, 'Picks per day', uc.picksPerDay, 'picksPerDay', '#,##0');
-          writeField(key, 'Error rate (%)', uc.errorRate, 'errorRate', '0.00');
-          writeField(key, 'Cost per error ($)', uc.costPerError, 'costPerError', '$#,##0');
-          writePct(key, 'Error reduction', uc.reductionPct, 'reductionPct');
+          // Driver 1
+          ws.getRow(r).height = 14;
+          c(ws, `B${r}`, '  Driver 1 — Error cost reduction', d1Muted ? DGRAY : LGRAY, font({ size: 9, italic: true, color: { argb: d1Muted ? 'FF999999' : NAVY } }), align('left'));
+          r++;
+          writeField(key, '  Error rate (%)', uc.errorRate, 'errorRate', '0.00');
+          if (d1Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
+          writeField(key, '  Cost per error ($)', uc.costPerError, 'costPerError', '$#,##0');
+          if (d1Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
+          // Driver 2
+          ws.getRow(r).height = 14;
+          c(ws, `B${r}`, '  Driver 2 — Time saved per pick', d2Muted ? DGRAY : LGRAY, font({ size: 9, italic: true, color: { argb: d2Muted ? 'FF999999' : NAVY } }), align('left'));
+          r++;
+          writeField(key, '  Minutes saved per pick', uc.minutesSavedPerPick || 0, 'minutesSavedPerPick', '0.0');
+          if (d2Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
+          writeField(key, '  Burdened rate ($/hr)', uc.burdenedRate || 0, 'burdenedRate', '$#,##0');
+          if (d2Muted) { ws.getCell(`C${r - 1}`).fill = fill(LGRAY); }
+          writePct(key, 'Error / time reduction', uc.reductionPct, 'reductionPct');
           break;
+        }
         case 'shipReceiveVerification':
         case 'goodsReceipt':
         case 'automatedPackCount':
@@ -419,11 +474,21 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
       case 'locateItems':
       case 'workOrderTracking': {
         const rrs = cc.roleRows || [];
-        if (!rrs.length) return '=0';
-        return `=${rrs.map(rr => `${rr.hld}*${rr.hc}*${dpyF}*${rr.br}*${cc.reductionPct}`).join('+')}`;
+        const d1 = rrs.length ? rrs.map(rr => `${rr.hld}*${rr.hc}*${dpyF}*${rr.br}*${cc.reductionPct}`).join('+') : '0';
+        const d2 = `${cc.supervisorHoursPerWeek}*${cc.supervisorHeadcount}*50*${cc.supervisorBurdenedRate}*${cc.reductionPct}`;
+        const ucMode = useCases[key].driverMode || 'and';
+        const ucActive = useCases[key].activeDriver || 1;
+        if (ucMode === 'or') return `=${ucActive === 1 ? d1 : d2}`;
+        return `=${d1}+${d2}`;
       }
-      case 'picklistVerification':
-        return `=${cc.picksPerDay}*(${cc.errorRate}/100)*${cc.costPerError}*${dpyF}*${cc.reductionPct}`;
+      case 'picklistVerification': {
+        const d1 = `${cc.picksPerDay}*(${cc.errorRate}/100)*${cc.costPerError}*${dpyF}*${cc.reductionPct}`;
+        const d2 = `(${cc.minutesSavedPerPick}/60)*${cc.picksPerDay}*${dpyF}*${cc.burdenedRate}*${cc.reductionPct}`;
+        const ucMode = useCases[key].driverMode || 'and';
+        const ucActive = useCases[key].activeDriver || 1;
+        if (ucMode === 'or') return `=${ucActive === 1 ? d1 : d2}`;
+        return `=${d1}+${d2}`;
+      }
       case 'shipReceiveVerification':
       case 'goodsReceipt':
       case 'automatedPackCount':
