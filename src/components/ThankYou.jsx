@@ -194,6 +194,11 @@ export default function ThankYou({ ops, useCases, fin, customCategories, contact
           <p className="mt-1.5 text-xs text-gray-400">Free 30-min call with a solutions engineer</p>
         </div>
       </div>
+
+      {/* Disclaimer */}
+      <p className="mt-8 text-xs text-gray-400 text-center leading-relaxed">
+        These figures are estimates based on inputs provided during this session. Actual results will vary based on your specific implementation and operational factors.
+      </p>
     </div>
   );
 }

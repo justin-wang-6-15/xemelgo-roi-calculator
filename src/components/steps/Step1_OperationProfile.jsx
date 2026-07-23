@@ -82,7 +82,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           onClick={handleNext}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
         >
-          Next: Select Use Cases →
+          Next: Select Solution + Use Cases →
         </button>
       </div>
     </div>

@@ -152,21 +152,57 @@ function NumField({ label, value, onChange, prefix, suffix, tooltip }) {
 }
 
 function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
-  if (ucKey === 'cycleCount') return (
-    <>
-      <div className={grid2}>
-        <NumField label="Hours per count session" value={uc.hoursPerSession} onChange={(v) => onUpdate('hoursPerSession', v)} />
-        <NumField label="Count sessions per week" value={uc.sessionsPerWeek} onChange={(v) => onUpdate('sessionsPerWeek', v)} />
-        <NumField label="People counting simultaneously per session" value={uc.peoplePerSession} onChange={(v) => onUpdate('peoplePerSession', v)} />
-        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr"
-          onChange={(v) => { onUpdate('burdenedRate', v); setOps((prev) => ({ ...prev, plannerRate: v })); }} />
-      </div>
-      <div>
-        <label className={labelCls}>Expected time reduction with RFID</label>
-        <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate}  />
-      </div>
-    </>
-  );
+  if (ucKey === 'cycleCount') {
+    const mode = uc.mode || 'reductionPct';
+    return (
+      <>
+        <div className="mb-3">
+          <label className={labelCls}>Calculation method</label>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+            <button
+              type="button"
+              onClick={() => onUpdate('mode', 'reductionPct')}
+              className={`px-4 py-1.5 text-xs font-medium transition-colors ${mode === 'reductionPct' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Reduction %
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate('mode', 'employeeDelta')}
+              className={`px-4 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 ${mode === 'employeeDelta' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Employee Delta
+            </button>
+          </div>
+        </div>
+        {mode === 'reductionPct' ? (
+          <>
+            <div className={grid2}>
+              <NumField label="Hours per count session" value={uc.hoursPerSession} onChange={(v) => onUpdate('hoursPerSession', v)} />
+              <NumField label="Count sessions per week" value={uc.sessionsPerWeek} onChange={(v) => onUpdate('sessionsPerWeek', v)} />
+              <NumField label="People counting simultaneously per session" value={uc.peoplePerSession} onChange={(v) => onUpdate('peoplePerSession', v)} />
+              <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr"
+                onChange={(v) => { onUpdate('burdenedRate', v); setOps((prev) => ({ ...prev, plannerRate: v })); }} />
+            </div>
+            <div>
+              <label className={labelCls}>Expected time reduction with RFID</label>
+              <ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} />
+            </div>
+          </>
+        ) : (
+          <div className={grid2}>
+            <NumField label="Employees counting today (before)" value={uc.employeesBefore} onChange={(v) => onUpdate('employeesBefore', v)} />
+            <NumField label="Hours per count (before)" value={uc.hoursPerCountBefore} onChange={(v) => onUpdate('hoursPerCountBefore', v)} />
+            <NumField label="Employees after RFID" value={uc.employeesAfter} onChange={(v) => onUpdate('employeesAfter', v)} />
+            <NumField label="Hours per count (after)" value={uc.hoursPerCountAfter} onChange={(v) => onUpdate('hoursPerCountAfter', v)} />
+            <NumField label="Counts per year" value={uc.countsPerYear} onChange={(v) => onUpdate('countsPerYear', v)} />
+            <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr"
+              onChange={(v) => { onUpdate('burdenedRate', v); setOps((prev) => ({ ...prev, plannerRate: v })); }} />
+          </div>
+        )}
+      </>
+    );
+  }
 
   if (ucKey === 'audit') return (
     <>
@@ -533,12 +569,45 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="Unexplained loss incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
         <div>
           <label className={`${labelCls} flex items-center gap-1`}>
-            Avg cost per incident ($)
-            <Tooltip content="Include the value of lost inventory plus any investigation or compliance costs associated with each shrinkage event.">
+            Material / inventory value per incident ($)
+            <Tooltip content="The replacement or book value of the lost or stolen inventory. This is typically the largest component of shrinkage cost.">
               <span className="text-blue-400 cursor-help">ⓘ</span>
             </Tooltip>
           </label>
-          <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span><input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-1 text-sm">$</span>
+            <input type="number" value={uc.materialValuePerIncident} onChange={(e) => onUpdate('materialValuePerIncident', Number(e.target.value))} className={inputCls} />
+          </div>
+        </div>
+        <NumField label="Investigation labor per incident (hrs)" value={uc.laborHoursPerIncident} onChange={(v) => onUpdate('laborHoursPerIncident', v)} />
+        <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
+        <div>
+          <label className={labelCls}>Scrap or disposal cost per incident ($) <span className="text-gray-400 font-normal">(optional)</span></label>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-1 text-sm">$</span>
+            <input
+              type="number"
+              value={uc.scrapCostPerIncident}
+              onChange={(e) => onUpdate('scrapCostPerIncident', e.target.value === '' ? '' : Number(e.target.value))}
+              className={inputCls}
+              placeholder="e.g. 200"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5">Disposal or scrap fees if lost items must be destroyed. Leave blank if not applicable.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Schedule / production impact per incident ($) <span className="text-gray-400 font-normal">(optional)</span></label>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-1 text-sm">$</span>
+            <input
+              type="number"
+              value={uc.scheduleImpactPerIncident}
+              onChange={(e) => onUpdate('scheduleImpactPerIncident', e.target.value === '' ? '' : Number(e.target.value))}
+              className={inputCls}
+              placeholder="e.g. 1000"
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5">Production delay or expediting costs caused by the shortage. Leave blank if not applicable.</p>
         </div>
       </div>
       <div>
@@ -692,29 +761,41 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
   return null;
 }
 
-function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, fin, interacted, onInteract, expanded, onToggle }) {
+function ReviewIcon({ reviewed }) {
+  if (reviewed) {
+    return (
+      <svg className="w-4 h-4 text-green-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="w-4 h-4 text-gray-300 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, fin, reviewed, expanded, onToggle }) {
   const annualValue = calcUseCaseValue(ucKey, uc, ops, fin);
   const description = UC_DESCRIPTIONS[ucKey] || '';
 
   function onUpdate(field, value) {
-    onInteract();
     setUseCases((prev) => ({ ...prev, [ucKey]: { ...prev[ucKey], [field]: value } }));
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+    <div className={`rounded-xl shadow-md overflow-hidden mb-4 border ${reviewed ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'}`}>
       {/* Header — always visible */}
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2 flex-1 min-w-0 mr-3">
-          {interacted && (
-            <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          )}
+          <ReviewIcon reviewed={reviewed} />
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
-            {!expanded && description && (
-              <p className="text-xs text-gray-400 mt-0.5">{description}</p>
+            {!expanded && (
+              <p className={`text-xs mt-0.5 ${reviewed ? 'text-green-600' : 'text-gray-400'}`}>
+                {reviewed ? 'Reviewed' : (description || 'Not yet reviewed')}
+              </p>
             )}
           </div>
         </div>
@@ -725,11 +806,7 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, fin, interact
             onClick={onToggle}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap flex items-center gap-1 transition-colors"
           >
-            {expanded ? (
-              <>Collapse <span aria-hidden="true">▲</span></>
-            ) : (
-              <>Adjust <span aria-hidden="true">▼</span></>
-            )}
+            {expanded ? <>Collapse <span aria-hidden="true">▲</span></> : reviewed ? <>Adjust <span aria-hidden="true">▼</span></> : <>Review <span aria-hidden="true">▼</span></>}
           </button>
         </div>
       </div>
@@ -737,6 +814,22 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, fin, interact
       {expanded && (
         <div className="px-5 pb-5 pt-1 space-y-4 border-t border-gray-100">
           <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} fin={fin} />
+          <div>
+            <label className={labelCls}>
+              Justification <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={uc.justification || ''}
+              onChange={(e) => onUpdate('justification', e.target.value.slice(0, 150))}
+              maxLength={150}
+              rows={2}
+              placeholder="Based on 3 FTEs doing weekly cycle counts across 2 warehouses."
+              className={`${inputCls} resize-none`}
+            />
+            <div className="text-right text-xs text-gray-400 mt-1">
+              {(uc.justification || '').length} / 150
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -749,25 +842,19 @@ const REVENUE_KEYS = ['fasterFulfillment', 'misShipReduction', 'dockTurnSpeed', 
 const CAPITAL_KEYS = ['workingCapitalImprovement'];
 
 export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCases, fin, customCategories, setCustomCategories, onNext, onBack }) {
-  const [interacted, setInteracted] = useState(new Set());
+  const [reviewed, setReviewed] = useState(new Set());
   const [expandedCards, setExpandedCards] = useState(new Set());
 
-  function markInteracted(key) {
-    setInteracted((prev) => {
-      if (prev.has(key)) return prev;
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-  }
-
-  function toggleExpanded(key) {
+  function toggleCard(key) {
+    const wasExpanded = expandedCards.has(key);
     setExpandedCards((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      wasExpanded ? next.delete(key) : next.add(key);
       return next;
     });
+    if (wasExpanded) {
+      setReviewed((prev) => { const n = new Set(prev); n.add(key); return n; });
+    }
   }
 
   function updateCustomCategory(id, field, value) {
@@ -805,40 +892,58 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
       </p>
 
       {/* Operating Schedule */}
-      <div className="bg-white rounded-xl shadow-md p-5 mb-6">
-        <h3 className="text-sm font-semibold text-gray-800 mb-1">Operating Schedule</h3>
-        <p className="text-xs text-gray-500 mb-3">Applies to all use cases below.</p>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className={labelCls}>Working Days / Week</label>
-            <input
-              type="number"
-              value={ops.workDaysPerWeek}
-              min={1}
-              max={7}
-              onChange={(e) => setOps((prev) => ({ ...prev, workDaysPerWeek: Number(e.target.value) }))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Working Weeks / Year</label>
-            <input
-              type="number"
-              value={ops.workWeeksPerYear}
-              min={1}
-              max={52}
-              onChange={(e) => setOps((prev) => ({ ...prev, workWeeksPerYear: Number(e.target.value) }))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Working Days / Year (calculated)</label>
-            <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
-              {ops.workDaysPerWeek * ops.workWeeksPerYear}
+      {(() => {
+        const key = '__operatingSchedule';
+        const isReviewed = reviewed.has(key);
+        const isExpanded = expandedCards.has(key);
+        return (
+          <div className={`rounded-xl shadow-md overflow-hidden mb-6 border ${isReviewed ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center justify-between px-5 py-4">
+              <div className="flex items-center gap-2 flex-1 min-w-0 mr-3">
+                <ReviewIcon reviewed={isReviewed} />
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800">Operating Schedule</h3>
+                  <p className={`text-xs mt-0.5 ${isReviewed ? 'text-green-600' : 'text-gray-400'}`}>
+                    {isReviewed ? 'Reviewed' : 'Not yet reviewed'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggleCard(key)}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap flex items-center gap-1 transition-colors"
+              >
+                {isExpanded ? <>Collapse <span aria-hidden="true">▲</span></> : isReviewed ? <>Adjust <span aria-hidden="true">▼</span></> : <>Review <span aria-hidden="true">▼</span></>}
+              </button>
             </div>
+            {isExpanded && (
+              <div className="px-5 pb-5 pt-1 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-3">Applies to all use cases below.</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelCls}>Working Days / Week</label>
+                    <input type="number" value={ops.workDaysPerWeek} min={1} max={7}
+                      onChange={(e) => setOps((prev) => ({ ...prev, workDaysPerWeek: Number(e.target.value) }))}
+                      className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Working Weeks / Year</label>
+                    <input type="number" value={ops.workWeeksPerYear} min={1} max={52}
+                      onChange={(e) => setOps((prev) => ({ ...prev, workWeeksPerYear: Number(e.target.value) }))}
+                      className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Working Days / Year (calculated)</label>
+                    <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
+                      {ops.workDaysPerWeek * ops.workWeeksPerYear}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Use Case Cards */}
       {enabledCards.length === 0 && cats.length === 0 && (
@@ -857,10 +962,9 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
           setOps={setOps}
           setUseCases={setUseCases}
           fin={fin}
-          interacted={interacted.has(key)}
-          onInteract={() => markInteracted(key)}
+          reviewed={reviewed.has(key)}
           expanded={expandedCards.has(key)}
-          onToggle={() => toggleExpanded(key)}
+          onToggle={() => toggleCard(key)}
         />
       ))}
 
@@ -894,6 +998,17 @@ export default function Step3_ValidateInputs({ ops, setOps, useCases, setUseCase
           </div>
         </div>
       ))}
+
+      {/* Review progress */}
+      {(() => {
+        const total = 1 + enabledCards.length; // Operating Schedule + each use case card
+        const reviewedCount = reviewed.size;
+        return (
+          <p className="text-xs text-gray-400 mb-4">
+            {reviewedCount} of {total} input group{total !== 1 ? 's' : ''} reviewed.
+          </p>
+        );
+      })()}
 
       <div className="flex justify-between">
         <button

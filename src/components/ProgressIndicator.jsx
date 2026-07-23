@@ -1,6 +1,6 @@
 const steps = [
   { label: 'Project Overview' },
-  { label: 'Select Use Cases' },
+  { label: 'Select Solution + Use Cases' },
   { label: 'Validate Your Inputs' },
   { label: 'Financial Inputs' },
   { label: 'Get Your Report' },

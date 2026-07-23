@@ -3,8 +3,13 @@
 export function calcUseCaseValue(key, uc, ops, fin = {}) {
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
   switch (key) {
-    case 'cycleCount':
+    case 'cycleCount': {
+      if ((uc.mode || 'reductionPct') === 'employeeDelta') {
+        return (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter)
+          * uc.countsPerYear * uc.burdenedRate;
+      }
       return uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
+    }
 
     case 'audit': {
       const labor = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.burdenedRate * uc.reductionPct;
@@ -70,7 +75,15 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
     case 'inventoryRequests':
       return uc.hoursPerWeek * uc.peopleInvolved * ops.workWeeksPerYear * uc.burdenedRate * uc.reductionPct;
 
-    case 'shrinkage':
+    case 'shrinkage': {
+      const materialValue = uc.materialValuePerIncident ?? uc.costPerIncident ?? 0;
+      const perIncident = materialValue
+        + (uc.laborHoursPerIncident || 0) * (uc.burdenedRate || 0)
+        + (Number(uc.scrapCostPerIncident) || 0)
+        + (Number(uc.scheduleImpactPerIncident) || 0);
+      return uc.incidentsPerYear * perIncident * uc.reductionPct;
+    }
+
     case 'productionEquipment':
     case 'rtiTracking':
     case 'proofOfDelivery':
@@ -85,6 +98,43 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
     case 'workingCapitalImprovement':
       return uc.wipInventoryValue * uc.reductionPct * (fin.wacc ?? 0.085);
 
+    default:
+      return 0;
+  }
+}
+
+const LABOR_UC_KEYS = new Set(['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery', 'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers', 'inventoryRequests']);
+
+export function calcUseCaseHours(key, uc, ops) {
+  if (!LABOR_UC_KEYS.has(key)) return 0;
+  const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
+  switch (key) {
+    case 'cycleCount':
+      if ((uc.mode || 'reductionPct') === 'employeeDelta') {
+        return (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear;
+      }
+      return uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.reductionPct;
+    case 'audit':
+      return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
+    case 'locateItems':
+      return (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
+    case 'workOrderTracking':
+      return (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
+    case 'picklistVerification':
+      return 0;
+    case 'shipReceiveVerification':
+      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.reductionPct;
+    case 'internalDelivery':
+      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.reductionPct;
+    case 'goodsReceipt':
+    case 'automatedPackCount':
+      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.reductionPct;
+    case 'outboundAudit':
+      return (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.reductionPct;
+    case 'returnsTransfers':
+      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.reductionPct;
+    case 'inventoryRequests':
+      return uc.hoursPerWeek * uc.peopleInvolved * ops.workWeeksPerYear * uc.reductionPct;
     default:
       return 0;
   }
@@ -154,9 +204,11 @@ export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
         key,
         name: bucket.labels[key],
         annualValue: calcUseCaseValue(key, useCases[key], ops, fin),
+        hoursSaved: calcUseCaseHours(key, useCases[key], ops),
       }));
     const subtotal = lineItems.reduce((sum, li) => sum + li.annualValue, 0);
-    return { name: bucket.name, subtotal, lineItems };
+    const totalHoursSaved = lineItems.reduce((sum, li) => sum + li.hoursSaved, 0);
+    return { name: bucket.name, subtotal, lineItems, totalHoursSaved };
   });
 
   if (customCategories && customCategories.length > 0) {

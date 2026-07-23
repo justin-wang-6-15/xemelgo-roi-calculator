@@ -130,12 +130,16 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
   const paybackBadge = paybackValue != null && paybackValue <= 24 ? 'Xemelgo avg: 18–24 wks' : null;
   const irrDisplay = !inputsReady ? '—' : result.irrAnnual > 3.0 ? '>300%' : fmtPct(result.irrAnnual);
 
+  const laborBucket = result.buckets.find((b) => b.name === 'Labor Efficiency');
+  const totalHoursSaved = laborBucket?.totalHoursSaved ?? 0;
+
   const secondaryMetrics = [
-    { label: '5-Year ROI',      value: inputsReady ? fmtPct(roiValue) : '—',              caption: 'Total return over 5 years',           colorClass: 'border-blue-500',   badge: roiBadge },
-    { label: '5-Year NPV',      value: inputsReady ? fmt$(result.npv) : '—',              caption: 'Net present value at your WACC',      colorClass: 'border-green-500' },
-    { label: 'IRR (Annual)',    value: irrDisplay,                                          caption: 'Internal rate of return',             colorClass: 'border-purple-500' },
-    { label: 'Payback Period',  value: inputsReady ? fmtWks(result.paybackWeeks) : '—',   caption: 'Weeks to recover investment',         colorClass: 'border-orange-500', badge: paybackBadge },
-    { label: 'Annual SaaS ROI', value: inputsReady ? fmtPct(result.saasRoi) : '—',        caption: 'Return per dollar of platform fee',   colorClass: 'border-indigo-400' },
+    { label: '5-Year ROI',        value: inputsReady ? fmtPct(roiValue) : '—',            caption: 'Total return over 5 years',                    colorClass: 'border-blue-500',   badge: roiBadge },
+    { label: '5-Year NPV',        value: inputsReady ? fmt$(result.npv) : '—',            caption: 'Net present value at your WACC',               colorClass: 'border-green-500' },
+    { label: 'IRR (Annual)',      value: irrDisplay,                                        caption: 'Internal rate of return',                      colorClass: 'border-purple-500' },
+    { label: 'Payback Period',    value: inputsReady ? fmtWks(result.paybackWeeks) : '—', caption: 'Weeks to recover investment',                  colorClass: 'border-orange-500', badge: paybackBadge },
+    { label: 'Annual SaaS ROI',   value: inputsReady ? fmtPct(result.saasRoi) : '—',      caption: 'Return per dollar of platform fee',            colorClass: 'border-indigo-400' },
+    { label: 'Annual Hours Saved', value: totalHoursSaved > 0 ? `${Math.round(totalHoursSaved).toLocaleString()} hrs` : '—', caption: 'Labor hours returned to your team each year', colorClass: 'border-teal-500' },
   ];
 
   return (
@@ -167,8 +171,8 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
         )}
       </div>
 
-      {/* 5 secondary metric cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+      {/* Secondary metric cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {secondaryMetrics.map((m) => (
           <SecondaryMetricCard key={m.label} {...m} />
         ))}

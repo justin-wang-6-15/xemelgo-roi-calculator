@@ -16,6 +16,7 @@ const BUCKET_COLORS = {
   'Labor Efficiency':              BLUE,
   'Loss Prevention & Compliance':  GREEN,
   'Revenue & Throughput':          LBLUE,
+  'Capital Efficiency':            NAVY,
 };
 
 const W = 612;
@@ -58,31 +59,31 @@ const UC_NAMES = {
 };
 
 const UC_DEFS = {
-  cycleCount:              [['Hours per session','hoursPerSession','n'],['Sessions per week','sessionsPerWeek','n'],['People per session','peoplePerSession','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
-  audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  cycleCount:              [['Hours per session','hoursPerSession','n'],['Sessions per week','sessionsPerWeek','n'],['People per session','peoplePerSession','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
+  audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
   locateItems:             [['Role rows','roleRows','custom']],
   workOrderTracking:       [['Role rows','roleRows','custom']],
-  picklistVerification:    [['Picks/day','picksPerDay','n'],['Error rate','errorRate','pct'],['Cost/error','costPerError','$'],['Reduction','reductionPct','p']],
-  shipReceiveVerification: [['Min saved/transaction','minutesSavedPerTransaction','n'],['Transactions/day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
-  internalDelivery:        [['Min/transfer','minutesPerTransfer','n'],['Transfers/day','transfersPerDay','n'],['People/transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  picklistVerification:    [['Picks per day','picksPerDay','n'],['Error rate','errorRate','pct'],['Cost per error','costPerError','$'],['Error reduction','reductionPct','p']],
+  shipReceiveVerification: [['Minutes saved per transaction','minutesSavedPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Dock headcount','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  internalDelivery:        [['Minutes per transfer','minutesPerTransfer','n'],['Transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
   expiredProducts:         [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
   calibrationReminders:    [['Failures per year','failuresPerYear','n'],['Cost per failure','costPerFailure','$'],['Failure reduction','reductionPct','p']],
   geofencing:              [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
-  goodsReceipt:            [['Min saved/transaction','minutesSavedPerTransaction','n'],['Transactions/day','transactionsPerDay','n'],['Receiving staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
-  automatedPackCount:      [['Min saved/pack count','minutesSavedPerTransaction','n'],['Pack counts/day','transactionsPerDay','n'],['Staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
-  outboundAudit:           [['Min saved/shipment','minutesSaved','n'],['Outbound shipments/day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
-  returnsTransfers:        [['Min/transfer','minutesPerTransfer','n'],['Transfers/day','transfersPerDay','n'],['People/transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
-  inventoryRequests:       [['Hrs/week on requests','hoursPerWeek','n'],['People involved','peopleInvolved','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  goodsReceipt:            [['Minutes saved per transaction','minutesSavedPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Receiving staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  automatedPackCount:      [['Minutes saved per pack count','minutesSavedPerTransaction','n'],['Pack counts per day','transactionsPerDay','n'],['Staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  outboundAudit:           [['Minutes saved per shipment','minutesSaved','n'],['Outbound shipments per day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  returnsTransfers:        [['Minutes per transfer','minutesPerTransfer','n'],['Transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  inventoryRequests:       [['Hours per week on requests','hoursPerWeek','n'],['People involved','peopleInvolved','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
   shrinkage:               [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
   productionEquipment:     [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
   rtiTracking:             [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
   proofOfDelivery:         [['Claims per year','incidentsPerYear','n'],['Cost per claim','costPerIncident','$'],['Claim reduction','reductionPct','p']],
-  qualityExceptionTracking:   [['Exceptions/year','exceptionsPerYear','n'],['Rework cost/exception','reworkCostPerException','$'],['Scrap cost/exception','scrapCostPerException','$'],['Reduction','reductionPct','p']],
-  expeditedExceptionTracking: [['Late shipments/month','lateShipmentsPerMonth','n'],['Cost/incident','costPerLateShipment','$'],['Reduction','reductionPct','p']],
-  workingCapitalImprovement:  [['Avg WIP inventory value','wipInventoryValue','$'],['Reduction','reductionPct','p']],
+  qualityExceptionTracking:   [['Exceptions per year','exceptionsPerYear','n'],['Rework cost per exception','reworkCostPerException','$'],['Scrap cost per exception','scrapCostPerException','$'],['Reduction rate','reductionPct','p']],
+  expeditedExceptionTracking: [['Late shipments per month','lateShipmentsPerMonth','n'],['Cost per late shipment','costPerLateShipment','$'],['Reduction rate','reductionPct','p']],
+  workingCapitalImprovement:  [['Avg WIP inventory value','wipInventoryValue','$'],['Inventory reduction','reductionPct','p']],
   fasterFulfillment:       [['Current cycle time (hrs)','currentCycleTime','n'],['Target cycle time (hrs)','targetCycleTime','n'],['Orders per month','ordersPerMonth','n'],['Revenue per order','revenuePerOrder','$']],
-  misShipReduction:        [['Mis-ships/month','misShipsPerMonth','n'],['Cost/mis-ship','costPerMisShip','$'],['Reduction','reductionPct','p']],
-  dockTurnSpeed:           [['Min saved/transaction','minutesSaved','n'],['Transactions/day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction','reductionPct','p']],
+  misShipReduction:        [['Mis-ships per month','misShipsPerMonth','n'],['Cost per mis-ship','costPerMisShip','$'],['Reduction rate','reductionPct','p']],
+  dockTurnSpeed:           [['Minutes saved per transaction','minutesSaved','n'],['Transactions per day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction rate','reductionPct','p']],
 };
 
 function fmtVal(v, type) {
@@ -99,8 +100,6 @@ function arrayBufferToBase64(buf) {
   return btoa(binary);
 }
 
-// Load Inter TTF from locally-bundled files in /public/fonts/.
-// Falls back to Helvetica if the fetch fails or the font can't be embedded.
 async function loadInterFont(doc) {
   try {
     const [boldRes, regRes] = await Promise.all([
@@ -132,7 +131,6 @@ async function loadImg(path) {
   } catch { return null; }
 }
 
-// Core drawing function — builds all pages onto `doc` with the given font and logo.
 function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, customCategories) {
   const company     = ops.companyName?.trim() || 'Your Facility';
   const ctxComp     = contactInfo?.company?.trim() || company;
@@ -141,7 +139,6 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const now         = new Date();
   const dateDisplay = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const dateISO     = now.toISOString().slice(0, 10);
-  const person      = (first || last) ? `${first} ${last}`.trim() : 'Valued Customer';
 
   const sf  = (...rgb) => doc.setFillColor(...rgb);
   const sc  = (...rgb) => doc.setTextColor(...rgb);
@@ -149,16 +146,6 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const lw  = (w)      => doc.setLineWidth(w);
   const box = (x, y, w, h) => doc.rect(x, y, w, h, 'F');
   const fn  = (style = 'normal', size = 9) => { doc.setFont(fontName, style); doc.setFontSize(size); };
-
-  // Layout constants
-  const SPINE_W  = 110;
-  const CX       = 126;
-  const CR       = 588;
-  const CW       = CR - CX; // 462pt
-
-  // Decorative muted colors for spine elements
-  const SPINEDIV = [50, 65, 90];
-  const TICKGRAY = [70, 90, 120];
 
   function logoOrText(x, y, w, h, fallbackSize = 13) {
     if (logo) {
@@ -169,101 +156,78 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     }
   }
 
-  function hairline(x1, y, x2, color, weight) {
-    sd(...(color || GRAY99)); lw(weight || 0.4);
-    doc.line(x1, y, x2, y);
-  }
-
   function sectionHead(label, x, y_text, x_end) {
     fn('bold', 7.5); sc(...NAVY);
     doc.text(label, x, y_text);
     const tw = doc.getTextWidth(label);
-    hairline(x + tw + 8, y_text - 4, x_end);
-  }
-
-  function footer(pageY = 740) {
-    hairline(0, pageY, W, GRAY99, 0.4);
-    fn('bold', 6); sc(...GRAY99);
-    doc.text('xemelgo', 24, pageY + 16);
-    fn('italic', 6.5); sc(...GRAY99);
-    doc.text(
-      'This analysis is based on inputs provided by the user and Xemelgo customer benchmarks. Actual results may vary.',
-      W - 16, pageY + 16, { align: 'right', maxWidth: 380 }
-    );
+    sd(...GRAY99); lw(0.4);
+    doc.line(x + tw + 8, y_text - 4, x_end, y_text - 4);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PAGE 1
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // Left navy spine — full page height
-  sf(...NAVY); box(0, 0, SPINE_W, 756);
+  // Hero band (navy, full width, y=0..220)
+  sf(...NAVY); box(0, 0, W, 220);
 
-  // Logo in spine
-  logoOrText(16, 20, 60, 18, 8);
+  // Blue accent strip at very top (y=0..6)
+  sf(...BLUE); box(0, 0, W, 6);
 
-  // Stacked eyebrow labels in spine
-  fn('normal', 6.5); sc(...LBLUE);
-  doc.text('ROI',      55, 54, { align: 'center' });
-  doc.text('ANALYSIS', 55, 65, { align: 'center' });
-  doc.text('REPORT',   55, 76, { align: 'center' });
+  // Logo (x=24, y=14)
+  logoOrText(24, 14, 130, 34, 13);
 
-  // Thin muted divider below eyebrow
-  sd(...SPINEDIV); lw(0.5);
-  doc.line(16, 86, 94, 86);
+  // Identity — right side
+  fn('normal', 11); sc(...WHITE);
+  doc.text('ROI Analysis Report', W - 24, 26, { align: 'right' });
+  fn('normal', 9); sc(...LBLUE);
+  doc.text(ctxComp, W - 24, 40, { align: 'right' });
+  fn('normal', 8); sc(...GRAY99);
+  doc.text(dateDisplay, W - 24, 52, { align: 'right' });
 
-  // Company name — white bold, word-wrapped within spine
-  fn('bold', 7.5); sc(...WHITE);
-  const compLines = doc.splitTextToSize(ctxComp, 88);
-  doc.text(compLines, 55, 100, { align: 'center' });
+  // Horizontal rule at y=82
+  sd(...BLUE); lw(0.5);
+  doc.line(0, 82, W, 82);
 
-  // Date — muted gray below company name
-  fn('normal', 6); sc(...GRAY99);
-  const dateY = 100 + compLines.length * 10;
-  doc.text(dateDisplay, 55, dateY, { align: 'center', maxWidth: 88 });
+  // 3 metric columns — labels, values, descriptions
+  const payStr = result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A';
+  const metricsData = [
+    { label: 'NET ANNUAL VALUE', value: fmt$(result.netAnnualValue), desc: 'Net of platform costs' },
+    { label: 'PAYBACK PERIOD',   value: payStr,                      desc: 'Time to recover investment' },
+    { label: '5-YEAR ROI',       value: fmtPct(result.fiveYrRoi - 1), desc: 'Return over 5 years' },
+  ];
+  const COL_W = W / 3; // 204
 
-  // Decorative tick marks near bottom of spine
-  [698, 710, 722, 734, 746].forEach((ty, i) => {
-    const len = i % 2 === 0 ? 8 : 14;
-    sd(...TICKGRAY); lw(0.6);
-    doc.line(55 - len / 2, ty, 55 + len / 2, ty);
+  metricsData.forEach(({ label, value, desc }, i) => {
+    const cx = COL_W * i + COL_W / 2;
+    fn('normal', 8); sc(...GRAY99);
+    doc.text(label, cx, 110, { align: 'center' });
+    // Auto-shrink value font to fit column
+    let vSize = 36;
+    fn('bold', vSize); sc(...WHITE);
+    while (doc.getTextWidth(value) > COL_W - 12 && vSize > 16) {
+      vSize -= 1;
+      doc.setFontSize(vSize);
+    }
+    doc.text(value, cx, 160, { align: 'center' });
+    fn('italic', 7); sc(...GRAY99);
+    doc.text(desc, cx, 186, { align: 'center' });
   });
 
-  // ── Hero metric ────────────────────────────────────────────────────────────
-  fn('normal', 6.5); sc(...GRAY99);
-  doc.text('NET ANNUAL VALUE', CX, 40);
+  // Light vertical dividers between metric columns
+  sd(60, 90, 150); lw(0.5);
+  doc.line(204, 90, 204, 210);
+  doc.line(408, 90, 408, 210);
 
-  fn('bold', 38); sc(...NAVY);
-  doc.text(fmt$(result.netAnnualValue), CX, 82);
+  // Narrative block (y=222..252, white fill)
+  sf(...WHITE); box(0, 222, W, 30);
 
-  // Blue accent rule beneath hero number
-  sf(...BLUE); box(CX, 87, 26, 2.5);
-
-  // ── Secondary stats (Payback + 5-Year ROI) ────────────────────────────────
-  const payStr = result.paybackWeeks ? fmtWks(result.paybackWeeks) : 'N/A';
-  const S1X = 432, S2X = 536, DIV_X = 484;
-
-  // Thin vertical hairline divider between secondary stats
-  sd(...GRAY99); lw(0.4);
-  doc.line(DIV_X, 42, DIV_X, 80);
-
-  fn('normal', 6); sc(...GRAY99);
-  doc.text('PAYBACK PERIOD', S1X, 50, { align: 'center' });
-  fn('bold', 13); sc(...NAVY);
-  doc.text(payStr, S1X, 70, { align: 'center' });
-
-  fn('normal', 6); sc(...GRAY99);
-  doc.text('5-YEAR ROI', S2X, 50, { align: 'center' });
-  fn('bold', 13); sc(...NAVY);
-  doc.text(fmtPct(result.fiveYrRoi - 1), S2X, 70, { align: 'center' });
-
-  // ── Narrative sentence ────────────────────────────────────────────────────
   const npvStr = fmt$(result.npv);
-  const SENT_Y = 112;
-  fn('normal', 9); sc(...GRAY66);
+  const SENT_Y = 240;
   const prefix = 'At these inputs, ';
-  doc.text(prefix, CX, SENT_Y);
-  let sx = CX + doc.getTextWidth(prefix);
+  fn('normal', 9); sc(...GRAY66);
+  doc.text(prefix, 24, SENT_Y);
+  let sx = 24 + doc.getTextWidth(prefix);
   fn('bold', 9); sc(...NAVY);
   doc.text(ctxComp, sx, SENT_Y);
   sx += doc.getTextWidth(ctxComp);
@@ -284,73 +248,102 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   fn('normal', 9); sc(...GRAY66);
   doc.text(' in net value over 5 years.', sx, SENT_Y);
 
-  // ── "HOW YOU GET THERE" section header ────────────────────────────────────
-  sectionHead('HOW YOU GET THERE', CX, 136, CR);
+  // Section bar (y=254..276, blue fill)
+  sf(...BLUE); box(0, 254, W, 22);
+  fn('bold', 9); sc(...WHITE);
+  doc.text('HOW YOU GET THERE', 24, 269);
 
-  // ── Full-width bucket bar chart ────────────────────────────────────────────
+  // ── Table (left, x=0..310) + bar chart (right, x=314..596) ──
+  const TABLE_X  = 16;
+  const TABLE_W  = 294;
+  const TABLE_R  = TABLE_X + TABLE_W; // 310
+  const CHART_X  = 318;
+  const CHART_R  = W - 16;
+  const ROW_H    = 18;
+
+  // Table column headers row
+  sf(...NAVY); box(0, 278, TABLE_R, 14);
+  fn('bold', 6.5); sc(...WHITE);
+  doc.text('USE CASE', TABLE_X + 10, 289);
+  doc.text('CATEGORY', TABLE_X + 155, 289);
+  doc.text('ANNUAL VALUE', TABLE_R - 4, 289, { align: 'right' });
+
+  let ty = 292;
+  let rowAlt = false;
+
+  result.buckets.forEach(bucket => {
+    if (!bucket.lineItems.length) return;
+    const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
+    bucket.lineItems.forEach(li => {
+      sf(...(rowAlt ? BGBLUE : WHITE)); box(0, ty, TABLE_R, ROW_H);
+      sf(...pillColor); box(TABLE_X, ty + 6, 6, 6);
+      fn('normal', 7); sc(...NAVY);
+      // Truncate long UC names to fit
+      const ucNameStr = doc.splitTextToSize(li.name, 128)[0];
+      doc.text(ucNameStr, TABLE_X + 10, ty + 12);
+      fn('normal', 6.5); sc(...GRAY66);
+      // Shorten category label to first word group before '&'
+      const catShort = bucket.name.split(' & ')[0];
+      doc.text(catShort, TABLE_X + 155, ty + 12);
+      fn('bold', 7.5); sc(...NAVY);
+      doc.text(fmt$(li.annualValue), TABLE_R - 4, ty + 12, { align: 'right' });
+      ty += ROW_H;
+      rowAlt = !rowAlt;
+    });
+    // Bucket subtotal row
+    sf(...BGBLUE); box(0, ty, TABLE_R, ROW_H);
+    fn('bold', 7.5); sc(...NAVY);
+    doc.text(bucket.name, TABLE_X + 10, ty + 12);
+    doc.text(fmt$(bucket.subtotal), TABLE_R - 4, ty + 12, { align: 'right' });
+    ty += ROW_H;
+    rowAlt = false;
+  });
+
+  // Totals section
+  sd(...NAVY); lw(0.5); doc.line(TABLE_X, ty, TABLE_R, ty); ty += 4;
+
+  fn('bold', 8); sc(...NAVY);
+  doc.text('Total Gross Annual', TABLE_X + 10, ty + 12);
+  doc.text(fmt$(result.totalGrossAnnual), TABLE_R - 4, ty + 12, { align: 'right' });
+  ty += ROW_H;
+
+  fn('normal', 7.5); sc(...RED);
+  doc.text('Annual Platform Cost', TABLE_X + 10, ty + 12);
+  doc.text(`(${fmt$(result.annualSaasFee)})`, TABLE_R - 4, ty + 12, { align: 'right' });
+  ty += ROW_H;
+
+  sd(...BLUE); lw(0.5); doc.line(TABLE_X, ty, TABLE_R, ty);
+  fn('bold', 8.5); sc(...BLUE);
+  doc.text('Net Annual Value', TABLE_X + 10, ty + 12);
+  doc.text(fmt$(result.netAnnualValue), TABLE_R - 4, ty + 12, { align: 'right' });
+  ty += ROW_H;
+  sd(...BLUE); lw(0.5); doc.line(TABLE_X, ty, TABLE_R, ty);
+
+  // Bar chart — sorted largest → smallest
   const activeBuckets = result.buckets.filter(b => b.subtotal > 0);
   const sortedBuckets = [...activeBuckets].sort((a, b) => b.subtotal - a.subtotal);
   const maxVal = Math.max(...sortedBuckets.map(b => b.subtotal), 1);
-  const BAR_H = 15;
-  const BUCKET_SPACING = 42;
+  const MAX_BAR_W = CHART_R - CHART_X - 70; // leave room for value label
+  const BAR_H = 14, BAR_SPACING = 14;
 
-  let by = 150;
+  fn('normal', 7); sc(...GRAY66);
+  doc.text('SAVINGS BY CATEGORY', CHART_X, 290);
+
+  let chy = 304;
   sortedBuckets.forEach(bucket => {
     const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
-    const barW = Math.max(4, Math.round((bucket.subtotal / maxVal) * CW));
-    fn('normal', 7.5); sc(...NAVY);
-    doc.text(bucket.name, CX, by);
-    fn('bold', 7.5); sc(...NAVY);
-    doc.text(fmt$(bucket.subtotal), CR, by, { align: 'right' });
-    sf(...pillColor); box(CX, by + 4, barW, BAR_H);
-    by += BUCKET_SPACING;
+    const barW = Math.max(4, Math.round((bucket.subtotal / maxVal) * MAX_BAR_W));
+    fn('normal', 7); sc(...NAVY);
+    doc.text(bucket.name, CHART_X, chy);
+    chy += 10;
+    sf(...pillColor); box(CHART_X, chy, barW, BAR_H);
+    fn('bold', 7); sc(...NAVY);
+    doc.text(fmt$(bucket.subtotal), CHART_X + barW + 4, chy + BAR_H - 2);
+    chy += BAR_H + BAR_SPACING;
   });
 
-  // Hairline after chart
-  hairline(CX, by, CR);
-  by += 10;
-
-  // ── Condensed itemized use case list ──────────────────────────────────────
-  const ROW_H = 11;
-  result.buckets.forEach(bucket => {
-    if (!bucket.lineItems.length) return;
-    bucket.lineItems.forEach(li => {
-      fn('normal', 6.5); sc(...GRAY66);
-      doc.text(li.name, CX, by);
-      doc.text(fmt$(li.annualValue), CR, by, { align: 'right' });
-      by += ROW_H;
-    });
-    hairline(CX, by + 2, CR, GRAY99, 0.3);
-    by += 8;
-  });
-
-  by += 6;
-
-  // Total Gross Annual — bold NAVY border line above, no fill
-  hairline(CX, by - 2, CR, NAVY, 0.6);
-  fn('bold', 8); sc(...NAVY);
-  doc.text('Total Gross Annual', CX, by + 9);
-  doc.text(fmt$(result.totalGrossAnnual), CR, by + 9, { align: 'right' });
-  by += 17;
-
-  // Annual Platform Cost — RED text, no fill
-  fn('normal', 7.5); sc(...RED);
-  doc.text('Annual Platform Cost', CX, by + 9);
-  doc.text(`(${fmt$(result.annualSaasFee)})`, CR, by + 9, { align: 'right' });
-  by += 15;
-
-  // Net Annual Value — bold BLUE text, BLUE hairlines above and below, no fill
-  hairline(CX, by, CR, BLUE, 0.6);
-  fn('bold', 8.5); sc(...BLUE);
-  doc.text('Net Annual Value', CX, by + 11);
-  doc.text(fmt$(result.netAnnualValue), CR, by + 11, { align: 'right' });
-  hairline(CX, by + 16, CR, BLUE, 0.6);
-  by += 22;
-
-  // ── Investment snapshot strip ─────────────────────────────────────────────
-  const INV_TOP = Math.max(by + 22, 660);
-  const invW = CW / 3;
-  hairline(CX, INV_TOP, CR, GRAY99, 0.5);
+  // Investment snapshot strip (y=712..754, blue fill)
+  sf(...BLUE); box(0, 712, W, 42);
 
   const invItems = [
     { label: 'CapEx',               value: fmt$(Number(fin.capex) || 0) },
@@ -358,23 +351,28 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     { label: 'WACC',                 value: fmtPct(fin.wacc)            },
   ];
   invItems.forEach((item, i) => {
-    const icx = CX + i * invW + invW / 2;
-    fn('normal', 7); sc(...GRAY66);
-    doc.text(item.label, icx, INV_TOP + 14, { align: 'center' });
-    fn('bold', 10); sc(...NAVY);
-    doc.text(item.value, icx, INV_TOP + 30, { align: 'center' });
+    const icx = COL_W * i + COL_W / 2;
+    fn('normal', 7); sc(...WHITE);
+    doc.text(item.label, icx, 726, { align: 'center' });
+    fn('bold', 10); sc(...WHITE);
+    doc.text(item.value, icx, 744, { align: 'center' });
   });
+  // Dividers between investment items
+  sd(30, 70, 160); lw(0.4);
+  doc.line(204, 718, 204, 748);
+  doc.line(408, 718, 408, 748);
 
-  // Vertical dividers between investment items
-  sd(...GRAY99); lw(0.4);
-  doc.line(CX + invW,     INV_TOP + 6, CX + invW,     INV_TOP + 38);
-  doc.line(CX + invW * 2, INV_TOP + 6, CX + invW * 2, INV_TOP + 38);
-  hairline(CX, INV_TOP + 42, CR, GRAY99, 0.5);
-
-  footer(740);
+  // Footer (y=762..792, navy fill)
+  sf(...NAVY); box(0, 762, W, 30);
+  logoOrText(24, 766, 60, 18, 7);
+  fn('italic', 6.5); sc(...GRAY99);
+  doc.text(
+    'This analysis is based on inputs provided by the user and Xemelgo customer benchmarks. Actual results may vary.',
+    W - 16, 778, { align: 'right', maxWidth: 380 }
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PAGE 2
+  // PAGE 2 — Inputs & Assumptions
   // ─────────────────────────────────────────────────────────────────────────────
   doc.addPage();
 
@@ -392,7 +390,6 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const LX = 24, LW = 275, RX = 307, RW = 279;
   const RH = 16;
 
-  // Section headers as eyebrow + hairline rule
   sectionHead('FACILITY OVERVIEW', LX, y + 12, LX + LW);
   sectionHead('TEAM HEADCOUNT & RATES', RX, y + 12, RX + RW);
   y += 18;
@@ -457,15 +454,23 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const CARD_W = 270, CARD_GAP = 14;
   const CL_X = 24, CR_X = 24 + CARD_W + CARD_GAP;
 
+  const justLines = ([, uc]) => {
+    const j = uc.justification?.trim();
+    return j ? doc.splitTextToSize(j, CARD_W - 20) : [];
+  };
+
   for (let i = 0; i < enabledUcs.length; i += 2) {
     const pair = enabledUcs.slice(i, i + 2);
-    const heights = pair.map(([key, uc]) => {
+    const heights = pair.map((entry) => {
+      const [key, uc] = entry;
       const defs = UC_DEFS[key] || [];
       const cnt  = defs.filter(([, f]) => uc[f] !== undefined).length;
-      return 12 + 13 + cnt * 11 + 6;
+      const jl   = justLines(entry);
+      return 12 + 13 + cnt * 11 + 6 + (jl.length ? 10 + jl.length * 8 : 0);
     });
     const rowH = Math.max(...heights, 50);
-    pair.forEach(([key, uc], col) => {
+    pair.forEach((entry, col) => {
+      const [key, uc] = entry;
       const cx   = col === 0 ? CL_X : CR_X;
       const defs = UC_DEFS[key] || [];
       fn('bold', 8); sc(...BLUE);
@@ -477,9 +482,18 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
         fn('normal', 7); sc(...GRAY99);
         doc.text(`${label}:`, cx + 10, iy);
         fn('bold', 7.5); sc(...NAVY);
-        doc.text(fmtVal(uc[field], type), cx + 128, iy);
+        doc.text(fmtVal(uc[field], type), cx + 140, iy);
         iy += 11;
       });
+      const jl = justLines(entry);
+      if (jl.length) {
+        iy += 3;
+        sd(...BGBLUE); lw(0.5);
+        doc.line(cx + 10, iy, cx + CARD_W - 10, iy);
+        iy += 9;
+        fn('italic', 7); sc(...GRAY66);
+        doc.text(jl, cx + 10, iy);
+      }
       sd(...BGBLUE); lw(0.5);
       doc.line(cx, y + rowH, cx + CARD_W, y + rowH);
     });
@@ -507,7 +521,15 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     y += 16;
   });
 
-  footer(762);
+  // Footer for page 2
+  sd(...GRAY99); lw(0.4); doc.line(0, 762, W, 762);
+  fn('bold', 6); sc(...GRAY99);
+  doc.text('xemelgo', 24, 778);
+  fn('italic', 6.5); sc(...GRAY99);
+  doc.text(
+    'This analysis is based on inputs provided by the user and Xemelgo customer benchmarks. Actual results may vary.',
+    W - 16, 778, { align: 'right', maxWidth: 380 }
+  );
 
   return dateISO;
 }
@@ -516,7 +538,6 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   const company = ops.companyName?.trim() || 'Your Facility';
   const logo    = await loadImg('/xemelgo_logo_light.png');
 
-  // First attempt: Inter font loaded from bundled TTF files
   try {
     const doc      = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
     const fontName = await loadInterFont(doc);
@@ -525,17 +546,16 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     doc.save(fname);
     return;
   } catch (err) {
-    console.error('[generatePDF] First attempt failed (font embedding or save). Retrying with Helvetica fallback.', err);
+    console.error('[generatePDF] First attempt failed. Retrying with Helvetica fallback.', err);
   }
 
-  // Fallback: rebuild with Helvetica — user still gets a usable PDF
   try {
     const doc     = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
     const dateISO = buildDoc(doc, 'Helvetica', logo, ops, useCases, fin, result, contactInfo, customCategories);
     const fname   = `Xemelgo_ROI_Report_${company.replace(/\s+/g, '_')}_${dateISO}.pdf`;
     doc.save(fname);
   } catch (fallbackErr) {
-    console.error('[generatePDF] Helvetica fallback also failed. doc.save() threw:', fallbackErr);
+    console.error('[generatePDF] Helvetica fallback also failed.', fallbackErr);
     throw fallbackErr;
   }
 }

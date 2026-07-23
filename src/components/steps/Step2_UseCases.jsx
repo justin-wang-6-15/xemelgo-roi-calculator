@@ -121,37 +121,34 @@ export default function Step2_UseCases({ useCases, setUseCases, customCategories
   const [selectedSolutions, setSelectedSolutions] = useState(new Set());
 
   function toggleSolution(sol) {
-    setSelectedSolutions((prev) => {
-      const next = new Set(prev);
-      if (next.has(sol.id)) {
-        next.delete(sol.id);
-        // Disable this solution's defaults unless another selected solution also lists them
-        setUseCases((ucs) => {
-          const updated = { ...ucs };
-          sol.defaults.forEach((key) => {
-            const stillNeeded = [...next].some((sid) => {
-              const s = SOLUTIONS.find((x) => x.id === sid);
-              return s?.defaults.includes(key);
-            });
-            if (!stillNeeded) {
-              updated[key] = { ...updated[key], enabled: false };
-            }
+    const next = new Set(selectedSolutions);
+    if (next.has(sol.id)) {
+      next.delete(sol.id);
+      setSelectedSolutions(next);
+      setUseCases((ucs) => {
+        const updated = { ...ucs };
+        sol.defaults.forEach((key) => {
+          const stillNeeded = [...next].some((sid) => {
+            const s = SOLUTIONS.find((x) => x.id === sid);
+            return s?.defaults.includes(key);
           });
-          return updated;
+          if (!stillNeeded) {
+            updated[key] = { ...updated[key], enabled: false };
+          }
         });
-      } else {
-        next.add(sol.id);
-        // Enable this solution's defaults
-        setUseCases((ucs) => {
-          const updated = { ...ucs };
-          sol.defaults.forEach((key) => {
-            if (updated[key]) updated[key] = { ...updated[key], enabled: true };
-          });
-          return updated;
+        return updated;
+      });
+    } else {
+      next.add(sol.id);
+      setSelectedSolutions(next);
+      setUseCases((ucs) => {
+        const updated = { ...ucs };
+        sol.defaults.forEach((key) => {
+          if (updated[key]) updated[key] = { ...updated[key], enabled: true };
         });
-      }
-      return next;
-    });
+        return updated;
+      });
+    }
   }
 
   function toggleUseCase(key) {

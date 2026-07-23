@@ -44,7 +44,7 @@ const defaultOperationDetails = {
 // All use cases disabled by default — user selects on Step 2
 function makeAllDisabledUseCases() {
   return {
-    cycleCount:              { enabled: false, hoursPerSession: 2, sessionsPerWeek: 3, peoplePerSession: 2, burdenedRate: 35, reductionPct: 0.98 },
+    cycleCount:              { enabled: false, mode: 'reductionPct', hoursPerSession: 2, sessionsPerWeek: 3, peoplePerSession: 2, burdenedRate: 35, reductionPct: 0.98, employeesBefore: 3, hoursPerCountBefore: 40, employeesAfter: 1, hoursPerCountAfter: 2, countsPerYear: 48 },
     audit:                   { enabled: false, people: 8, daysPerAudit: 2, hoursPerDay: 8, auditsPerYear: 2, burdenedRate: 35, reductionPct: 0.90, downtimeCostPerDay: '' },
     locateItems:             { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.90 },
     picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 2, costPerError: 50, reductionPct: 0.95 },
@@ -62,7 +62,7 @@ function makeAllDisabledUseCases() {
     outboundAudit:           { enabled: false, minutesSaved: 10, transactionsPerDay: 8, dockStaff: 2, burdenedRate: 25, reductionPct: 0.90 },
     returnsTransfers:        { enabled: false, minutesPerTransfer: 6, transfersPerDay: 20, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.90 },
     inventoryRequests:       { enabled: false, hoursPerWeek: 3, peopleInvolved: 2, burdenedRate: 35, reductionPct: 0.90 },
-    shrinkage:               { enabled: false, incidentsPerYear: 15,  costPerIncident: 1500, reductionPct: 0.85 },
+    shrinkage:               { enabled: false, incidentsPerYear: 15, materialValuePerIncident: 1200, laborHoursPerIncident: 2, burdenedRate: 25, scrapCostPerIncident: '', scheduleImpactPerIncident: '', reductionPct: 0.85 },
     productionEquipment:     { enabled: false, incidentsPerYear: 10,  costPerIncident: 3000, reductionPct: 0.85 },
     rtiTracking:             { enabled: false, incidentsPerYear: 200, costPerIncident: 75,   reductionPct: 0.85 },
     proofOfDelivery:         { enabled: false, incidentsPerYear: 25,  costPerIncident: 400,  reductionPct: 0.90 },
