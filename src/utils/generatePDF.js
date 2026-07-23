@@ -58,12 +58,19 @@ const UC_NAMES = {
   dockTurnSpeed:           'Receiving and Shipping Throughput',
 };
 
+// Driver labels shown on PDF when driverMode === 'or'
+const UC_DRIVER_LABELS = {
+  picklistVerification: { 1: 'Error reduction', 2: 'Time saved per scan' },
+  locateItems:          { 1: 'Search time saved', 2: 'Supervisory visibility time saved' },
+  workOrderTracking:    { 1: 'Labor time lost tracking', 2: 'Expediting visibility time saved' },
+};
+
 const UC_DEFS = {
   cycleCount:              [['Hours per session','hoursPerSession','n'],['Sessions per week','sessionsPerWeek','n'],['People per session','peoplePerSession','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
   audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
-  locateItems:             [['Role rows','roleRows','custom']],
-  workOrderTracking:       [['Role rows','roleRows','custom']],
-  picklistVerification:    [['Picks per day','picksPerDay','n'],['Error rate','errorRate','pct'],['Cost per error','costPerError','$'],['Error reduction','reductionPct','p']],
+  locateItems:             [['Role rows','roleRows','custom',1],['Supervisor hours per week','supervisorHoursPerWeek','n',2],['Supervisor headcount','supervisorHeadcount','n',2],['Supervisor burdened rate','supervisorBurdenedRate','$',2]],
+  workOrderTracking:       [['Role rows','roleRows','custom',1],['Supervisor hours per week','supervisorHoursPerWeek','n',2],['Supervisor headcount','supervisorHeadcount','n',2],['Supervisor burdened rate','supervisorBurdenedRate','$',2]],
+  picklistVerification:    [['Picks per day','picksPerDay','n'],['Error rate','errorRate','pct',1],['Cost per error','costPerError','$',1],['Error reduction','reductionPct','p'],['Minutes saved per pick','minutesSavedPerPick','n',2],['Burdened rate (time driver)','burdenedRate','$',2]],
   shipReceiveVerification: [['Minutes saved per transaction','minutesSavedPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Dock headcount','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
   internalDelivery:        [['Minutes per transfer','minutesPerTransfer','n'],['Transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
   expiredProducts:         [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
@@ -464,21 +471,41 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     const heights = pair.map((entry) => {
       const [key, uc] = entry;
       const defs = UC_DEFS[key] || [];
-      const cnt  = defs.filter(([, f]) => uc[f] !== undefined).length;
+      const driverMode = uc.driverMode || 'and';
+      const activeDriver = uc.activeDriver || 1;
+      const cnt  = defs.filter(([, f, type, driver]) => {
+        if (uc[f] === undefined) return false;
+        if (type === 'custom') return false;
+        if (!driver) return true;
+        if (driverMode === 'and') return true;
+        return driver === activeDriver;
+      }).length;
       const jl   = justLines(entry);
-      return 12 + 13 + cnt * 11 + 6 + (jl.length ? 10 + jl.length * 8 : 0);
+      const hasDriverLine = driverMode === 'or' && !!UC_DRIVER_LABELS[key];
+      return 12 + 13 + (hasDriverLine ? 11 : 0) + cnt * 11 + 6 + (jl.length ? 10 + jl.length * 8 : 0);
     });
     const rowH = Math.max(...heights, 50);
     pair.forEach((entry, col) => {
       const [key, uc] = entry;
       const cx   = col === 0 ? CL_X : CR_X;
       const defs = UC_DEFS[key] || [];
+      const ucDriverMode   = uc.driverMode || 'and';
+      const ucActiveDriver = uc.activeDriver || 1;
       fn('bold', 8); sc(...BLUE);
       doc.text(UC_NAMES[key] || key, cx + 10, y + 14);
       let iy = y + 26;
-      defs.forEach(([label, field, type]) => {
+      // Show "Driver used" label when or-mode
+      if (ucDriverMode === 'or' && UC_DRIVER_LABELS[key]) {
+        const driverLabel = UC_DRIVER_LABELS[key][ucActiveDriver];
+        fn('italic', 7); sc(...GRAY66);
+        doc.text(`Driver used: ${driverLabel}`, cx + 10, iy);
+        iy += 11;
+      }
+      defs.forEach(([label, field, type, driver]) => {
         if (uc[field] === undefined) return;
         if (type === 'custom') return;
+        // Filter by active driver in 'or' mode
+        if (driver && ucDriverMode === 'or' && driver !== ucActiveDriver) return;
         fn('normal', 7); sc(...GRAY99);
         doc.text(`${label}:`, cx + 10, iy);
         fn('bold', 7.5); sc(...NAVY);
