@@ -2,7 +2,7 @@ import { useState } from 'react';
 import RangeSlider from '../RangeSlider';
 import Tooltip from '../Tooltip';
 import { fmt$ } from '../../utils/format';
-import { calcUseCaseValue, BUCKET_CONFIG } from '../../utils/calculations';
+import { calcUseCaseValue, BUCKET_CONFIG, getBaseUcKey } from '../../utils/calculations';
 
 // ─── Shared style constants ───────────────────────────────────────────────
 const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -13,14 +13,14 @@ const sourceNote = (text) => <p className="text-xs text-gray-400 italic mt-1">{t
 // ─── Solutions / use-case metadata ───────────────────────────────────────
 const SOLUTIONS = [
   { id: 'inventory', name: 'Inventory management', description: 'Cycle counting, locate items, full audits, and expiry tracking.',
-    defaults: ['cycleCount', 'locateItems', 'audit', 'shrinkage'],
+    defaults: ['cycleCount__inventory', 'locateItems__inventory', 'audit', 'shrinkage'],
     extras:   ['expiredProducts', 'goodsReceipt', 'inventoryRequests', 'returnsTransfers'] },
   { id: 'asset', name: 'Asset tracking', description: 'Locate assets, track calibration status, and enforce zone boundaries.',
-    defaults: ['locateItems', 'calibrationReminders', 'cycleCount', 'productionEquipment', 'rtiTracking'],
+    defaults: ['locateItems__asset', 'calibrationReminders', 'cycleCount__asset', 'productionEquipment', 'rtiTracking__asset'],
     extras:   ['geofencing'] },
   { id: 'wip', name: 'Work in process', description: 'Track work orders and in-progress materials across your facility.',
-    defaults: ['cycleCount', 'locateItems', 'workOrderTracking', 'qualityExceptionTracking', 'expeditedExceptionTracking'],
-    extras:   ['rtiTracking', 'workingCapitalImprovement'] },
+    defaults: ['cycleCount__wip', 'locateItems__wip', 'workOrderTracking', 'qualityExceptionTracking', 'expeditedExceptionTracking'],
+    extras:   ['rtiTracking__wip', 'workingCapitalImprovement'] },
   { id: 'shipment', name: 'Shipment tracking', description: 'Verify picks, reduce mis-ships, and accelerate dock throughput.',
     defaults: ['picklistVerification', 'shipReceiveVerification', 'misShipReduction', 'fasterFulfillment', 'proofOfDelivery'],
     extras:   ['automatedPackCount', 'outboundAudit'] },
@@ -112,14 +112,6 @@ const ROLE_DEFAULTS = {
   indirect:        { hoursLostPerDay: 0.25, headcount: 5, rateKey: 'indirectRate', countKey: 'indirectCount' },
   direct:          { hoursLostPerDay: 1.0, headcount: 50, rateKey: 'directRate', countKey: 'directCount' },
 };
-
-const UC_DEFAULT_IN = {};
-SOLUTIONS.forEach((sol) => {
-  sol.defaults.forEach((key) => {
-    if (!UC_DEFAULT_IN[key]) UC_DEFAULT_IN[key] = [];
-    UC_DEFAULT_IN[key].push(sol.name);
-  });
-});
 
 const RATE_LABEL = 'Fully-loaded hourly rate (wages + benefits + overhead)';
 const RATE_TOOLTIP = 'Your fully-loaded rate includes base wage plus benefits, payroll taxes, and overhead. Typically 1.3–1.5× base wage.';
@@ -279,7 +271,8 @@ function RoleTable({ rows, ops, onUpdate, labelHoursLost }) {
 }
 
 function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
-  if (ucKey === 'cycleCount') {
+  const baseKey = getBaseUcKey(ucKey);
+  if (baseKey === 'cycleCount') {
     const mode = uc.mode || 'reductionPct';
     return (
       <>
@@ -301,7 +294,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
               <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr"
                 onChange={(v) => { onUpdate('burdenedRate', v); setOps((p) => ({ ...p, plannerRate: v })); }} />
             </div>
-            <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+            <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
           </>
         ) : (
           <div className={grid2}>
@@ -318,7 +311,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
     );
   }
 
-  if (ucKey === 'audit') return (
+  if (baseKey === 'audit') return (
     <>
       <div className={grid2}>
         <NumField label="People per audit" value={uc.people} onChange={(v) => onUpdate('people', v)} />
@@ -333,11 +326,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
               onChange={(e) => onUpdate('downtimeCostPerDay', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected labor reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected labor reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'locateItems') {
+  if (baseKey === 'locateItems') {
     const rows = uc.roleRows || [];
     const d1On = uc.driver1Enabled !== false;
     const d2On = uc.driver2Enabled !== false;
@@ -372,12 +365,12 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             </div>
           )}
         </div>
-        <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+        <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
       </>
     );
   }
 
-  if (ucKey === 'workOrderTracking') {
+  if (baseKey === 'workOrderTracking') {
     const rows = uc.roleRows || [];
     const d1On = uc.driver1Enabled !== false;
     const d2On = uc.driver2Enabled !== false;
@@ -412,12 +405,12 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             </div>
           )}
         </div>
-        <div><label className={labelCls}>Expected reduction in status checking time</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+        <div><label className={labelCls}>Expected reduction in status checking time</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
       </>
     );
   }
 
-  if (ucKey === 'picklistVerification') {
+  if (baseKey === 'picklistVerification') {
     const d1On = uc.driver1Enabled !== false;
     const d2On = uc.driver2Enabled !== false;
     return (
@@ -462,12 +455,12 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             </div>
           )}
         </div>
-        <div><label className={labelCls}>Expected error / time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+        <div><label className={labelCls}>Expected error / time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
       </>
     );
   }
 
-  if (ucKey === 'shipReceiveVerification') return (
+  if (baseKey === 'shipReceiveVerification') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes saved per dock transaction" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
@@ -475,11 +468,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'internalDelivery') return (
+  if (baseKey === 'internalDelivery') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes per internal transfer" value={uc.minutesPerTransfer} onChange={(v) => onUpdate('minutesPerTransfer', v)} />
@@ -487,11 +480,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="People per transfer" value={uc.peoplePerTransfer} onChange={(v) => onUpdate('peoplePerTransfer', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'expiredProducts') return (
+  if (baseKey === 'expiredProducts') return (
     <>
       <div className={grid2}>
         <NumField label="Expired product incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
@@ -503,11 +496,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'calibrationReminders') return (
+  if (baseKey === 'calibrationReminders') return (
     <>
       <div className={grid2}>
         <NumField label="Missed calibrations per year" value={uc.failuresPerYear} onChange={(v) => onUpdate('failuresPerYear', v)} />
@@ -519,11 +512,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerFailure} onChange={(e) => onUpdate('costPerFailure', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'geofencing') return (
+  if (baseKey === 'geofencing') return (
     <>
       <div className={grid2}>
         <NumField label="Out-of-zone incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
@@ -535,11 +528,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'misShipReduction') return (
+  if (baseKey === 'misShipReduction') return (
     <>
       <div className={grid2}>
         <NumField label="Mis-ships per month" value={uc.misShipsPerMonth} onChange={(v) => onUpdate('misShipsPerMonth', v)} />
@@ -551,11 +544,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerMisShip} onChange={(e) => onUpdate('costPerMisShip', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'dockTurnSpeed') return (
+  if (baseKey === 'dockTurnSpeed') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes saved per dock transaction" value={uc.minutesSaved} onChange={(v) => onUpdate('minutesSaved', v)} />
@@ -563,11 +556,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected improvement with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected improvement with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'goodsReceipt') return (
+  if (baseKey === 'goodsReceipt') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes saved per receiving transaction" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
@@ -575,11 +568,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="Number of receiving staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'automatedPackCount') return (
+  if (baseKey === 'automatedPackCount') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes saved per pack count" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
@@ -587,11 +580,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="Number of staff performing counts" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'outboundAudit') return (
+  if (baseKey === 'outboundAudit') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes saved per outbound shipment" value={uc.minutesSaved} onChange={(v) => onUpdate('minutesSaved', v)} />
@@ -599,11 +592,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'returnsTransfers') return (
+  if (baseKey === 'returnsTransfers') return (
     <>
       <div className={grid2}>
         <NumField label="Minutes per return or transfer" value={uc.minutesPerTransfer} onChange={(v) => onUpdate('minutesPerTransfer', v)} />
@@ -611,22 +604,22 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="People per transfer" value={uc.peoplePerTransfer} onChange={(v) => onUpdate('peoplePerTransfer', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'inventoryRequests') return (
+  if (baseKey === 'inventoryRequests') return (
     <>
       <div className={grid2}>
         <NumField label="Hours per week spent managing requests" value={uc.hoursPerWeek} onChange={(v) => onUpdate('hoursPerWeek', v)} />
         <NumField label="People involved" value={uc.peopleInvolved} onChange={(v) => onUpdate('peopleInvolved', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'shrinkage') return (
+  if (baseKey === 'shrinkage') return (
     <>
       <div className={grid2}>
         <NumField label="Unexplained loss incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
@@ -652,11 +645,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
               onChange={(e) => onUpdate('scheduleImpactPerIncident', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'productionEquipment') return (
+  if (baseKey === 'productionEquipment') return (
     <>
       <div className={grid2}>
         <NumField label="Tool downtime incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
@@ -668,11 +661,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'rtiTracking') return (
+  if (baseKey === 'rtiTracking') return (
     <>
       <div className={grid2}>
         <NumField label="Lost or untracked container incidents per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
@@ -684,11 +677,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'proofOfDelivery') return (
+  if (baseKey === 'proofOfDelivery') return (
     <>
       <div className={grid2}>
         <NumField label="Disputed or fraudulent delivery claims per year" value={uc.incidentsPerYear} onChange={(v) => onUpdate('incidentsPerYear', v)} />
@@ -700,11 +693,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'qualityExceptionTracking') return (
+  if (baseKey === 'qualityExceptionTracking') return (
     <>
       <div className={grid2}>
         <NumField label="Quality exceptions per year" value={uc.exceptionsPerYear} onChange={(v) => onUpdate('exceptionsPerYear', v)} />
@@ -716,11 +709,11 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
               onChange={(e) => onUpdate('scrapCostPerException', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'expeditedExceptionTracking') return (
+  if (baseKey === 'expeditedExceptionTracking') return (
     <>
       <div className={grid2}>
         <NumField label="Late or missed shipments per month" value={uc.lateShipmentsPerMonth} onChange={(v) => onUpdate('lateShipmentsPerMonth', v)} />
@@ -732,23 +725,23 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <input type="number" value={uc.costPerLateShipment} onChange={(e) => onUpdate('costPerLateShipment', Number(e.target.value))} className={inputCls} /></div>
         </div>
       </div>
-      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
     </>
   );
 
-  if (ucKey === 'workingCapitalImprovement') return (
+  if (baseKey === 'workingCapitalImprovement') return (
     <>
       <div className={grid2}>
         <NumField label="Average WIP inventory value ($)" value={uc.wipInventoryValue} prefix="$" onChange={(v) => onUpdate('wipInventoryValue', v)} />
       </div>
-      <div><label className={labelCls}>Expected WIP reduction with RFID</label><ReductionInput ucKey={ucKey} uc={uc} onUpdate={onUpdate} /></div>
+      <div><label className={labelCls}>Expected WIP reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
       <p className="text-xs text-gray-400 italic mt-1">
         Uses your cost of capital assumption from Step 3 (currently {fin?.wacc != null ? `${(fin.wacc * 100).toFixed(1)}%` : '8.5%'}).
       </p>
     </>
   );
 
-  if (ucKey === 'fasterFulfillment') return (
+  if (baseKey === 'fasterFulfillment') return (
     <div className={grid2}>
       <NumField label="Current fulfillment cycle time (hrs)" value={uc.currentCycleTime} onChange={(v) => onUpdate('currentCycleTime', v)} />
       <NumField label="Target cycle time with RFID (hrs)" value={uc.targetCycleTime} onChange={(v) => onUpdate('targetCycleTime', v)} />
@@ -771,15 +764,6 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
   const [selectedSolutions, setSelectedSolutions] = useState(new Set());
   const [osExpanded, setOsExpanded] = useState(false);
 
-  // Precompute which solution "owns" each UC key's input section
-  // (first selected solution that lists the key as default or extra)
-  const keyOwner = {};
-  SOLUTIONS.filter((s) => selectedSolutions.has(s.id)).forEach((sol) => {
-    [...sol.defaults, ...sol.extras].forEach((key) => {
-      if (!keyOwner[key]) keyOwner[key] = sol.id;
-    });
-  });
-
   function updateUC(key, field, value) {
     setUseCases((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   }
@@ -791,10 +775,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
       setSelectedSolutions(next);
       setUseCases((ucs) => {
         const updated = { ...ucs };
-        sol.defaults.forEach((key) => {
-          const stillNeeded = [...next].some((sid) => SOLUTIONS.find((x) => x.id === sid)?.defaults.includes(key));
-          if (!stillNeeded) updated[key] = { ...updated[key], enabled: false };
-        });
+        sol.defaults.forEach((key) => { if (updated[key]) updated[key] = { ...updated[key], enabled: false }; });
         return updated;
       });
     } else {
@@ -894,10 +875,9 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                       const enabled = uc?.enabled ?? false;
                       const reviewed = uc?.reviewed ?? false;
                       const isDefault = sol.defaults.includes(key);
-                      const alsoIn = (UC_DEFAULT_IN[key] || []).filter((n) => n !== sol.name);
-                      const ownerSolId = keyOwner[key];
-                      const showInputs = enabled && ownerSolId === sol.id;
+                      const showInputs = enabled;
                       const annualValue = enabled ? calcUseCaseValue(key, uc, ops, fin) : null;
+                      const baseKey = getBaseUcKey(key);
 
                       return (
                         <div key={key} className={`rounded-lg border transition-colors ${reviewed && enabled ? 'border-green-300 bg-green-50' : enabled ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200 bg-white'}`}>
@@ -906,20 +886,16 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                             <Toggle checked={enabled} onChange={() => toggleUseCase(key)} />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>{UC_LABELS[key] || key}</span>
+                                <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>{UC_LABELS[baseKey] || key}</span>
                                 {reviewed && enabled && <span className="text-xs font-medium text-green-600 bg-green-100 rounded px-1.5 py-0.5">Reviewed</span>}
-                                {alsoIn.length > 0 && <span className="text-xs text-gray-400 italic flex-shrink-0">also under {alsoIn.join(', ')}</span>}
                                 {isDefault && <span className="text-xs text-blue-500 font-medium flex-shrink-0">default</span>}
                               </div>
-                              {!showInputs && UC_DESCRIPTIONS[key] && (
-                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_DESCRIPTIONS[key]}</p>
+                              {!showInputs && UC_DESCRIPTIONS[baseKey] && (
+                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_DESCRIPTIONS[baseKey]}</p>
                               )}
                             </div>
                             {annualValue !== null && (
                               <span className="text-sm font-bold text-green-700 flex-shrink-0">{fmt$(annualValue)}</span>
-                            )}
-                            {enabled && ownerSolId !== sol.id && (
-                              <span className="text-xs text-gray-400 italic flex-shrink-0">inputs under {SOLUTIONS.find((s) => s.id === ownerSolId)?.name}</span>
                             )}
                           </div>
 
@@ -930,7 +906,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                                 onUpdate={(field, value) => updateUC(key, field, value)} fin={fin} />
 
                               {/* Justification — single or per-driver */}
-                              {!MULTI_DRIVER_KEYS.has(key) && (
+                              {!MULTI_DRIVER_KEYS.has(baseKey) && (
                                 <JustificationField value={uc.justification}
                                   onChange={(v) => updateUC(key, 'justification', v)}
                                   placeholder="Based on 3 FTEs doing weekly cycle counts across 2 warehouses." />

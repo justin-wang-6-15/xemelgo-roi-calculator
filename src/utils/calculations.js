@@ -1,10 +1,16 @@
 // src/utils/calculations.js
 
+// Strip the __solutionId suffix from composite keys like 'cycleCount__inventory'
+export function getBaseUcKey(key) {
+  const idx = key.indexOf('__');
+  return idx === -1 ? key : key.slice(0, idx);
+}
+
 export function calcUseCaseValue(key, uc, ops, fin = {}) {
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
   const customTotal = (uc.customDrivers || []).reduce((sum, d) => sum + (Number(d.annualValue) || 0), 0);
   let base = 0;
-  switch (key) {
+  switch (getBaseUcKey(key)) {
     case 'cycleCount': {
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
         base = (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear * uc.burdenedRate;
@@ -89,9 +95,9 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
 const LABOR_UC_KEYS = new Set(['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery', 'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers', 'inventoryRequests']);
 
 export function calcUseCaseHours(key, uc, ops) {
-  if (!LABOR_UC_KEYS.has(key)) return 0;
+  if (!LABOR_UC_KEYS.has(getBaseUcKey(key))) return 0;
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
-  switch (key) {
+  switch (getBaseUcKey(key)) {
     case 'cycleCount':
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
         return (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear;
@@ -187,19 +193,44 @@ export function calcCustomCategoryTotal(customCategories) {
   return (customCategories || []).reduce((sum, c) => sum + (Number(c.annualSavings) || 0), 0);
 }
 
+// Solution id → display name (for composite key labels)
+const SOLUTION_NAMES = {
+  inventory: 'Inventory Management',
+  asset:     'Asset Tracking',
+  wip:       'Work in Process',
+  shipment:  'Shipment Tracking',
+  delivery:  'Package Delivery',
+};
+
+// Build a flat map: baseKey → bucket index, for fast lookup
+const BASE_KEY_TO_BUCKET = {};
+BUCKET_CONFIG.forEach((bucket, bi) => {
+  bucket.keys.forEach((k) => { BASE_KEY_TO_BUCKET[k] = bi; });
+});
+
+// Return the display name for a UC key (composite or plain)
+export function getUcDisplayName(key) {
+  const base = getBaseUcKey(key);
+  const baseLabel = BUCKET_CONFIG[BASE_KEY_TO_BUCKET[base]]?.labels[base] ?? base;
+  const solId = key.indexOf('__') !== -1 ? key.slice(key.indexOf('__') + 2) : null;
+  return solId && SOLUTION_NAMES[solId] ? `${baseLabel} (${SOLUTION_NAMES[solId]})` : baseLabel;
+}
+
 export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
-  const buckets = BUCKET_CONFIG.map((bucket) => {
-    const lineItems = bucket.keys
-      .filter((key) => useCases[key]?.enabled)
-      .map((key) => ({
-        key,
-        name: bucket.labels[key],
-        annualValue: calcUseCaseValue(key, useCases[key], ops, fin),
-        hoursSaved: calcUseCaseHours(key, useCases[key], ops),
-      }));
-    const subtotal = lineItems.reduce((sum, li) => sum + li.annualValue, 0);
-    const totalHoursSaved = lineItems.reduce((sum, li) => sum + li.hoursSaved, 0);
-    return { name: bucket.name, subtotal, lineItems, totalHoursSaved };
+  // Build empty bucket shells
+  const buckets = BUCKET_CONFIG.map((b) => ({ name: b.name, subtotal: 0, lineItems: [], totalHoursSaved: 0 }));
+
+  // Iterate actual keys in useCases (handles composite keys)
+  Object.entries(useCases).forEach(([key, uc]) => {
+    if (!uc?.enabled) return;
+    const base = getBaseUcKey(key);
+    const bi = BASE_KEY_TO_BUCKET[base];
+    if (bi === undefined) return; // unknown key — skip
+    const annualValue = calcUseCaseValue(key, uc, ops, fin);
+    const hoursSaved  = calcUseCaseHours(key, uc, ops);
+    buckets[bi].lineItems.push({ key, name: getUcDisplayName(key), annualValue, hoursSaved });
+    buckets[bi].subtotal      += annualValue;
+    buckets[bi].totalHoursSaved += hoursSaved;
   });
 
   if (customCategories && customCategories.length > 0) {
@@ -211,6 +242,7 @@ export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
         name: c.name || 'Custom Category',
         annualValue: Number(c.annualSavings) || 0,
       })),
+      totalHoursSaved: 0,
     });
   }
 

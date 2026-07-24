@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { fmt$, fmtPct, fmtWks } from './format';
+import { getBaseUcKey, getUcDisplayName } from './calculations';
 
 // Brand colors [R, G, B]
 const NAVY   = [11,  16,  40 ];  // #0B1028
@@ -470,7 +471,8 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     const pair = enabledUcs.slice(i, i + 2);
     const heights = pair.map((entry) => {
       const [key, uc] = entry;
-      const defs = UC_DEFS[key] || [];
+      const base = getBaseUcKey(key);
+      const defs = UC_DEFS[base] || [];
       const driverMode = uc.driverMode || 'and';
       const activeDriver = uc.activeDriver || 1;
       const cnt  = defs.filter(([, f, type, driver]) => {
@@ -481,22 +483,23 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
         return driver === activeDriver;
       }).length;
       const jl   = justLines(entry);
-      const hasDriverLine = driverMode === 'or' && !!UC_DRIVER_LABELS[key];
+      const hasDriverLine = driverMode === 'or' && !!UC_DRIVER_LABELS[base];
       return 12 + 13 + (hasDriverLine ? 11 : 0) + cnt * 11 + 6 + (jl.length ? 10 + jl.length * 8 : 0);
     });
     const rowH = Math.max(...heights, 50);
     pair.forEach((entry, col) => {
       const [key, uc] = entry;
+      const base = getBaseUcKey(key);
       const cx   = col === 0 ? CL_X : CR_X;
-      const defs = UC_DEFS[key] || [];
+      const defs = UC_DEFS[base] || [];
       const ucDriverMode   = uc.driverMode || 'and';
       const ucActiveDriver = uc.activeDriver || 1;
       fn('bold', 8); sc(...BLUE);
-      doc.text(UC_NAMES[key] || key, cx + 10, y + 14);
+      doc.text(getUcDisplayName(key) || UC_NAMES[base] || key, cx + 10, y + 14);
       let iy = y + 26;
       // Show "Driver used" label when or-mode
-      if (ucDriverMode === 'or' && UC_DRIVER_LABELS[key]) {
-        const driverLabel = UC_DRIVER_LABELS[key][ucActiveDriver];
+      if (ucDriverMode === 'or' && UC_DRIVER_LABELS[base]) {
+        const driverLabel = UC_DRIVER_LABELS[base][ucActiveDriver];
         fn('italic', 7); sc(...GRAY66);
         doc.text(`Driver used: ${driverLabel}`, cx + 10, iy);
         iy += 11;
