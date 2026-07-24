@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { fmt$, fmtPct, fmtWks } from './format';
-import { getBaseUcKey, getUcDisplayName } from './calculations';
+import { getBaseUcKey, getUcDisplayName, calcUseCaseValue } from './calculations';
 
 // Brand colors [R, G, B]
 const NAVY   = [11,  16,  40 ];  // #0B1028
@@ -59,46 +59,67 @@ const UC_NAMES = {
   dockTurnSpeed:           'Receiving and Shipping Throughput',
 };
 
-// Driver labels shown on PDF when driverMode === 'or'
-const UC_DRIVER_LABELS = {
-  picklistVerification: { 1: 'Error reduction', 2: 'Time saved per scan' },
-  locateItems:          { 1: 'Search time saved', 2: 'Supervisory visibility time saved' },
-  workOrderTracking:    { 1: 'Labor time lost tracking', 2: 'Expediting visibility time saved' },
-};
-
+// Field definitions for standard (non-multi-driver) UCs
+// [label, stateField, type] — type: 'n'=number, '$'=dollar, 'p'=percent 0-1, 'pct'=percent as-is
 const UC_DEFS = {
-  cycleCount:              [['Hours per session','hoursPerSession','n'],['Sessions per week','sessionsPerWeek','n'],['People per session','peoplePerSession','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
   audit:                   [['People per audit','people','n'],['Days per audit','daysPerAudit','n'],['Hours per day','hoursPerDay','n'],['Audits per year','auditsPerYear','n'],['Burdened rate','burdenedRate','$'],['Efficiency improvement','reductionPct','p']],
-  locateItems:             [['Role rows','roleRows','custom',1],['Supervisor hours per week','supervisorHoursPerWeek','n',2],['Supervisor headcount','supervisorHeadcount','n',2],['Supervisor burdened rate','supervisorBurdenedRate','$',2]],
-  workOrderTracking:       [['Role rows','roleRows','custom',1],['Supervisor hours per week','supervisorHoursPerWeek','n',2],['Supervisor headcount','supervisorHeadcount','n',2],['Supervisor burdened rate','supervisorBurdenedRate','$',2]],
-  picklistVerification:    [['Picks per day','picksPerDay','n'],['Error rate','errorRate','pct',1],['Cost per error','costPerError','$',1],['Error reduction','reductionPct','p'],['Minutes saved per pick','minutesSavedPerPick','n',2],['Burdened rate (time driver)','burdenedRate','$',2]],
-  shipReceiveVerification: [['Minutes saved per transaction','minutesSavedPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Dock headcount','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  internalDelivery:        [['Minutes per transfer','minutesPerTransfer','n'],['Transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  expiredProducts:         [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
-  calibrationReminders:    [['Failures per year','failuresPerYear','n'],['Cost per failure','costPerFailure','$'],['Failure reduction','reductionPct','p']],
-  geofencing:              [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
-  goodsReceipt:            [['Minutes saved per transaction','minutesSavedPerTransaction','n'],['Transactions per day','transactionsPerDay','n'],['Receiving staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  automatedPackCount:      [['Minutes saved per pack count','minutesSavedPerTransaction','n'],['Pack counts per day','transactionsPerDay','n'],['Staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  outboundAudit:           [['Minutes saved per shipment','minutesSaved','n'],['Outbound shipments per day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  returnsTransfers:        [['Minutes per transfer','minutesPerTransfer','n'],['Transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  inventoryRequests:       [['Hours per week on requests','hoursPerWeek','n'],['People involved','peopleInvolved','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
-  shrinkage:               [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
-  productionEquipment:     [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
-  rtiTracking:             [['Incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
-  proofOfDelivery:         [['Claims per year','incidentsPerYear','n'],['Cost per claim','costPerIncident','$'],['Claim reduction','reductionPct','p']],
+  shipReceiveVerification: [['Minutes saved per dock transaction','minutesSavedPerTransaction','n'],['Dock transactions per day','transactionsPerDay','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  internalDelivery:        [['Minutes per internal transfer','minutesPerTransfer','n'],['Internal transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  expiredProducts:         [['Expired product incidents per year','incidentsPerYear','n'],['Avg write-off cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
+  calibrationReminders:    [['Missed calibrations per year','failuresPerYear','n'],['Cost per failure','costPerFailure','$'],['Failure reduction','reductionPct','p']],
+  geofencing:              [['Out-of-zone incidents per year','incidentsPerYear','n'],['Cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
+  shrinkage:               [['Unexplained loss incidents per year','incidentsPerYear','n'],['Material / inventory value per incident','materialValuePerIncident','$'],['Investigation labor per incident (hrs)','laborHoursPerIncident','n'],['Burdened rate','burdenedRate','$'],['Scrap or disposal cost per incident','scrapCostPerIncident','$'],['Incident reduction','reductionPct','p']],
+  productionEquipment:     [['Tool downtime incidents per year','incidentsPerYear','n'],['Avg cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
+  rtiTracking:             [['Lost or untracked container incidents per year','incidentsPerYear','n'],['Avg cost per incident','costPerIncident','$'],['Incident reduction','reductionPct','p']],
+  proofOfDelivery:         [['Disputed delivery claims per year','incidentsPerYear','n'],['Cost per claim','costPerIncident','$'],['Claim reduction','reductionPct','p']],
   qualityExceptionTracking:   [['Exceptions per year','exceptionsPerYear','n'],['Rework cost per exception','reworkCostPerException','$'],['Scrap cost per exception','scrapCostPerException','$'],['Reduction rate','reductionPct','p']],
   expeditedExceptionTracking: [['Late shipments per month','lateShipmentsPerMonth','n'],['Cost per late shipment','costPerLateShipment','$'],['Reduction rate','reductionPct','p']],
   workingCapitalImprovement:  [['Avg WIP inventory value','wipInventoryValue','$'],['Inventory reduction','reductionPct','p']],
   fasterFulfillment:       [['Current cycle time (hrs)','currentCycleTime','n'],['Target cycle time (hrs)','targetCycleTime','n'],['Orders per month','ordersPerMonth','n'],['Revenue per order','revenuePerOrder','$']],
   misShipReduction:        [['Mis-ships per month','misShipsPerMonth','n'],['Cost per mis-ship','costPerMisShip','$'],['Reduction rate','reductionPct','p']],
-  dockTurnSpeed:           [['Minutes saved per transaction','minutesSaved','n'],['Transactions per day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Reduction rate','reductionPct','p']],
+  dockTurnSpeed:           [['Minutes saved per dock transaction','minutesSaved','n'],['Dock transactions per day','transactionsPerDay','n'],['Burdened rate','burdenedRate','$'],['Reduction rate','reductionPct','p']],
+  goodsReceipt:            [['Minutes saved per receiving transaction','minutesSavedPerTransaction','n'],['Receiving transactions per day','transactionsPerDay','n'],['Receiving staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  automatedPackCount:      [['Minutes saved per pack count','minutesSavedPerTransaction','n'],['Pack counts per day','transactionsPerDay','n'],['Number of staff performing counts','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  outboundAudit:           [['Minutes saved per outbound shipment','minutesSaved','n'],['Outbound shipments per day','transactionsPerDay','n'],['Dock staff','dockStaff','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  returnsTransfers:        [['Minutes per internal transfer','minutesPerTransfer','n'],['Internal transfers per day','transfersPerDay','n'],['People per transfer','peoplePerTransfer','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+  inventoryRequests:       [['Hours per week on requests','hoursPerWeek','n'],['People involved','peopleInvolved','n'],['Burdened rate','burdenedRate','$'],['Time reduction','reductionPct','p']],
+};
+
+const SOLUTION_GROUPS = [
+  { name: 'Inventory Management', keys: [
+    'cycleCount__inventory', 'locateItems__inventory', 'audit', 'shrinkage',
+    'expiredProducts', 'inventoryRequests',
+  ]},
+  { name: 'Asset Tracking', keys: [
+    'cycleCount__asset', 'locateItems__asset', 'calibrationReminders',
+    'productionEquipment', 'rtiTracking__asset', 'geofencing',
+  ]},
+  { name: 'Work in Process', keys: [
+    'cycleCount__wip', 'locateItems__wip', 'workOrderTracking',
+    'qualityExceptionTracking', 'expeditedExceptionTracking',
+    'rtiTracking__wip', 'workingCapitalImprovement',
+  ]},
+  { name: 'Shipment Tracking', keys: [
+    'picklistVerification', 'shipReceiveVerification', 'misShipReduction',
+    'fasterFulfillment', 'proofOfDelivery', 'dockTurnSpeed',
+    'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers',
+  ]},
+  { name: 'Package Delivery', keys: ['internalDelivery'] },
+];
+
+const ROLE_DISPLAY = {
+  materialHandler: 'Material Handler',
+  planner:         'Planner',
+  indirect:        'Indirect / Leadership',
+  direct:          'Direct Employee',
 };
 
 function fmtVal(v, type) {
+  if (v === '' || v === undefined || v === null) return '—';
   if (type === '$') return fmt$(v);
   if (type === 'p') return fmtPct(v);
   if (type === 'pct') return String(v) + '%';
-  return String(Number.isInteger(v) ? v : parseFloat(v.toFixed(2)));
+  return String(Number.isInteger(v) ? v : parseFloat(Number(v).toFixed(2)));
 }
 
 function arrayBufferToBase64(buf) {
@@ -286,11 +307,9 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
       sf(...(rowAlt ? BGBLUE : WHITE)); box(0, ty, TABLE_R, ROW_H);
       sf(...pillColor); box(TABLE_X, ty + 6, 6, 6);
       fn('normal', 7); sc(...NAVY);
-      // Truncate long UC names to fit
       const ucNameStr = doc.splitTextToSize(li.name, 128)[0];
       doc.text(ucNameStr, TABLE_X + 10, ty + 12);
       fn('normal', 6.5); sc(...GRAY66);
-      // Shorten category label to first word group before '&'
       const catShort = bucket.name.split(' & ')[0];
       doc.text(catShort, TABLE_X + 155, ty + 12);
       fn('bold', 7.5); sc(...NAVY);
@@ -331,7 +350,7 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   const activeBuckets = result.buckets.filter(b => b.subtotal > 0);
   const sortedBuckets = [...activeBuckets].sort((a, b) => b.subtotal - a.subtotal);
   const maxVal = Math.max(...sortedBuckets.map(b => b.subtotal), 1);
-  const MAX_BAR_W = CHART_R - CHART_X - 70; // leave room for value label
+  const MAX_BAR_W = CHART_R - CHART_X - 70;
   const BAR_H = 14, BAR_SPACING = 14;
 
   fn('normal', 7); sc(...GRAY66);
@@ -446,113 +465,316 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     ry += RH;
   });
 
-  y = Math.max(ly, ry) + 12;
+  y = Math.max(ly, ry) + 16;
 
-  sectionHead('USE CASE INPUTS & ASSUMPTIONS', 24, y + 12, W - 24);
-  y += 18;
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FINANCE SECTION
+  // ─────────────────────────────────────────────────────────────────────────────
+  const BOTTOM_MARGIN = 740;
+  const PAGE_HDR_H   = 58;
 
-  fn('italic', 7); sc(...GRAY66);
-  doc.text(
-    'These are the inputs used to calculate your annual opportunity. Values reflect what you entered in the calculator.',
-    24, y + 10, { maxWidth: W - 48 }
-  );
-  y += 22;
-
-  const enabledUcs = Object.entries(useCases).filter(([, uc]) => uc.enabled);
-  const CARD_W = 270, CARD_GAP = 14;
-  const CL_X = 24, CR_X = 24 + CARD_W + CARD_GAP;
-
-  const justLines = ([, uc]) => {
-    const j = uc.justification?.trim();
-    return j ? doc.splitTextToSize(j, CARD_W - 20) : [];
-  };
-
-  for (let i = 0; i < enabledUcs.length; i += 2) {
-    const pair = enabledUcs.slice(i, i + 2);
-    const heights = pair.map((entry) => {
-      const [key, uc] = entry;
-      const base = getBaseUcKey(key);
-      const defs = UC_DEFS[base] || [];
-      const driverMode = uc.driverMode || 'and';
-      const activeDriver = uc.activeDriver || 1;
-      const cnt  = defs.filter(([, f, type, driver]) => {
-        if (uc[f] === undefined) return false;
-        if (type === 'custom') return false;
-        if (!driver) return true;
-        if (driverMode === 'and') return true;
-        return driver === activeDriver;
-      }).length;
-      const jl   = justLines(entry);
-      const hasDriverLine = driverMode === 'or' && !!UC_DRIVER_LABELS[base];
-      return 12 + 13 + (hasDriverLine ? 11 : 0) + cnt * 11 + 6 + (jl.length ? 10 + jl.length * 8 : 0);
-    });
-    const rowH = Math.max(...heights, 50);
-    pair.forEach((entry, col) => {
-      const [key, uc] = entry;
-      const base = getBaseUcKey(key);
-      const cx   = col === 0 ? CL_X : CR_X;
-      const defs = UC_DEFS[base] || [];
-      const ucDriverMode   = uc.driverMode || 'and';
-      const ucActiveDriver = uc.activeDriver || 1;
-      fn('bold', 8); sc(...BLUE);
-      doc.text(getUcDisplayName(key) || UC_NAMES[base] || key, cx + 10, y + 14);
-      let iy = y + 26;
-      // Show "Driver used" label when or-mode
-      if (ucDriverMode === 'or' && UC_DRIVER_LABELS[base]) {
-        const driverLabel = UC_DRIVER_LABELS[base][ucActiveDriver];
-        fn('italic', 7); sc(...GRAY66);
-        doc.text(`Driver used: ${driverLabel}`, cx + 10, iy);
-        iy += 11;
-      }
-      defs.forEach(([label, field, type, driver]) => {
-        if (uc[field] === undefined) return;
-        if (type === 'custom') return;
-        // Filter by active driver in 'or' mode
-        if (driver && ucDriverMode === 'or' && driver !== ucActiveDriver) return;
-        fn('normal', 7); sc(...GRAY99);
-        doc.text(`${label}:`, cx + 10, iy);
-        fn('bold', 7.5); sc(...NAVY);
-        doc.text(fmtVal(uc[field], type), cx + 140, iy);
-        iy += 11;
-      });
-      const jl = justLines(entry);
-      if (jl.length) {
-        iy += 3;
-        sd(...BGBLUE); lw(0.5);
-        doc.line(cx + 10, iy, cx + CARD_W - 10, iy);
-        iy += 9;
-        fn('italic', 7); sc(...GRAY66);
-        doc.text(jl, cx + 10, iy);
-      }
-      sd(...BGBLUE); lw(0.5);
-      doc.line(cx, y + rowH, cx + CARD_W, y + rowH);
-    });
-    y += rowH + 6;
+  function addNewPage() {
+    doc.addPage();
+    sf(...NAVY); box(0, 0, W, 52);
+    sf(...BLUE); box(0, 0, W, 6);
+    logoOrText(24, 12, 90, 28, 10);
+    fn('normal', 9); sc(...WHITE);
+    doc.text('Inputs Appendix', W - 24, 22, { align: 'right' });
+    fn('normal', 8); sc(...LBLUE);
+    doc.text(ctxComp, W - 24, 37, { align: 'right' });
+    y = PAGE_HDR_H;
   }
 
-  y += 8;
-  sectionHead('INVESTMENT INPUTS', 24, y + 12, W - 24);
-  y += 18;
+  function needPage(h) {
+    if (y + h > BOTTOM_MARGIN) addNewPage();
+  }
 
-  const invRows = [
-    ['Hardware & Installation',          fmt$(Number(fin.hardwareCapex) || 0)],
-    ['Xemelgo Setup Cost',              fmt$(Number(fin.setupCapex) || 0)],
-    ['Contingency rate',                 fmtPct(fin.contingencyRate)],
-    ['Total CapEx with contingency',     fmt$(result.totalCapex)],
-    ['Monthly platform fee',             fmt$(Number(fin.monthlyPlatformFee) || 0)],
-    ['Annual platform fee',              fmt$(result.annualSaasFee)],
-    ['WACC',                             fmtPct(fin.wacc)],
+  needPage(120);
+  sectionHead('FINANCE', LX, y + 12, W - LX);
+  y += 20;
+
+  const finRows = [
+    ['Hardware & Installation',      fmt$(Number(fin.hardwareCapex) || 0)],
+    ['Xemelgo Setup Cost',           fmt$(Number(fin.setupCapex) || 0)],
+    ['Contingency Rate',             fmtPct(fin.contingencyRate)],
+    ['Total CapEx with Contingency', fmt$(result.totalCapex)],
+    ['Monthly Platform Fee',         fmt$(Number(fin.monthlyPlatformFee) || 0)],
+    ['WACC',                         fmtPct(fin.wacc)],
   ];
-  invRows.forEach((row, i) => {
-    sf(...(i % 2 === 0 ? WHITE : BGBLUE)); box(0, y, W, 16);
+  finRows.forEach(([label, val], i) => {
+    sf(...(i % 2 === 0 ? WHITE : BGBLUE)); box(LX, y, W - LX * 2, 15);
     fn('normal', 7.5); sc(...GRAY66);
-    doc.text(row[0], 24, y + 11);
+    doc.text(label, LX + 8, y + 11);
     fn('bold', 8); sc(...NAVY);
-    doc.text(row[1], W - 24, y + 11, { align: 'right' });
-    y += 16;
+    doc.text(val, W - LX - 8, y + 11, { align: 'right' });
+    y += 15;
   });
 
-  // Footer for page 2
+  y += 20;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // USE CASES & SAVINGS DRIVERS SECTION
+  // ─────────────────────────────────────────────────────────────────────────────
+  needPage(50);
+  sectionHead('USE CASES & SAVINGS DRIVERS', LX, y + 12, W - LX);
+  y += 24;
+
+  const CARD_X = 24, CARD_END = W - 24, FULL_W = CARD_END - CARD_X;
+
+  // ── Inner helpers (all share `y` by closure) ──
+
+  function fieldRow(label, val, type) {
+    const displayVal = fmtVal(val, type);
+    if (displayVal === '—' && val === '') return; // skip empty optional fields
+    needPage(13);
+    fn('normal', 7); sc(...GRAY66);
+    doc.text(label + ':', CARD_X + 12, y);
+    fn('bold', 7.5); sc(...NAVY);
+    doc.text(displayVal, CARD_END - 12, y, { align: 'right' });
+    y += 13;
+  }
+
+  function driverTag(label) {
+    needPage(18);
+    y += 5;
+    fn('bold', 6.5); sc(...GRAY66);
+    doc.text(label, CARD_X + 12, y);
+    y += 13;
+  }
+
+  function renderRoleRow(row) {
+    needPage(13);
+    const roleName = row.role === 'custom'
+      ? (row.customRoleName || 'Custom Role')
+      : (ROLE_DISPLAY[row.role] || row.role);
+    // 4-part inline row: role | hrs/day | HC | rate
+    const x1 = CARD_X + 12, x2 = x1 + 160, x3 = x2 + 110, x4 = x3 + 90;
+    fn('normal', 6.5); sc(...GRAY66); doc.text('Role:', x1, y);
+    fn('bold', 7);     sc(...NAVY);   doc.text(roleName, x1 + 28, y);
+    fn('normal', 6.5); sc(...GRAY66); doc.text('Hrs lost/day:', x2, y);
+    fn('bold', 7);     sc(...NAVY);   doc.text(String(row.hoursLostPerDay ?? '—'), x2 + 58, y);
+    fn('normal', 6.5); sc(...GRAY66); doc.text('HC:', x3, y);
+    fn('bold', 7);     sc(...NAVY);   doc.text(String(row.headcount ?? '—'), x3 + 20, y);
+    fn('normal', 6.5); sc(...GRAY66); doc.text('Rate:', x4, y);
+    fn('bold', 7);     sc(...NAVY);   doc.text(fmt$(row.burdenedRate ?? 0) + '/hr', CARD_END - 12, y, { align: 'right' });
+    y += 13;
+  }
+
+  function renderJustification(text) {
+    const trimmed = (text || '').trim();
+    if (trimmed) {
+      const lines = doc.splitTextToSize(trimmed, FULL_W - 30);
+      const bH    = 8 + lines.length * 10;
+      needPage(bH + 8);
+      const iy = y;
+      sf(...BGBLUE); box(CARD_X + 8, iy, FULL_W - 16, bH);
+      sd(...LBLUE); lw(2);
+      doc.line(CARD_X + 8, iy, CARD_X + 8, iy + bH);
+      sd(...GRAY99); lw(0.3);
+      fn('normal', 7); sc(...GRAY66);
+      doc.text(lines, CARD_X + 18, iy + 10);
+      y = iy + bH + 6;
+    } else {
+      needPage(14);
+      fn('italic', 7); sc(...GRAY99);
+      doc.text('No justification entered.', CARD_X + 12, y);
+      y += 14;
+    }
+  }
+
+  function renderCustomDriver(cd) {
+    driverTag((cd.name || 'Custom') + ' (CUSTOM DRIVER)');
+    needPage(13);
+    fn('normal', 7); sc(...GRAY66);
+    doc.text('Annual value:', CARD_X + 12, y);
+    fn('bold', 7.5); sc(...NAVY);
+    doc.text(fmt$(Number(cd.annualValue) || 0), CARD_END - 12, y, { align: 'right' });
+    y += 13;
+    if (cd.justification?.trim()) {
+      const lines = doc.splitTextToSize(cd.justification.trim(), FULL_W - 30);
+      const bH    = 8 + lines.length * 10;
+      needPage(bH + 8);
+      const iy = y;
+      sf(...BGBLUE); box(CARD_X + 8, iy, FULL_W - 16, bH);
+      sd(...LBLUE); lw(2);
+      doc.line(CARD_X + 8, iy, CARD_X + 8, iy + bH);
+      sd(...GRAY99); lw(0.3);
+      fn('normal', 7); sc(...GRAY66);
+      doc.text(lines, CARD_X + 18, iy + 10);
+      y = iy + bH + 6;
+    }
+  }
+
+  // Compact 3-column grid for standard UCs
+  function renderStdGrid(uc, base) {
+    const defs = (UC_DEFS[base] || []).filter(([, f]) => {
+      const v = uc[f];
+      return v !== undefined && v !== '';
+    });
+    if (!defs.length) return;
+    const colW   = FULL_W / 3;
+    const colX   = [CARD_X, CARD_X + colW, CARD_X + colW * 2];
+    let colIdx   = 0;
+    defs.forEach((def, i) => {
+      const [label, field, type] = def;
+      if (colIdx === 0) needPage(13);
+      const cx = colX[colIdx];
+      fn('normal', 6.5); sc(...GRAY66);
+      doc.text(label + ':', cx + 8, y);
+      fn('bold', 7); sc(...NAVY);
+      doc.text(fmtVal(uc[field], type), cx + colW - 8, y, { align: 'right' });
+      colIdx++;
+      if (colIdx === 3 || i === defs.length - 1) { y += 13; colIdx = 0; }
+    });
+  }
+
+  // cycleCount handles both modes
+  function renderCycleCountFields(uc) {
+    if ((uc.mode || 'reductionPct') === 'employeeDelta') {
+      fieldRow('Employees before', uc.employeesBefore, 'n');
+      fieldRow('Hours per count (before)', uc.hoursPerCountBefore, 'n');
+      fieldRow('Employees after', uc.employeesAfter, 'n');
+      fieldRow('Hours per count (after)', uc.hoursPerCountAfter, 'n');
+      fieldRow('Counts per year', uc.countsPerYear, 'n');
+      fieldRow('Burdened rate', uc.burdenedRate, '$');
+    } else {
+      fieldRow('Hours per count session', uc.hoursPerSession, 'n');
+      fieldRow('Count sessions per week', uc.sessionsPerWeek, 'n');
+      fieldRow('People counting simultaneously per session', uc.peoplePerSession, 'n');
+      fieldRow('Burdened rate', uc.burdenedRate, '$');
+      fieldRow('Efficiency improvement', uc.reductionPct, 'p');
+    }
+  }
+
+  // Full UC card renderer
+  function renderUcCard(key, uc) {
+    const base        = getBaseUcKey(key);
+    const annualValue = calcUseCaseValue(key, uc, ops, fin);
+    const displayName = getUcDisplayName(key) || UC_NAMES[base] || base;
+    const isZero      = annualValue <= 0;
+
+    // Header — ensure at least header + first content line fit
+    needPage(isZero ? 50 : 60);
+    sf(...BGBLUE); box(CARD_X, y, FULL_W, 20);
+    fn('bold', 8.5); sc(...BLUE);
+    const nameStr = doc.splitTextToSize(displayName, FULL_W - 110)[0];
+    doc.text(nameStr, CARD_X + 10, y + 14);
+    fn('bold', 9); sc(...GREEN);
+    doc.text(fmt$(annualValue), CARD_END - 10, y + 14, { align: 'right' });
+    y += 23;
+
+    if (isZero) {
+      fn('italic', 7); sc(...GRAY66);
+      doc.text('Enabled but not yet configured — contributes $0 to the total.', CARD_X + 12, y);
+      y += 14;
+    } else if (base === 'cycleCount') {
+      renderCycleCountFields(uc);
+      y += 3;
+      renderJustification(uc.justification);
+    } else if (base === 'locateItems' || base === 'workOrderTracking') {
+      const isLocate = base === 'locateItems';
+      if (uc.driver1Enabled !== false) {
+        driverTag(isLocate
+          ? 'DRIVER 1 — FLOOR WORKER SEARCH TIME'
+          : 'DRIVER 1 — TIME SPENT MANUALLY TRACKING');
+        (uc.roleRows || []).forEach(renderRoleRow);
+        fieldRow('Efficiency improvement', uc.reductionPct, 'p');
+        renderJustification(uc.driver1Justification);
+      }
+      if (uc.driver2Enabled !== false) {
+        driverTag(isLocate
+          ? 'DRIVER 2 — SUPERVISORY VISIBILITY TIME'
+          : 'DRIVER 2 — SUPERVISOR EXPEDITING VISIBILITY TIME');
+        fieldRow(isLocate ? 'Supervisor hours spent locating per week' : 'Supervisor hours spent expediting per week', uc.supervisorHoursPerWeek, 'n');
+        fieldRow('Number of supervisors', uc.supervisorHeadcount, 'n');
+        fieldRow('Supervisor burdened rate', uc.supervisorBurdenedRate, '$');
+        fieldRow('Efficiency improvement', uc.reductionPct, 'p');
+        renderJustification(uc.driver2Justification);
+      }
+    } else if (base === 'picklistVerification') {
+      if (uc.driver1Enabled !== false) {
+        driverTag('DRIVER 1 — ERROR COST REDUCTION');
+        fieldRow('Picks per day', uc.picksPerDay, 'n');
+        fieldRow('Error rate today (%)', uc.errorRate, 'pct');
+        fieldRow('Cost per error', uc.costPerError, '$');
+        fieldRow('Error reduction', uc.reductionPct, 'p');
+        renderJustification(uc.driver1Justification);
+      }
+      if (uc.driver2Enabled !== false) {
+        driverTag('DRIVER 2 — TIME SAVED PER PICK');
+        fieldRow('Picks per day', uc.picksPerDay, 'n');
+        fieldRow('Minutes saved per pick', uc.minutesSavedPerPick, 'n');
+        fieldRow('Burdened rate', uc.burdenedRate, '$');
+        renderJustification(uc.driver2Justification);
+      }
+    } else {
+      renderStdGrid(uc, base);
+      y += 3;
+      renderJustification(uc.justification);
+    }
+
+    // Custom drivers
+    (uc.customDrivers || []).forEach(renderCustomDriver);
+
+    // Bottom separator
+    needPage(10);
+    sd(...GRAY99); lw(0.3);
+    doc.line(CARD_X, y, CARD_END, y);
+    y += 10;
+  }
+
+  // Render solution groups
+  let anyUC = false;
+  SOLUTION_GROUPS.forEach(({ name, keys }) => {
+    const enabledKeys = keys.filter(k => useCases[k]?.enabled);
+    if (!enabledKeys.length) return;
+    anyUC = true;
+
+    needPage(32);
+    fn('bold', 8); sc(...NAVY);
+    doc.text(name, CARD_X, y);
+    sd(...BLUE); lw(0.5);
+    doc.line(CARD_X, y + 4, CARD_END, y + 4);
+    y += 16;
+
+    enabledKeys.forEach(k => renderUcCard(k, useCases[k]));
+    y += 4;
+  });
+
+  // Custom categories
+  const cats = customCategories || [];
+  if (cats.length) {
+    anyUC = true;
+    needPage(32);
+    fn('bold', 8); sc(...NAVY);
+    doc.text('Custom', CARD_X, y);
+    sd(...BLUE); lw(0.5);
+    doc.line(CARD_X, y + 4, CARD_END, y + 4);
+    y += 16;
+
+    cats.forEach(cc => {
+      const val = Number(cc.annualSavings) || 0;
+      needPage(50);
+      sf(...BGBLUE); box(CARD_X, y, FULL_W, 20);
+      fn('bold', 8.5); sc(...BLUE);
+      doc.text(cc.name || 'Custom Category', CARD_X + 10, y + 14);
+      fn('bold', 9); sc(...GREEN);
+      doc.text(fmt$(val), CARD_END - 10, y + 14, { align: 'right' });
+      y += 23;
+      renderJustification(cc.justification);
+      sd(...GRAY99); lw(0.3);
+      doc.line(CARD_X, y, CARD_END, y);
+      y += 10;
+    });
+  }
+
+  if (!anyUC) {
+    fn('italic', 7); sc(...GRAY99);
+    doc.text('No use cases enabled.', CARD_X, y);
+    y += 16;
+  }
+
+  // Footer on last page (fixed position at bottom)
   sd(...GRAY99); lw(0.4); doc.line(0, 762, W, 762);
   fn('bold', 6); sc(...GRAY99);
   doc.text('xemelgo', 24, 778);
