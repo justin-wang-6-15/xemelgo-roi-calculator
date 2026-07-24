@@ -303,18 +303,23 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   result.buckets.forEach(bucket => {
     if (!bucket.lineItems.length) return;
     const pillColor = BUCKET_COLORS[bucket.name] || NAVY;
+    const NAME_AVAIL_W = 141;
+    const LINE_STEP = 9;
     bucket.lineItems.forEach(li => {
-      sf(...(rowAlt ? BGBLUE : WHITE)); box(0, ty, TABLE_R, ROW_H);
+      fn('normal', 7);
+      const nameLines = doc.splitTextToSize(li.name, NAME_AVAIL_W);
+      const rowH = nameLines.length > 1 ? ROW_H + (nameLines.length - 1) * LINE_STEP : ROW_H;
+
+      sf(...(rowAlt ? BGBLUE : WHITE)); box(0, ty, TABLE_R, rowH);
       sf(...pillColor); box(TABLE_X, ty + 6, 6, 6);
       fn('normal', 7); sc(...NAVY);
-      const ucNameStr = doc.splitTextToSize(li.name, 128)[0];
-      doc.text(ucNameStr, TABLE_X + 10, ty + 12);
+      nameLines.forEach((line, i) => doc.text(line, TABLE_X + 10, ty + 12 + i * LINE_STEP));
       fn('normal', 6.5); sc(...GRAY66);
       const catShort = bucket.name.split(' & ')[0];
       doc.text(catShort, TABLE_X + 155, ty + 12);
       fn('bold', 7.5); sc(...NAVY);
       doc.text(fmt$(li.annualValue), TABLE_R - 4, ty + 12, { align: 'right' });
-      ty += ROW_H;
+      ty += rowH;
       rowAlt = !rowAlt;
     });
     // Bucket subtotal row
