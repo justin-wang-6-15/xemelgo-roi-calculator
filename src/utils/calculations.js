@@ -2,111 +2,88 @@
 
 export function calcUseCaseValue(key, uc, ops, fin = {}) {
   const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
+  const customTotal = (uc.customDrivers || []).reduce((sum, d) => sum + (Number(d.annualValue) || 0), 0);
+  let base = 0;
   switch (key) {
     case 'cycleCount': {
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
-        return (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter)
-          * uc.countsPerYear * uc.burdenedRate;
+        base = (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear * uc.burdenedRate;
+      } else {
+        base = uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
       }
-      return uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
+      break;
     }
-
     case 'audit': {
       const labor = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.burdenedRate * uc.reductionPct;
       const downtime = (uc.downtimeCostPerDay !== '' && Number(uc.downtimeCostPerDay) > 0)
-        ? Number(uc.downtimeCostPerDay) * uc.daysPerAudit * uc.auditsPerYear
-        : 0;
-      return labor + downtime;
+        ? Number(uc.downtimeCostPerDay) * uc.daysPerAudit * uc.auditsPerYear : 0;
+      base = labor + downtime; break;
     }
-
     case 'locateItems': {
-      const d1 = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0);
-      const d2 = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct;
-      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1 : d2;
-      return d1 + d2;
+      const d1 = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0) : 0;
+      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
+      base = d1 + d2; break;
     }
-
     case 'workOrderTracking': {
-      const d1 = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0);
-      const d2 = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct;
-      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1 : d2;
-      return d1 + d2;
+      const d1 = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0) : 0;
+      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
+      base = d1 + d2; break;
     }
-
     case 'picklistVerification': {
-      const d1 = uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct;
-      const d2 = ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * (uc.burdenedRate || 0) * uc.reductionPct;
-      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1 : d2;
-      return d1 + d2;
+      const d1 = (uc.driver1Enabled !== false) ? uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct : 0;
+      const d2 = (uc.driver2Enabled !== false) ? ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * (uc.burdenedRate || 0) * uc.reductionPct : 0;
+      base = d1 + d2; break;
     }
-
     case 'shipReceiveVerification':
-      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'internalDelivery':
-      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'expiredProducts':
-      return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
-
+      base = uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct; break;
     case 'calibrationReminders':
-      return uc.failuresPerYear * uc.costPerFailure * uc.reductionPct;
-
+      base = uc.failuresPerYear * uc.costPerFailure * uc.reductionPct; break;
     case 'geofencing':
-      return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
-
+      base = uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct; break;
     case 'fasterFulfillment':
-      return uc.currentCycleTime > 0
+      base = uc.currentCycleTime > 0
         ? ((uc.currentCycleTime - uc.targetCycleTime) / uc.currentCycleTime) * uc.ordersPerMonth * 12 * uc.revenuePerOrder * 0.10
-        : 0;
-
+        : 0; break;
     case 'misShipReduction':
-      return uc.misShipsPerMonth * 12 * uc.costPerMisShip * uc.reductionPct;
-
+      base = uc.misShipsPerMonth * 12 * uc.costPerMisShip * uc.reductionPct; break;
     case 'dockTurnSpeed':
-      return (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'goodsReceipt':
-      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'automatedPackCount':
-      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'outboundAudit':
-      return (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesSaved / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'returnsTransfers':
-      return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'inventoryRequests':
-      return uc.hoursPerWeek * uc.peopleInvolved * ops.workWeeksPerYear * uc.burdenedRate * uc.reductionPct;
-
+      base = uc.hoursPerWeek * uc.peopleInvolved * ops.workWeeksPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'shrinkage': {
       const materialValue = uc.materialValuePerIncident ?? uc.costPerIncident ?? 0;
       const perIncident = materialValue
         + (uc.laborHoursPerIncident || 0) * (uc.burdenedRate || 0)
         + (Number(uc.scrapCostPerIncident) || 0)
         + (Number(uc.scheduleImpactPerIncident) || 0);
-      return uc.incidentsPerYear * perIncident * uc.reductionPct;
+      base = uc.incidentsPerYear * perIncident * uc.reductionPct; break;
     }
-
     case 'productionEquipment':
     case 'rtiTracking':
     case 'proofOfDelivery':
-      return uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct;
-
+      base = uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct; break;
     case 'qualityExceptionTracking':
-      return uc.exceptionsPerYear * uc.reductionPct * (uc.reworkCostPerException + (Number(uc.scrapCostPerException) || 0));
-
+      base = uc.exceptionsPerYear * uc.reductionPct * (uc.reworkCostPerException + (Number(uc.scrapCostPerException) || 0)); break;
     case 'expeditedExceptionTracking':
-      return uc.lateShipmentsPerMonth * 12 * uc.costPerLateShipment * uc.reductionPct;
-
+      base = uc.lateShipmentsPerMonth * 12 * uc.costPerLateShipment * uc.reductionPct; break;
     case 'workingCapitalImprovement':
-      return uc.wipInventoryValue * uc.reductionPct * (fin.wacc ?? 0.085);
-
+      base = uc.wipInventoryValue * uc.reductionPct * (fin.wacc ?? 0.085); break;
     default:
-      return 0;
+      base = 0;
   }
+  return base + customTotal;
 }
 
 const LABOR_UC_KEYS = new Set(['cycleCount', 'audit', 'locateItems', 'workOrderTracking', 'picklistVerification', 'shipReceiveVerification', 'internalDelivery', 'goodsReceipt', 'automatedPackCount', 'outboundAudit', 'returnsTransfers', 'inventoryRequests']);
@@ -123,20 +100,17 @@ export function calcUseCaseHours(key, uc, ops) {
     case 'audit':
       return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
     case 'locateItems': {
-      const d1Hrs = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
-      const d2Hrs = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct;
-      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1Hrs : d2Hrs;
+      const d1Hrs = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0) : 0;
+      const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct : 0;
       return d1Hrs + d2Hrs;
     }
     case 'workOrderTracking': {
-      const d1Hrs = (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0);
-      const d2Hrs = (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct;
-      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? d1Hrs : d2Hrs;
+      const d1Hrs = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0) : 0;
+      const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct : 0;
       return d1Hrs + d2Hrs;
     }
     case 'picklistVerification': {
-      const d2Hrs = ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * uc.reductionPct;
-      if ((uc.driverMode || 'and') === 'or') return (uc.activeDriver || 1) === 1 ? 0 : d2Hrs;
+      const d2Hrs = (uc.driver2Enabled !== false) ? ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * uc.reductionPct : 0;
       return d2Hrs;
     }
     case 'shipReceiveVerification':

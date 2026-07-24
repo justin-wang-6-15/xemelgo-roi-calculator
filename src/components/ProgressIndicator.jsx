@@ -1,13 +1,12 @@
 const steps = [
   { label: 'Project Overview' },
-  { label: 'Select Solution + Use Cases' },
-  { label: 'Validate Your Inputs' },
+  { label: 'Solutions & Inputs' },
   { label: 'Financial Inputs' },
   { label: 'Get Your Report' },
 ];
 
 export default function ProgressIndicator({ currentStep, visitedSteps = new Set(), onStepClick }) {
-  const pct = Math.round(((currentStep - 1) / 4) * 100);
+  const pct = Math.round(((currentStep - 1) / 3) * 100);
 
   return (
     <div className="mb-8">
@@ -61,7 +60,7 @@ export default function ProgressIndicator({ currentStep, visitedSteps = new Set(
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="text-center text-xs text-gray-400 mt-1">Step {currentStep} of 5</p>
+        <p className="text-center text-xs text-gray-400 mt-1">Step {currentStep} of 4</p>
       </div>
     </div>
   );
