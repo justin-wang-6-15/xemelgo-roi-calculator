@@ -762,6 +762,15 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
 export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
   const [selectedSolutions, setSelectedSolutions] = useState(new Set());
   const [osExpanded, setOsExpanded] = useState(false);
+  const [collapsedUCs, setCollapsedUCs] = useState(new Set());
+
+  function toggleCollapsed(key) {
+    setCollapsedUCs((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
 
   function updateUC(key, field, value) {
     setUseCases((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
@@ -878,12 +887,15 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                       const annualValue = enabled ? calcUseCaseValue(key, uc, ops, fin) : null;
                       const baseKey = getBaseUcKey(key);
 
+                      const isCollapsed = collapsedUCs.has(key);
                       return (
                         <div key={key} className={`rounded-lg border transition-colors ${reviewed && enabled ? 'border-green-300 bg-green-50' : enabled ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200 bg-white'}`}>
                           {/* Toggle row */}
-                          <div className="flex items-center gap-3 px-4 py-3 cursor-pointer" onClick={() => toggleUseCase(key)}>
-                            <Toggle checked={enabled} onChange={() => toggleUseCase(key)} />
-                            <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <div className="cursor-pointer" onClick={() => toggleUseCase(key)}>
+                              <Toggle checked={enabled} onChange={() => toggleUseCase(key)} />
+                            </div>
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleUseCase(key)}>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>{UC_LABELS[baseKey] || key}</span>
                                 {reviewed && enabled && <span className="text-xs font-medium text-green-600 bg-green-100 rounded px-1.5 py-0.5">Reviewed</span>}
@@ -896,10 +908,25 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                             {annualValue !== null && (
                               <span className="text-sm font-bold text-green-700 flex-shrink-0">{fmt$(annualValue)}</span>
                             )}
+                            {showInputs && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); toggleCollapsed(key); }}
+                                className="ml-1 p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0 transition-colors"
+                                aria-label={isCollapsed ? 'Expand' : 'Collapse'}
+                              >
+                                <svg
+                                  className={`w-4 h-4 transition-transform duration-150 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}
+                                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
 
                           {/* Inline inputs — only under owning solution */}
-                          {showInputs && (
+                          {showInputs && !isCollapsed && (
                             <div className="px-4 pb-4 pt-1 border-t border-gray-100 space-y-4">
                               <UseCaseInputs ucKey={key} uc={uc} ops={ops} setOps={setOps}
                                 onUpdate={(field, value) => updateUC(key, field, value)} fin={fin} />
