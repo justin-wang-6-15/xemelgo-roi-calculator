@@ -354,7 +354,7 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   sf(...BLUE); box(0, 712, W, 42);
 
   const invItems = [
-    { label: 'CapEx',               value: fmt$(Number(fin.capex) || 0) },
+    { label: 'CapEx',               value: fmt$((Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0)) },
     { label: 'Annual Platform Fee',  value: fmt$(result.annualSaasFee)  },
     { label: 'WACC',                 value: fmtPct(fin.wacc)            },
   ];
@@ -535,7 +535,8 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   y += 18;
 
   const invRows = [
-    ['CapEx (hardware & installation)',  fmt$(Number(fin.capex) || 0)],
+    ['Hardware & Installation',          fmt$(Number(fin.hardwareCapex) || 0)],
+    ['Xemelgo Setup Cost',              fmt$(Number(fin.setupCapex) || 0)],
     ['Contingency rate',                 fmtPct(fin.contingencyRate)],
     ['Total CapEx with contingency',     fmt$(result.totalCapex)],
     ['Monthly platform fee',             fmt$(Number(fin.monthlyPlatformFee) || 0)],

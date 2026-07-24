@@ -15,7 +15,7 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
         base = (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear * uc.burdenedRate;
       } else {
-        base = uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
+        base = uc.hoursPerSession * uc.sessionsPerWeek * ops.workWeeksPerYear * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
       }
       break;
     }
@@ -27,12 +27,12 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
     }
     case 'locateItems': {
       const d1 = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0) : 0;
-      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
+      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
       base = d1 + d2; break;
     }
     case 'workOrderTracking': {
       const d1 = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0) : 0;
-      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
+      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
       base = d1 + d2; break;
     }
     case 'picklistVerification': {
@@ -102,17 +102,17 @@ export function calcUseCaseHours(key, uc, ops) {
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
         return (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear;
       }
-      return uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.reductionPct;
+      return uc.hoursPerSession * uc.sessionsPerWeek * ops.workWeeksPerYear * uc.peoplePerSession * uc.reductionPct;
     case 'audit':
       return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
     case 'locateItems': {
       const d1Hrs = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0) : 0;
-      const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct : 0;
+      const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * uc.reductionPct : 0;
       return d1Hrs + d2Hrs;
     }
     case 'workOrderTracking': {
       const d1Hrs = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0) : 0;
-      const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * 50 * uc.reductionPct : 0;
+      const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * uc.reductionPct : 0;
       return d1Hrs + d2Hrs;
     }
     case 'picklistVerification': {

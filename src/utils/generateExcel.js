@@ -730,9 +730,8 @@ function buildFinancialAnalysis(ws, ops, useCases, fin, result, saRefs, dateISO)
   sHdr(ws, `A${r}`, 'Cost Inputs (yellow cells are editable)');
   r++;
 
-  const capexLabel = enabledUcNames ? `${enabledUcNames.split(',')[0].trim()} CapEx` : 'Hardware & Installation CapEx';
   const costInputDefs = [
-    [capexLabel,                                             Number(fin.capex) || 0,               YELLOW, '$#,##0'],
+    ['Hardware & Setup CapEx',                               (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0), YELLOW, '$#,##0'],
     ['CapEx Contingency',                                    fin.contingencyRate,                   YELLOW, '0.0%' ],
     ['Xemelgo Monthly Fee',                                  Number(fin.monthlyPlatformFee) || 0,   YELLOW, '$#,##0'],
     ['Estimated Annual Opportunity (from Savings Analysis)', result.totalGrossAnnual,               LGRAY,  '$#,##0'],
