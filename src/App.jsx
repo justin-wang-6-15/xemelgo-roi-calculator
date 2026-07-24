@@ -107,6 +107,8 @@ export default function App() {
   const [ops, setOps] = useState(defaultOps);
   const [operationDetails, setOperationDetails] = useState(defaultOperationDetails);
   const [useCases, setUseCases] = useState(() => makeAllDisabledUseCases());
+  const [collapsedUCs, setCollapsedUCs] = useState(new Set());
+  const [osExpanded, setOsExpanded] = useState(false);
   const [fin, setFin] = useState(defaultFin);
   const [customCategories, setCustomCategories] = useState([]);
   const [contactInfo, setContactInfo] = useState(null);
@@ -138,6 +140,8 @@ export default function App() {
   // Step 1 → Step 2: reset use cases to all-disabled, then show analyzing screen
   function handleStep1Next() {
     setUseCases(makeAllDisabledUseCases());
+    setCollapsedUCs(new Set());
+    setOsExpanded(false);
     setOperationDetails(defaultOperationDetails);
     setCustomCategories([]);
     markVisited(2);
@@ -167,6 +171,8 @@ export default function App() {
     setOps(defaultOps);
     setOperationDetails(defaultOperationDetails);
     setUseCases(makeAllDisabledUseCases());
+    setCollapsedUCs(new Set());
+    setOsExpanded(false);
     setFin(defaultFin);
     setCustomCategories([]);
     setContactInfo(null);
@@ -261,6 +267,10 @@ export default function App() {
                 fin={fin}
                 useCases={useCases}
                 setUseCases={setUseCases}
+                collapsedUCs={collapsedUCs}
+                setCollapsedUCs={setCollapsedUCs}
+                osExpanded={osExpanded}
+                setOsExpanded={setOsExpanded}
                 customCategories={customCategories}
                 setCustomCategories={setCustomCategories}
                 onNext={() => goTo(3)}

@@ -759,10 +759,10 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────
-export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases, customCategories, setCustomCategories, onNext, onBack }) {
-  const [selectedSolutions, setSelectedSolutions] = useState(new Set());
-  const [osExpanded, setOsExpanded] = useState(false);
-  const [collapsedUCs, setCollapsedUCs] = useState(new Set());
+export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases, collapsedUCs, setCollapsedUCs, osExpanded, setOsExpanded, customCategories, setCustomCategories, onNext, onBack }) {
+  const selectedSolutions = new Set(
+    SOLUTIONS.filter((sol) => sol.defaults.some((key) => useCases[key]?.enabled)).map((sol) => sol.id)
+  );
 
   function toggleCollapsed(key) {
     setCollapsedUCs((prev) => {
@@ -777,24 +777,12 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
   }
 
   function toggleSolution(sol) {
-    const next = new Set(selectedSolutions);
-    if (next.has(sol.id)) {
-      next.delete(sol.id);
-      setSelectedSolutions(next);
-      setUseCases((ucs) => {
-        const updated = { ...ucs };
-        sol.defaults.forEach((key) => { if (updated[key]) updated[key] = { ...updated[key], enabled: false }; });
-        return updated;
-      });
-    } else {
-      next.add(sol.id);
-      setSelectedSolutions(next);
-      setUseCases((ucs) => {
-        const updated = { ...ucs };
-        sol.defaults.forEach((key) => { if (updated[key]) updated[key] = { ...updated[key], enabled: true }; });
-        return updated;
-      });
-    }
+    const isOn = selectedSolutions.has(sol.id);
+    setUseCases((ucs) => {
+      const updated = { ...ucs };
+      sol.defaults.forEach((key) => { if (updated[key]) updated[key] = { ...updated[key], enabled: !isOn }; });
+      return updated;
+    });
   }
 
   function toggleUseCase(key) {
