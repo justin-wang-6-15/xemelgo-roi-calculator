@@ -4,9 +4,9 @@ import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import Tooltip from '../Tooltip';
 
 function buildCumulativeData(fin, totalGrossAnnual) {
-  const capex = Number(fin.capex) || 0;
+  const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
   const monthlyFee = Number(fin.monthlyPlatformFee) || 0;
-  const totalCapex = capex * (1 + fin.contingencyRate);
+  const totalCapex = rawCapex * (1 + fin.contingencyRate);
   const monthlyBase = totalGrossAnnual / 12;
   const ramp = [0, 0.25, 0.50, 0.75, 1.0];
 
@@ -122,7 +122,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
 
-  const inputsReady = fin.capex !== '' && fin.monthlyPlatformFee !== '';
+  const inputsReady = fin.hardwareCapex !== '' && fin.setupCapex !== '' && fin.monthlyPlatformFee !== '';
 
   const roiValue = inputsReady ? result.fiveYrRoi - 1 : null;
   const paybackValue = inputsReady ? result.paybackWeeks : null;
@@ -185,7 +185,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                CapEx (hardware, installation)
+                Hardware &amp; Installation
                 <Tooltip content="Includes RFID hardware (readers, antennas, tags) and installation labor. Get the exact quote from your Xemelgo rep before entering this number.">
                   <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
                 </Tooltip>
@@ -195,13 +195,33 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                 <input
                   type="number"
                   min={0}
-                  value={fin.capex}
+                  value={fin.hardwareCapex}
                   placeholder="Enter your quoted hardware and installation cost"
-                  onChange={(e) => set('capex')(e.target.value === '' ? '' : Number(e.target.value))}
+                  onChange={(e) => set('hardwareCapex')(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500">Use the exact figure quoted by your Xemelgo rep. This is the number your finance team will need.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                Xemelgo Setup Cost
+                <Tooltip content="One-time implementation and onboarding fee charged by Xemelgo. Confirm the exact amount with your Xemelgo rep.">
+                  <span className="text-blue-400 cursor-help text-sm">ⓘ</span>
+                </Tooltip>
+              </label>
+              <div className="flex items-center">
+                <span className="text-gray-500 mr-1">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={fin.setupCapex}
+                  placeholder="Enter your quoted setup and onboarding cost"
+                  onChange={(e) => set('setupCapex')(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">One-time implementation and onboarding fee. Confirm with your Xemelgo rep.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Xemelgo Monthly Platform Fee</label>
@@ -256,7 +276,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Total CapEx with Contingency</label>
                     <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
-                      {fin.capex !== '' ? fmt$(result.totalCapex) : '—'}
+                      {(fin.hardwareCapex !== '' || fin.setupCapex !== '') ? fmt$(result.totalCapex) : '—'}
                     </div>
                   </div>
                   <div>

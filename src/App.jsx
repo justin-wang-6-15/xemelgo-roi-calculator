@@ -51,7 +51,7 @@ function makeAllDisabledUseCases() {
     locateItems__asset:      { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.90, driver1Enabled: true, driver2Enabled: true, supervisorHoursPerWeek: 2, supervisorHeadcount: 2, supervisorBurdenedRate: 45, driver1Justification: '', driver2Justification: '', customDrivers: [], reviewed: false },
     locateItems__wip:        { enabled: false, roleRows: [{ id: 1, role: 'materialHandler', customRoleName: '', hoursLostPerDay: 1.5, headcount: 10, burdenedRate: 25 }], reductionPct: 0.90, driver1Enabled: true, driver2Enabled: true, supervisorHoursPerWeek: 2, supervisorHeadcount: 2, supervisorBurdenedRate: 45, driver1Justification: '', driver2Justification: '', customDrivers: [], reviewed: false },
     picklistVerification:    { enabled: false, picksPerDay: 500, errorRate: 2, costPerError: 50, reductionPct: 0.95, driver1Enabled: true, driver2Enabled: true, minutesSavedPerPick: 1, burdenedRate: 25, driver1Justification: '', driver2Justification: '', customDrivers: [], reviewed: false },
-    shipReceiveVerification: { enabled: false, minutesSavedPerTransaction: 8, transactionsPerDay: 20, dockStaff: 4, burdenedRate: 25, reductionPct: 0.95, justification: '', customDrivers: [], reviewed: false },
+    shipReceiveVerification: { enabled: false, minutesSavedPerTransaction: 8, transactionsPerDay: 20, burdenedRate: 25, reductionPct: 0.95, justification: '', customDrivers: [], reviewed: false },
     internalDelivery:        { enabled: false, minutesPerTransfer: 8, transfersPerDay: 30, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.90, justification: '', customDrivers: [], reviewed: false },
     expiredProducts:         { enabled: false, incidentsPerYear: 12, costPerIncident: 2000, reductionPct: 0.95, justification: '', customDrivers: [], reviewed: false },
     calibrationReminders:    { enabled: false, failuresPerYear: 6, costPerFailure: 5000, reductionPct: 0.95, justification: '', customDrivers: [], reviewed: false },
@@ -77,7 +77,8 @@ function makeAllDisabledUseCases() {
 }
 
 const defaultFin = {
-  capex: '',
+  hardwareCapex: '',
+  setupCapex: '',
   contingencyRate: 0.025,
   monthlyPlatformFee: '',
   wacc: 0.085,

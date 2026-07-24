@@ -41,7 +41,7 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
       base = d1 + d2; break;
     }
     case 'shipReceiveVerification':
-      base = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
+      base = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'internalDelivery':
       base = (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'expiredProducts':
@@ -120,7 +120,7 @@ export function calcUseCaseHours(key, uc, ops) {
       return d2Hrs;
     }
     case 'shipReceiveVerification':
-      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * uc.dockStaff * daysPerYear * uc.reductionPct;
+      return (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * daysPerYear * uc.reductionPct;
     case 'internalDelivery':
       return (uc.minutesPerTransfer / 60) * uc.transfersPerDay * uc.peoplePerTransfer * daysPerYear * uc.reductionPct;
     case 'goodsReceipt':
@@ -252,7 +252,8 @@ export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
 
 export function calcFinancials(ops, useCases, fin, customCategories) {
   const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops, customCategories, fin);
-  const totalCapex = fin.capex * (1 + fin.contingencyRate);
+  const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
+  const totalCapex = rawCapex * (1 + fin.contingencyRate);
   const annualSaasFee = fin.monthlyPlatformFee * 12;
   const netAnnualValue = totalGrossAnnual - annualSaasFee;
   const monthlyGross = totalGrossAnnual / 12;

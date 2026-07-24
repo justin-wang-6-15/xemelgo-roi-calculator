@@ -378,12 +378,12 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
       <>
         <div className="space-y-3 mb-3">
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-            <span className="text-xs font-medium text-gray-700">Driver 1 — Labor time lost tracking work orders</span>
+            <span className="text-xs font-medium text-gray-700">Driver 1 — Time spent manually tracking work orders</span>
             <Toggle checked={d1On} onChange={(v) => onUpdate('driver1Enabled', v)} />
           </div>
           {d1On && (
             <div className="pl-3 border-l-2 border-blue-200 space-y-3">
-              <RoleTable rows={rows} ops={ops} onUpdate={onUpdate} labelHoursLost="Hours spent checking status per day" />
+              <RoleTable rows={rows} ops={ops} onUpdate={onUpdate} labelHoursLost="Hours spent manually tracking status per day" />
               <JustificationField value={uc.driver1Justification} onChange={(v) => onUpdate('driver1Justification', v)}
                 placeholder="Based on time studies with production planners." />
             </div>
@@ -465,7 +465,6 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
       <div className={grid2}>
         <NumField label="Minutes saved per dock transaction" value={uc.minutesSavedPerTransaction} onChange={(v) => onUpdate('minutesSavedPerTransaction', v)} />
         <NumField label="Dock transactions per day" value={uc.transactionsPerDay} onChange={(v) => onUpdate('transactionsPerDay', v)} />
-        <NumField label="Number of dock staff" value={uc.dockStaff} onChange={(v) => onUpdate('dockStaff', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
       </div>
       <div><label className={labelCls}>Expected time reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
