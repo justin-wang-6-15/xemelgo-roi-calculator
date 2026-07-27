@@ -66,6 +66,7 @@ function makeAllDisabledUseCases() {
     returnsTransfers:        { enabled: false, minutesPerTransfer: 6, transfersPerDay: 20, peoplePerTransfer: 2, burdenedRate: 25, reductionPct: 0.90, justification: '', customDrivers: [], reviewed: false },
     inventoryRequests:       { enabled: false, hoursPerWeek: 3, peopleInvolved: 2, burdenedRate: 35, reductionPct: 0.90, justification: '', customDrivers: [], reviewed: false },
     shrinkage:               { enabled: false, incidentsPerYear: 15, materialValuePerIncident: 1200, laborHoursPerIncident: 2, burdenedRate: 25, scrapCostPerIncident: '', scheduleImpactPerIncident: '', reductionPct: 0.85, justification: '', customDrivers: [], reviewed: false },
+    shrinkage__asset:        { enabled: false, incidentsPerYear: 10, materialValuePerIncident: 2500, laborHoursPerIncident: 2, burdenedRate: 35, scrapCostPerIncident: '', scheduleImpactPerIncident: '', reductionPct: 0.85, justification: '', customDrivers: [], reviewed: false },
     productionEquipment:     { enabled: false, incidentsPerYear: 10,  costPerIncident: 3000, reductionPct: 0.85, justification: '', customDrivers: [], reviewed: false },
     rtiTracking__asset:      { enabled: false, incidentsPerYear: 200, costPerIncident: 75,   reductionPct: 0.85, justification: '', customDrivers: [], reviewed: false },
     rtiTracking__wip:        { enabled: false, incidentsPerYear: 200, costPerIncident: 75,   reductionPct: 0.85, justification: '', customDrivers: [], reviewed: false },

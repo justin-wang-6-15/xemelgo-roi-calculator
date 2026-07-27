@@ -17,7 +17,7 @@ const SOLUTIONS = [
     extras:   ['expiredProducts', 'goodsReceipt', 'inventoryRequests', 'returnsTransfers'] },
   { id: 'asset', name: 'Asset tracking', description: 'Locate assets, track calibration status, and enforce zone boundaries.',
     defaults: ['locateItems__asset', 'calibrationReminders', 'cycleCount__asset', 'productionEquipment', 'rtiTracking__asset'],
-    extras:   ['geofencing'] },
+    extras:   ['shrinkage__asset'] },
   { id: 'wip', name: 'Work in process', description: 'Track work orders and in-progress materials across your facility.',
     defaults: ['cycleCount__wip', 'locateItems__wip', 'workOrderTracking', 'qualityExceptionTracking', 'expeditedExceptionTracking'],
     extras:   ['rtiTracking__wip', 'workingCapitalImprovement'] },
@@ -106,6 +106,16 @@ const SOURCE_NOTES = {
   workingCapitalImprovement: `Facilities with real-time WIP visibility typically report 10–30% reductions in WIP inventory. Default set to ${d.workingCapitalImprovement}%.`,
 };
 
+const UC_LABEL_OVERRIDES = {
+  'shrinkage__asset': 'Asset Theft and Loss Prevention',
+};
+const UC_DESCRIPTION_OVERRIDES = {
+  'shrinkage__asset': 'Catch missing or stolen assets before they become a write-off.',
+};
+const UC_SOURCE_NOTE_OVERRIDES = {
+  'shrinkage__asset': 'Real-time RFID visibility catches asset loss before write-off. Customers report 70–85% reduction. Default set to 85%.',
+};
+
 const ROLE_DEFAULTS = {
   materialHandler: { hoursLostPerDay: 1.5, headcount: 10, rateKey: 'materialHandlerRate', countKey: 'materialHandlerCount' },
   planner:         { hoursLostPerDay: 0.5, headcount: 3,  rateKey: 'plannerRate', countKey: 'plannerCount' },
@@ -145,7 +155,7 @@ function NumField({ label, value, onChange, prefix, suffix, tooltip }) {
 }
 
 function ReductionInput({ ucKey, uc, onUpdate }) {
-  const note = SOURCE_NOTES[ucKey];
+  const note = UC_SOURCE_NOTE_OVERRIDES[ucKey] ?? SOURCE_NOTES[getBaseUcKey(ucKey)] ?? SOURCE_NOTES[ucKey];
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -885,12 +895,12 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                             </div>
                             <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleUseCase(key)}>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>{UC_LABELS[baseKey] || key}</span>
+                                <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>{UC_LABEL_OVERRIDES[key] ?? UC_LABELS[baseKey] ?? key}</span>
                                 {reviewed && enabled && <span className="text-xs font-medium text-green-600 bg-green-100 rounded px-1.5 py-0.5">Reviewed</span>}
                                 {isDefault && <span className="text-xs text-blue-500 font-medium flex-shrink-0">default</span>}
                               </div>
-                              {!showInputs && UC_DESCRIPTIONS[baseKey] && (
-                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_DESCRIPTIONS[baseKey]}</p>
+                              {!showInputs && (UC_DESCRIPTION_OVERRIDES[key] ?? UC_DESCRIPTIONS[baseKey]) && (
+                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_DESCRIPTION_OVERRIDES[key] ?? UC_DESCRIPTIONS[baseKey]}</p>
                               )}
                             </div>
                             {annualValue !== null && (

@@ -208,8 +208,13 @@ BUCKET_CONFIG.forEach((bucket, bi) => {
   bucket.keys.forEach((k) => { BASE_KEY_TO_BUCKET[k] = bi; });
 });
 
+const COMPOSITE_LABEL_OVERRIDES = {
+  'shrinkage__asset': 'Asset Theft and Loss Prevention',
+};
+
 // Return the display name for a UC key (composite or plain)
 export function getUcDisplayName(key) {
+  if (COMPOSITE_LABEL_OVERRIDES[key]) return COMPOSITE_LABEL_OVERRIDES[key];
   const base = getBaseUcKey(key);
   const baseLabel = BUCKET_CONFIG[BASE_KEY_TO_BUCKET[base]]?.labels[base] ?? base;
   const solId = key.indexOf('__') !== -1 ? key.slice(key.indexOf('__') + 2) : null;
