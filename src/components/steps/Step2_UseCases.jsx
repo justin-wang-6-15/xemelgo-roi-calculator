@@ -107,7 +107,7 @@ const SOURCE_NOTES = {
 };
 
 const UC_LABEL_OVERRIDES = {
-  'shrinkage__asset': 'Asset Theft and Loss Prevention',
+  'shrinkage__asset': 'Shrinkage and Loss Prevention',
 };
 const UC_DESCRIPTION_OVERRIDES = {
   'shrinkage__asset': 'Catch missing or stolen assets before they become a write-off.',

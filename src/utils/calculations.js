@@ -209,7 +209,7 @@ BUCKET_CONFIG.forEach((bucket, bi) => {
 });
 
 const COMPOSITE_LABEL_OVERRIDES = {
-  'shrinkage__asset': 'Asset Theft and Loss Prevention',
+  'shrinkage__asset': 'Shrinkage and Loss Prevention',
 };
 
 // Return the display name for a UC key (composite or plain)
