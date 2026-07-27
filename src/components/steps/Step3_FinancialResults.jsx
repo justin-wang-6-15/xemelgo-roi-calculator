@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { calcFinancials } from '../../utils/calculations';
+import { calcFinancials, groupUseCaseTotalsBySolution } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import Tooltip from '../Tooltip';
 
@@ -119,6 +119,7 @@ function SecondaryMetricCard({ label, value, caption, colorClass, badge }) {
 
 export default function Step3_FinancialResults({ ops, useCases, fin, setFin, customCategories, onNext, onBack }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [savingsView, setSavingsView] = useState('category');
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
 
@@ -303,49 +304,81 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">Savings Summary</h3>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-1 pr-2 font-medium text-gray-600">Category</th>
-                <th className="text-right py-1 font-medium text-gray-600">Annual Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {result.buckets.map((bucket) =>
-                bucket.lineItems.length > 0 ? (
-                  <React.Fragment key={bucket.name}>
-                    {bucket.lineItems.map((li) => (
-                      <tr key={li.key}>
-                        <td className="py-1.5 pr-2 text-gray-700 pl-2">{li.name}</td>
-                        <td className="text-right text-gray-700">{fmt$(li.annualValue)}</td>
-                      </tr>
-                    ))}
-                    <tr className="bg-gray-50">
-                      <td className="py-1 pr-2 pl-2 text-xs font-medium text-gray-500">{bucket.name} subtotal</td>
-                      <td className="text-right text-xs font-medium text-gray-500 pr-1">{fmt$(bucket.subtotal)}</td>
-                    </tr>
-                  </React.Fragment>
-                ) : null
-              )}
-              <tr className="border-t border-gray-300 font-semibold">
-                <td className="py-1.5 pr-2 text-gray-900">Total Gross Annual</td>
-                <td className="text-right text-gray-900">{fmt$(result.totalGrossAnnual)}</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
-                <td className={`text-right ${inputsReady ? 'text-red-600' : 'text-gray-400'}`}>
-                  {inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}
-                </td>
-              </tr>
-              <tr className="border-t-2 border-gray-400 font-bold">
-                <td className="py-2 pr-2 text-gray-900">Net Annual Value</td>
-                <td className={`text-right text-base ${inputsReady ? 'text-blue-700' : 'text-gray-400'}`}>
-                  {inputsReady ? fmt$(result.netAnnualValue) : '—'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold text-gray-800">Savings Summary</h3>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setSavingsView('category')}
+                className={`px-3 py-1.5 transition-colors ${savingsView === 'category' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                By Category
+              </button>
+              <button
+                type="button"
+                onClick={() => setSavingsView('solution')}
+                className={`px-3 py-1.5 border-l border-gray-200 transition-colors ${savingsView === 'solution' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                By Solution
+              </button>
+            </div>
+          </div>
+          {(() => {
+            const viewBuckets = savingsView === 'solution'
+              ? groupUseCaseTotalsBySolution(useCases, ops, customCategories, fin).buckets
+              : result.buckets;
+            const groupLabel = savingsView === 'solution' ? 'Solution' : 'Category';
+            return (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-1 pr-2 font-medium text-gray-600">{groupLabel}</th>
+                    <th className="text-right py-1 font-medium text-gray-600">Annual Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {viewBuckets.map((bucket) =>
+                    bucket.lineItems.length > 0 ? (
+                      <React.Fragment key={bucket.name}>
+                        {bucket.lineItems.map((li) => (
+                          <tr key={li.key}>
+                            <td className="py-1.5 pr-2 text-gray-700 pl-2">{li.name}</td>
+                            <td className="text-right text-gray-700">{fmt$(li.annualValue)}</td>
+                          </tr>
+                        ))}
+                        <tr className="bg-gray-50">
+                          <td className="py-1 pr-2 pl-2 text-xs font-medium text-gray-500">{bucket.name} subtotal</td>
+                          <td className="text-right text-xs font-medium text-gray-500 pr-1">{fmt$(bucket.subtotal)}</td>
+                        </tr>
+                      </React.Fragment>
+                    ) : null
+                  )}
+                  <tr className="border-t border-gray-300 font-semibold">
+                    <td className="py-1.5 pr-2 text-gray-900">Total Gross Annual</td>
+                    <td className="text-right text-gray-900">{fmt$(result.totalGrossAnnual)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 pr-2 text-gray-600">Total First Year CapEx (Hardware + Setup)</td>
+                    <td className={`text-right ${inputsReady ? 'text-red-600' : 'text-gray-400'}`}>
+                      {inputsReady ? `(${fmt$(result.totalCapex)})` : '—'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
+                    <td className={`text-right ${inputsReady ? 'text-red-600' : 'text-gray-400'}`}>
+                      {inputsReady ? `(${fmt$(result.annualSaasFee)})` : '—'}
+                    </td>
+                  </tr>
+                  <tr className="border-t-2 border-gray-400 font-bold">
+                    <td className="py-2 pr-2 text-gray-900">Net Annual Value</td>
+                    <td className={`text-right text-base ${inputsReady ? 'text-blue-700' : 'text-gray-400'}`}>
+                      {inputsReady ? fmt$(result.netAnnualValue) : '—'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            );
+          })()}
         </div>
       </div>
 

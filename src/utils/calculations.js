@@ -255,6 +255,72 @@ export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
   return { totalGrossAnnual, buckets };
 }
 
+const SOLUTION_ORDER = [
+  'Inventory Management',
+  'Asset Tracking',
+  'Work in Process',
+  'Shipment Tracking',
+  'Package Delivery',
+];
+
+const BASE_KEY_TO_SOLUTION = {
+  audit: 'Inventory Management', shrinkage: 'Inventory Management',
+  expiredProducts: 'Inventory Management', goodsReceipt: 'Inventory Management',
+  inventoryRequests: 'Inventory Management', returnsTransfers: 'Inventory Management',
+  calibrationReminders: 'Asset Tracking', productionEquipment: 'Asset Tracking',
+  workOrderTracking: 'Work in Process', qualityExceptionTracking: 'Work in Process',
+  expeditedExceptionTracking: 'Work in Process', workingCapitalImprovement: 'Work in Process',
+  picklistVerification: 'Shipment Tracking', shipReceiveVerification: 'Shipment Tracking',
+  misShipReduction: 'Shipment Tracking', fasterFulfillment: 'Shipment Tracking',
+  proofOfDelivery: 'Shipment Tracking', automatedPackCount: 'Shipment Tracking',
+  outboundAudit: 'Shipment Tracking',
+  internalDelivery: 'Package Delivery',
+};
+
+const SOLUTION_ID_TO_NAME = {
+  inventory: 'Inventory Management',
+  asset:     'Asset Tracking',
+  wip:       'Work in Process',
+  shipment:  'Shipment Tracking',
+  delivery:  'Package Delivery',
+};
+
+export function groupUseCaseTotalsBySolution(useCases, ops, customCategories, fin = {}) {
+  const map = {};
+  SOLUTION_ORDER.forEach((name) => { map[name] = { name, subtotal: 0, lineItems: [], totalHoursSaved: 0 }; });
+
+  Object.entries(useCases).forEach(([key, uc]) => {
+    if (!uc?.enabled) return;
+    const base = getBaseUcKey(key);
+    const solId = key.indexOf('__') !== -1 ? key.slice(key.indexOf('__') + 2) : null;
+    const solName = (solId && SOLUTION_ID_TO_NAME[solId]) || BASE_KEY_TO_SOLUTION[base];
+    if (!solName) return;
+    const annualValue = calcUseCaseValue(key, uc, ops, fin);
+    const hoursSaved  = calcUseCaseHours(key, uc, ops);
+    map[solName].lineItems.push({ key, name: getUcDisplayName(key), annualValue, hoursSaved });
+    map[solName].subtotal       += annualValue;
+    map[solName].totalHoursSaved += hoursSaved;
+  });
+
+  const buckets = SOLUTION_ORDER.map((name) => map[name]);
+
+  if (customCategories && customCategories.length > 0) {
+    buckets.push({
+      name: 'Custom',
+      subtotal: calcCustomCategoryTotal(customCategories),
+      lineItems: customCategories.map((c) => ({
+        key: `custom_${c.id}`,
+        name: c.name || 'Custom Category',
+        annualValue: Number(c.annualSavings) || 0,
+      })),
+      totalHoursSaved: 0,
+    });
+  }
+
+  const totalGrossAnnual = buckets.reduce((sum, b) => sum + b.subtotal, 0);
+  return { totalGrossAnnual, buckets };
+}
+
 export function calcFinancials(ops, useCases, fin, customCategories) {
   const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops, customCategories, fin);
   const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
