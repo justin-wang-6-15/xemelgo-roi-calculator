@@ -503,7 +503,7 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
     ['Xemelgo Setup Cost',           fmt$(Number(fin.setupCapex) || 0)],
     ['Contingency Rate',             fmtPct(fin.contingencyRate)],
     ['Total CapEx with Contingency', fmt$(result.totalCapex)],
-    ['Monthly Platform Fee',         fmt$(Number(fin.monthlyPlatformFee) || 0)],
+    ['Annual Platform Fee',           fmt$(Number(fin.annualPlatformFee) || 0)],
     ['WACC',                         fmtPct(fin.wacc)],
   ];
   finRows.forEach(([label, val], i) => {

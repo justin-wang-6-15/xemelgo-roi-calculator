@@ -81,7 +81,7 @@ const defaultFin = {
   hardwareCapex: '',
   setupCapex: '',
   contingencyRate: 0.025,
-  monthlyPlatformFee: '',
+  annualPlatformFee: '',
   wacc: 0.085,
 };
 

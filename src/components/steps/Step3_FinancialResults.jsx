@@ -5,7 +5,7 @@ import Tooltip from '../Tooltip';
 
 function buildCumulativeData(fin, totalGrossAnnual) {
   const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
-  const monthlyFee = Number(fin.monthlyPlatformFee) || 0;
+  const monthlyFee = (Number(fin.annualPlatformFee) || 0) / 12;
   const totalCapex = rawCapex * (1 + fin.contingencyRate);
   const monthlyBase = totalGrossAnnual / 12;
   const ramp = [0, 0.25, 0.50, 0.75, 1.0];
@@ -122,7 +122,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
 
-  const inputsReady = fin.hardwareCapex !== '' && fin.setupCapex !== '' && fin.monthlyPlatformFee !== '';
+  const inputsReady = fin.hardwareCapex !== '' && fin.setupCapex !== '' && fin.annualPlatformFee !== '';
 
   const roiValue = inputsReady ? result.fiveYrRoi - 1 : null;
   const paybackValue = inputsReady ? result.paybackWeeks : null;
@@ -224,15 +224,15 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
               <p className="mt-1 text-xs text-gray-500">One-time implementation and onboarding fee. Confirm with your Xemelgo rep.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Xemelgo Monthly Platform Fee</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Xemelgo Annual Platform Fee</label>
               <div className="flex items-center">
                 <span className="text-gray-500 mr-1">$</span>
                 <input
                   type="number"
                   min={0}
-                  value={fin.monthlyPlatformFee}
-                  placeholder="Enter your monthly platform fee"
-                  onChange={(e) => set('monthlyPlatformFee')(e.target.value === '' ? '' : Number(e.target.value))}
+                  value={fin.annualPlatformFee}
+                  placeholder="Enter your annual platform fee"
+                  onChange={(e) => set('annualPlatformFee')(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

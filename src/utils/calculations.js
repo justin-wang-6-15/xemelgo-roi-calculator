@@ -259,13 +259,13 @@ export function calcFinancials(ops, useCases, fin, customCategories) {
   const { totalGrossAnnual, buckets } = calcUseCaseTotals(useCases, ops, customCategories, fin);
   const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
   const totalCapex = rawCapex * (1 + fin.contingencyRate);
-  const annualSaasFee = fin.monthlyPlatformFee * 12;
+  const annualSaasFee = Number(fin.annualPlatformFee) || 0;
   const netAnnualValue = totalGrossAnnual - annualSaasFee;
   const monthlyGross = totalGrossAnnual / 12;
   const saasRoi = annualSaasFee > 0 ? netAnnualValue / annualSaasFee : 0;
 
   const rampFactors = [0.25, 0.50, 0.75, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-  const monthlySaasFee = fin.monthlyPlatformFee;
+  const monthlySaasFee = annualSaasFee / 12;
   const cashFlows = [];
   cashFlows.push(-totalCapex);
   let year1Net = 0;
