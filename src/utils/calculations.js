@@ -1,5 +1,13 @@
 // src/utils/calculations.js
 
+// Ramp factor for month m (1-indexed). Months 1–3 ramp at 25/50/75%; full from month 4.
+export function getRampFactor(m) {
+  if (m === 1) return 0.25;
+  if (m === 2) return 0.50;
+  if (m === 3) return 0.75;
+  return 1.0;
+}
+
 // Strip the __solutionId suffix from composite keys like 'cycleCount__inventory'
 export function getBaseUcKey(key) {
   const idx = key.indexOf('__');
@@ -48,8 +56,6 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
       base = uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct; break;
     case 'calibrationReminders':
       base = uc.failuresPerYear * uc.costPerFailure * uc.reductionPct; break;
-    case 'geofencing':
-      base = uc.incidentsPerYear * uc.costPerIncident * uc.reductionPct; break;
     case 'fasterFulfillment':
       base = uc.currentCycleTime > 0
         ? ((uc.currentCycleTime - uc.targetCycleTime) / uc.currentCycleTime) * uc.ordersPerMonth * 12 * uc.revenuePerOrder * 0.10
@@ -330,13 +336,12 @@ export function calcFinancials(ops, useCases, fin, customCategories) {
   const monthlyGross = totalGrossAnnual / 12;
   const saasRoi = annualSaasFee > 0 ? netAnnualValue / annualSaasFee : 0;
 
-  const rampFactors = [0.25, 0.50, 0.75, 1, 1, 1, 1, 1, 1, 1, 1, 1];
   const monthlySaasFee = annualSaasFee / 12;
   const cashFlows = [];
   cashFlows.push(-totalCapex);
   let year1Net = 0;
   for (let m = 0; m < 12; m++) {
-    const cf = monthlyGross * rampFactors[m] - monthlySaasFee;
+    const cf = monthlyGross * getRampFactor(m + 1) - monthlySaasFee;
     cashFlows.push(cf);
     year1Net += cf;
   }

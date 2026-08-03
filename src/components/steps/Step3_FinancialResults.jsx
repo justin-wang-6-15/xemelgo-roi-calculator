@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { calcFinancials, groupUseCaseTotalsBySolution } from '../../utils/calculations';
+import { calcFinancials, groupUseCaseTotalsBySolution, getRampFactor } from '../../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../../utils/format';
 import Tooltip from '../Tooltip';
 
@@ -8,11 +8,10 @@ function buildCumulativeData(fin, totalGrossAnnual) {
   const monthlyFee = (Number(fin.annualPlatformFee) || 0) / 12;
   const totalCapex = rawCapex * (1 + fin.contingencyRate);
   const monthlyBase = totalGrossAnnual / 12;
-  const ramp = [0, 0.25, 0.50, 0.75, 1.0];
 
   const netPosition = [-totalCapex];
   for (let m = 1; m <= 60; m++) {
-    const mSavings = monthlyBase * (m <= 4 ? ramp[m] : 1.0);
+    const mSavings = monthlyBase * getRampFactor(m);
     netPosition.push(netPosition[m - 1] + mSavings - monthlyFee);
   }
 
@@ -199,6 +198,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                   value={fin.hardwareCapex}
                   placeholder="Enter your quoted hardware and installation cost"
                   onChange={(e) => set('hardwareCapex')(e.target.value === '' ? '' : Number(e.target.value))}
+                  onWheel={(e) => e.target.blur()}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -219,6 +219,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                   value={fin.setupCapex}
                   placeholder="Enter your quoted setup and onboarding cost"
                   onChange={(e) => set('setupCapex')(e.target.value === '' ? '' : Number(e.target.value))}
+                  onWheel={(e) => e.target.blur()}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -234,6 +235,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                   value={fin.annualPlatformFee}
                   placeholder="Enter your annual platform fee"
                   onChange={(e) => set('annualPlatformFee')(e.target.value === '' ? '' : Number(e.target.value))}
+                  onWheel={(e) => e.target.blur()}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -268,8 +270,8 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                       type="number"
                       min={0}
                       max={100}
-                      value={Math.round(fin.contingencyRate * 100)}
-                      onChange={(e) => set('contingencyRate')(Number(e.target.value) / 100)}
+                      value={parseFloat((fin.contingencyRate * 100).toFixed(1))}
+                      onChange={(e) => set('contingencyRate')(parseFloat(e.target.value) / 100)}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="mt-1 text-xs text-gray-500">Buffer for unexpected installation costs. Typical range is 0–5%. Applied to CapEx.</p>
@@ -291,8 +293,8 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                       type="number"
                       min={0}
                       max={100}
-                      value={Math.round(fin.wacc * 100)}
-                      onChange={(e) => set('wacc')(Number(e.target.value) / 100)}
+                      value={parseFloat((fin.wacc * 100).toFixed(1))}
+                      onChange={(e) => set('wacc')(parseFloat(e.target.value) / 100)}
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="mt-1 text-xs text-gray-500">Your weighted average cost of capital, used to discount future cash flows to present value.</p>

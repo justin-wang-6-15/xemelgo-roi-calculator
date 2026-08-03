@@ -49,6 +49,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           <select
             value={ops.industry}
             onChange={(e) => setOps((prev) => ({ ...prev, industry: e.target.value }))}
+            onWheel={(e) => e.target.blur()}
             className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white
               ${errors.industry ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
           >

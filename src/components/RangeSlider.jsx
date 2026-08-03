@@ -7,6 +7,7 @@ export default function RangeSlider({ min = 0, max = 100, value, onChange, class
       max={max}
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
+      onWheel={(e) => e.target.blur()}
       className={`slider-custom ${className}`}
       style={{
         background: `linear-gradient(to right, #2563eb ${pct}%, #e5e7eb ${pct}%)`,

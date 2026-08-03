@@ -32,7 +32,7 @@ const UC_LABELS = {
   cycleCount: 'Cycle counting', locateItems: 'Locate items', audit: 'Full inventory audit',
   expiredProducts: 'Expired products', goodsReceipt: 'Goods receipt', inventoryRequests: 'Inventory requests',
   returnsTransfers: 'Returns and transfers', shrinkage: 'Shrinkage and loss prevention',
-  calibrationReminders: 'Calibration reminders', geofencing: 'Geofencing',
+  calibrationReminders: 'Calibration reminders',
   productionEquipment: 'Production equipment tracking', rtiTracking: 'RTI tracking',
   workOrderTracking: 'Work order cycle time tracking', qualityExceptionTracking: 'Quality exception path tracking',
   expeditedExceptionTracking: 'Expedited exception path tracking', workingCapitalImprovement: 'Working capital improvement',
@@ -52,7 +52,6 @@ const UC_DESCRIPTIONS = {
   returnsTransfers: 'Track inventory moving between locations without manual logging.',
   shrinkage: 'Catch unexplained inventory loss as it happens.',
   calibrationReminders: 'Get notified before a calibrated asset falls out of compliance.',
-  geofencing: 'Alert your team when an asset leaves an authorized zone.',
   productionEquipment: 'Track jigs, fixtures, and tooling to prevent downtime.',
   rtiTracking: 'Track totes and containers to cut loss and replacement costs.',
   workOrderTracking: 'Free up supervisor and planner hours spent manually checking on stalled work orders.',
@@ -73,7 +72,7 @@ const UC_REDUCTION_DEFAULTS = {
   cycleCount: 98, audit: 90, locateItems: 90, workOrderTracking: 85, picklistVerification: 95,
   shipReceiveVerification: 95, internalDelivery: 90, goodsReceipt: 90, automatedPackCount: 90,
   outboundAudit: 90, returnsTransfers: 90, inventoryRequests: 90, expiredProducts: 95,
-  calibrationReminders: 95, geofencing: 90, shrinkage: 85, productionEquipment: 85, rtiTracking: 85,
+  calibrationReminders: 95, shrinkage: 85, productionEquipment: 85, rtiTracking: 85,
   proofOfDelivery: 90, misShipReduction: 95, dockTurnSpeed: 95, qualityExceptionTracking: 85,
   expeditedExceptionTracking: 90, workingCapitalImprovement: 15,
 };
@@ -89,7 +88,6 @@ const SOURCE_NOTES = {
   internalDelivery: `RFID eliminates manual confirmation steps. Customers report 75–90% time reduction. Default set to ${d.internalDelivery}%.`,
   expiredProducts: `Proactive alerts eliminate most write-offs. Customers report 80–95% reduction. Default set to ${d.expiredProducts}%.`,
   calibrationReminders: `Automated alerts prevent most missed events. Customers report 80–95% reduction. Default set to ${d.calibrationReminders}%.`,
-  geofencing: `Real-time zone alerts prevent most unauthorized movements. Customers report 75–90% reduction. Default set to ${d.geofencing}%.`,
   goodsReceipt: `RFID portal reads replace manual receiving checks. Customers report 75–90% time reduction. Default set to ${d.goodsReceipt}%.`,
   automatedPackCount: `RFID case reads replace manual scan-per-item counting. Customers report 75–90% time reduction. Default set to ${d.automatedPackCount}%.`,
   outboundAudit: `RFID portal reads certify shipments. Customers report 75–90% time reduction. Default set to ${d.outboundAudit}%.`,
@@ -147,7 +145,7 @@ function NumField({ label, value, onChange, prefix, suffix, tooltip }) {
       </label>
       <div className="flex items-center">
         {prefix && <span className="text-gray-400 mr-1 text-sm">{prefix}</span>}
-        <input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} className={inputCls} />
+        <input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} />
         {suffix && <span className="text-gray-400 ml-1.5 text-xs">{suffix}</span>}
       </div>
     </div>
@@ -163,6 +161,7 @@ function ReductionInput({ ucKey, uc, onUpdate }) {
           onChange={(val) => onUpdate('reductionPct', val / 100)} className="flex-1" />
         <input type="number" min={0} max={100} value={Math.round(uc.reductionPct * 100)}
           onChange={(e) => onUpdate('reductionPct', Number(e.target.value) / 100)}
+          onWheel={(e) => e.target.blur()}
           className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         <span className="text-sm text-gray-500">%</span>
       </div>
@@ -209,7 +208,7 @@ function CustomDriversSection({ drivers, onUpdate }) {
               <div className="flex items-center">
                 <span className="text-gray-400 mr-1 text-sm">$</span>
                 <input type="number" value={drv.annualValue} placeholder="0"
-                  onChange={(e) => updateDriver(drv.id, 'annualValue', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} />
+                  onChange={(e) => updateDriver(drv.id, 'annualValue', e.target.value === '' ? '' : Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} />
               </div>
             </div>
             <div className="sm:col-span-2">
@@ -256,7 +255,7 @@ function RoleTable({ rows, ops, onUpdate, labelHoursLost }) {
           <div className={grid2}>
             <div>
               <label className={labelCls}>Role</label>
-              <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} className={inputCls}>
+              <select value={row.role} onChange={(e) => changeRole(row.id, e.target.value)} onWheel={(e) => e.target.blur()} className={inputCls}>
                 <option value="materialHandler">Material Handlers</option>
                 <option value="planner">Planners</option>
                 <option value="indirect">Indirect / Leadership</option>
@@ -333,7 +332,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
           <label className={labelCls}>Production downtime cost per audit day <span className="text-gray-400 font-normal">(optional)</span></label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
             <input type="number" value={uc.downtimeCostPerDay} placeholder="e.g. 5000"
-              onChange={(e) => onUpdate('downtimeCostPerDay', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
+              onChange={(e) => onUpdate('downtimeCostPerDay', e.target.value === '' ? '' : Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected labor reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -442,7 +441,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
                     </Tooltip>
                   </label>
                   <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-                    <input type="number" value={uc.costPerError} onChange={(e) => onUpdate('costPerError', Number(e.target.value))} className={inputCls} /></div>
+                    <input type="number" value={uc.costPerError} onChange={(e) => onUpdate('costPerError', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
                 </div>
               </div>
               <JustificationField value={uc.driver1Justification} onChange={(v) => onUpdate('driver1Justification', v)}
@@ -502,7 +501,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include the cost of the expired product plus disposal fees, compliance costs, or production downtime."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -518,7 +517,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include equipment downtime, rework required, regulatory fine or audit penalty, and production delay."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerFailure} onChange={(e) => onUpdate('costPerFailure', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerFailure} onChange={(e) => onUpdate('costPerFailure', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -534,7 +533,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include labor to locate and return the asset, compliance penalty, and production delay."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -550,7 +549,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include: return freight, replacement shipment, customer credit or chargeback, and labor to process the return."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerMisShip} onChange={(e) => onUpdate('costPerMisShip', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerMisShip} onChange={(e) => onUpdate('costPerMisShip', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -637,7 +636,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="The replacement or book value of the lost or stolen inventory."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.materialValuePerIncident} onChange={(e) => onUpdate('materialValuePerIncident', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.materialValuePerIncident} onChange={(e) => onUpdate('materialValuePerIncident', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
         <NumField label="Investigation labor per incident (hrs)" value={uc.laborHoursPerIncident} onChange={(v) => onUpdate('laborHoursPerIncident', v)} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
@@ -645,13 +644,13 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
           <label className={labelCls}>Scrap or disposal cost per incident ($) <span className="text-gray-400 font-normal">(optional)</span></label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
             <input type="number" value={uc.scrapCostPerIncident} placeholder="e.g. 200"
-              onChange={(e) => onUpdate('scrapCostPerIncident', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
+              onChange={(e) => onUpdate('scrapCostPerIncident', e.target.value === '' ? '' : Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
         <div>
           <label className={labelCls}>Schedule / production impact per incident ($) <span className="text-gray-400 font-normal">(optional)</span></label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
             <input type="number" value={uc.scheduleImpactPerIncident} placeholder="e.g. 1000"
-              onChange={(e) => onUpdate('scheduleImpactPerIncident', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
+              onChange={(e) => onUpdate('scheduleImpactPerIncident', e.target.value === '' ? '' : Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -667,7 +666,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include production downtime cost, labor to locate the missing tool, and any expedite or rework costs."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -683,7 +682,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include the cost to replace the container plus any disruption to production flow."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -699,7 +698,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include the cost of replacement shipment, customer credit or chargeback, and labor to investigate."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerIncident} onChange={(e) => onUpdate('costPerIncident', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -715,7 +714,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
           <label className={labelCls}>Avg scrap cost per exception ($) <span className="text-gray-400 font-normal">(optional)</span></label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
             <input type="number" value={uc.scrapCostPerException} placeholder="e.g. 500"
-              onChange={(e) => onUpdate('scrapCostPerException', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls} /></div>
+              onChange={(e) => onUpdate('scrapCostPerException', e.target.value === '' ? '' : Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -731,7 +730,7 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
             <Tooltip content="Include expedited freight cost, customer penalty or chargeback, and labor to reroute or expedite."><span className="text-blue-400 cursor-help">ⓘ</span></Tooltip>
           </label>
           <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
-            <input type="number" value={uc.costPerLateShipment} onChange={(e) => onUpdate('costPerLateShipment', Number(e.target.value))} className={inputCls} /></div>
+            <input type="number" value={uc.costPerLateShipment} onChange={(e) => onUpdate('costPerLateShipment', Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
         </div>
       </div>
       <div><label className={labelCls}>Expected reduction with RFID</label><ReductionInput ucKey={baseKey} uc={uc} onUpdate={onUpdate} /></div>
@@ -848,12 +847,12 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                 <div>
                   <label className={labelCls}>Working Days / Week</label>
                   <input type="number" value={ops.workDaysPerWeek} min={1} max={7}
-                    onChange={(e) => setOps((p) => ({ ...p, workDaysPerWeek: Number(e.target.value) }))} className={inputCls} />
+                    onChange={(e) => setOps((p) => ({ ...p, workDaysPerWeek: Number(e.target.value) }))} onWheel={(e) => e.target.blur()} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Working Weeks / Year</label>
                   <input type="number" value={ops.workWeeksPerYear} min={1} max={52}
-                    onChange={(e) => setOps((p) => ({ ...p, workWeeksPerYear: Number(e.target.value) }))} className={inputCls} />
+                    onChange={(e) => setOps((p) => ({ ...p, workWeeksPerYear: Number(e.target.value) }))} onWheel={(e) => e.target.blur()} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Days / Year (calculated)</label>
@@ -987,7 +986,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                     <label className={labelCls}>Estimated annual savings ($)</label>
                     <div className="flex items-center"><span className="text-gray-400 mr-1 text-sm">$</span>
                       <input type="number" value={cat.annualSavings} placeholder="0"
-                        onChange={(e) => setCustomCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, annualSavings: e.target.value === '' ? '' : Number(e.target.value) } : c))} className={inputCls} /></div>
+                        onChange={(e) => setCustomCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, annualSavings: e.target.value === '' ? '' : Number(e.target.value) } : c))} onWheel={(e) => e.target.blur()} className={inputCls} /></div>
                   </div>
                 </div>
               </div>
