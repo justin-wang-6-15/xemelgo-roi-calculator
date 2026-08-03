@@ -182,6 +182,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
+  function handleReportStepClick(stepNum) {
+    if (!visitedSteps.has(stepNum)) return;
+    setDone(false);
+    setStep(stepNum);
+    setTransitionClass('step-enter');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
   // Step indicator click — navigate to a previously visited step without clearing data
   function handleStepClick(stepNum) {
     if (stepNum === step) return;
@@ -245,11 +253,11 @@ export default function App() {
       )}
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {!done && !analyzing && (
+        {!analyzing && (
           <ProgressIndicator
-            currentStep={step}
+            currentStep={done ? 4 : step}
             visitedSteps={visitedSteps}
-            onStepClick={handleStepClick}
+            onStepClick={done ? handleReportStepClick : handleStepClick}
           />
         )}
 

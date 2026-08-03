@@ -83,26 +83,26 @@ export default function Step4_EmailGate({ ops, useCases, fin, onSubmit, onBack }
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-              <input required type="text" value={form.firstName} onChange={set('firstName')}
+              <input type="text" value={form.firstName} onChange={set('firstName')}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <input required type="text" value={form.lastName} onChange={set('lastName')}
+              <input type="text" value={form.lastName} onChange={set('lastName')}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-            <input required type="text" value={form.company} onChange={set('company')}
+            <input type="text" value={form.company} onChange={set('company')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Work Email</label>
-            <input required type="email" value={form.email} onChange={set('email')}
+            <input type="email" value={form.email} onChange={set('email')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
-          <p className="text-xs text-gray-400">We respect your privacy. No spam, ever.</p>
+          <p className="text-xs text-gray-400">All fields optional — internal use only.</p>
           <div className="flex justify-between pt-2">
             <button type="button" onClick={onBack} className="bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-2.5 rounded-lg border border-gray-300 transition-colors">
               ← Back

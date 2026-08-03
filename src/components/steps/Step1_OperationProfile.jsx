@@ -6,7 +6,6 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
   function validate() {
     const e = {};
     if (!ops.companyName.trim()) e.companyName = 'Company name is required.';
-    if (!ops.industry) e.industry = 'Please select your industry.';
     return e;
   }
 
@@ -45,7 +44,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Industry / Vertical</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Industry / Vertical <span className="text-gray-400 font-normal">(optional)</span></label>
           <select
             value={ops.industry}
             onChange={(e) => setOps((prev) => ({ ...prev, industry: e.target.value }))}
