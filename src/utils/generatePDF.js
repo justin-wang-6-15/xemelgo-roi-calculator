@@ -433,14 +433,11 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   sectionHead('TEAM HEADCOUNT & RATES', RX, y + 12, RX + RW);
   y += 18;
 
-  const unitsLbl  = UNITS_LABEL[ops.industry] ?? UNITS_LABEL[''];
-  const shiftsLbl = ops.industry === 'retail' ? 'Operating hours / day' : 'Shifts per day';
   const facRows = [
-    ['Industry',             ops.industry ? ops.industry.charAt(0).toUpperCase() + ops.industry.slice(1) : '—'],
-    [unitsLbl,               (ops.unitsPerMonth || 0).toLocaleString()],
-    ['Working days / week',  ops.workDaysPerWeek],
-    ['Working weeks / year', ops.workWeeksPerYear],
-    [shiftsLbl,              ops.shiftsPerDay],
+    ['Units Produced Per Month', (ops.unitsPerMonth || 0).toLocaleString()],
+    ['Working days / week',      ops.workDaysPerWeek],
+    ['Working weeks / year',     ops.workWeeksPerYear],
+    ['Shifts per day',           ops.shiftsPerDay],
   ];
 
   let ly = y;

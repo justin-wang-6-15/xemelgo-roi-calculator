@@ -71,14 +71,18 @@ export default function ThankYou({ ops, useCases, fin, customCategories, contact
               <td className="py-1.5 pr-2">Total Gross Annual</td>
               <td className="text-right">{fmt$(result.totalGrossAnnual)}</td>
             </tr>
-            <tr>
-              <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
-              <td className="text-right text-red-600">({fmt$(result.annualSaasFee)})</td>
-            </tr>
-            <tr className="border-t-2 border-gray-400 font-bold">
-              <td className="py-2 pr-2">Net Annual Value</td>
-              <td className="text-right text-blue-700 text-base">{fmt$(result.netAnnualValue)}</td>
-            </tr>
+            {result.annualSaasFee > 0 && (
+              <tr>
+                <td className="py-1.5 pr-2 text-gray-600">Annual Platform Cost</td>
+                <td className="text-right text-red-600">({fmt$(result.annualSaasFee)})</td>
+              </tr>
+            )}
+            {result.annualSaasFee > 0 && (
+              <tr className="border-t-2 border-gray-400 font-bold">
+                <td className="py-2 pr-2">Net Annual Value</td>
+                <td className="text-right text-blue-700 text-base">{fmt$(result.netAnnualValue)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

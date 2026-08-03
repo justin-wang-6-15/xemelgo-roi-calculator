@@ -122,7 +122,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
 
-  const inputsReady = fin.hardwareCapex !== '' && fin.setupCapex !== '' && fin.annualPlatformFee !== '';
+  const inputsReady = fin.hardwareCapex !== 0 || fin.setupCapex !== 0 || fin.annualPlatformFee !== 0;
 
   const roiValue = inputsReady ? result.fiveYrRoi - 1 : null;
   const paybackValue = inputsReady ? result.paybackWeeks : null;
@@ -280,7 +280,7 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Total CapEx with Contingency</label>
                     <div className="bg-gray-50 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700">
-                      {(fin.hardwareCapex !== '' || fin.setupCapex !== '') ? fmt$(result.totalCapex) : '—'}
+                      {(fin.hardwareCapex !== 0 || fin.setupCapex !== 0) ? fmt$(result.totalCapex) : '—'}
                     </div>
                   </div>
                   <div>
