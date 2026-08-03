@@ -118,7 +118,7 @@ function SecondaryMetricCard({ label, value, caption, colorClass, badge }) {
 
 export default function Step3_FinancialResults({ ops, useCases, fin, setFin, customCategories, onNext, onBack }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [savingsView, setSavingsView] = useState('category');
+  const [savingsView, setSavingsView] = useState('solution');
   const set = (key) => (val) => setFin((prev) => ({ ...prev, [key]: val }));
   const result = calcFinancials(ops, useCases, fin, customCategories);
 
@@ -145,13 +145,19 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Your ROI at a glance</h2>
+      {ops.projectTitle && <p className="text-sm text-gray-400 mb-1">{ops.projectTitle}</p>}
       <p className="text-sm text-gray-500 mb-6">Based on your inputs, here's what Xemelgo is worth to your facility.</p>
 
-      {/* Hero: Net Annual Value */}
+      {/* Hero */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-600 rounded-2xl shadow-lg px-6 py-8 mb-5 text-white">
-        <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">Net Annual Value</p>
-        {inputsReady ? (
+        {fin.hardwareCapex === 0 && fin.setupCapex === 0 && fin.annualPlatformFee === 0 ? (
           <>
+            <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">Total Estimated Annual Savings</p>
+            <p className="text-5xl font-bold mb-3">{fmt$(result.totalGrossAnnual)}</p>
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">Net Annual Value</p>
             <p className="text-5xl font-bold mb-3">{fmt$(result.netAnnualValue)}</p>
             <p className="text-sm text-blue-100 leading-relaxed">
               At these inputs,{' '}
@@ -162,11 +168,6 @@ export default function Step3_FinancialResults({ ops, useCases, fin, setFin, cus
               <strong className="text-white">{fmt$(result.npv)}</strong>{' '}
               in net value over 5 years.
             </p>
-          </>
-        ) : (
-          <>
-            <p className="text-5xl font-bold mb-3 text-blue-300">—</p>
-            <p className="text-sm text-blue-200">Enter CapEx and platform fee below to unlock your results.</p>
           </>
         )}
       </div>

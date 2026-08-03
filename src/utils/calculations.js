@@ -219,10 +219,11 @@ const COMPOSITE_LABEL_OVERRIDES = {
 };
 
 // Return the display name for a UC key (composite or plain)
-export function getUcDisplayName(key) {
+export function getUcDisplayName(key, skipSuffix = false) {
   if (COMPOSITE_LABEL_OVERRIDES[key]) return COMPOSITE_LABEL_OVERRIDES[key];
   const base = getBaseUcKey(key);
   const baseLabel = BUCKET_CONFIG[BASE_KEY_TO_BUCKET[base]]?.labels[base] ?? base;
+  if (skipSuffix) return baseLabel;
   const solId = key.indexOf('__') !== -1 ? key.slice(key.indexOf('__') + 2) : null;
   return solId && SOLUTION_NAMES[solId] ? `${baseLabel} (${SOLUTION_NAMES[solId]})` : baseLabel;
 }
@@ -303,7 +304,7 @@ export function groupUseCaseTotalsBySolution(useCases, ops, customCategories, fi
     if (!solName) return;
     const annualValue = calcUseCaseValue(key, uc, ops, fin);
     const hoursSaved  = calcUseCaseHours(key, uc, ops);
-    map[solName].lineItems.push({ key, name: getUcDisplayName(key), annualValue, hoursSaved });
+    map[solName].lineItems.push({ key, name: getUcDisplayName(key, true), annualValue, hoursSaved });
     map[solName].subtotal       += annualValue;
     map[solName].totalHoursSaved += hoursSaved;
   });

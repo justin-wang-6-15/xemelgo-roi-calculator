@@ -211,8 +211,15 @@ function buildDoc(doc, fontName, logo, ops, useCases, fin, result, contactInfo, 
   doc.text('ROI Analysis Report', W - 24, 26, { align: 'right' });
   fn('normal', 9); sc(...LBLUE);
   doc.text(ctxComp, W - 24, 40, { align: 'right' });
-  fn('normal', 8); sc(...GRAY99);
-  doc.text(dateDisplay, W - 24, 52, { align: 'right' });
+  if (ops.projectTitle?.trim()) {
+    fn('normal', 8); sc(...WHITE);
+    doc.text(ops.projectTitle.trim(), W - 24, 52, { align: 'right' });
+    fn('normal', 8); sc(...GRAY99);
+    doc.text(dateDisplay, W - 24, 64, { align: 'right' });
+  } else {
+    fn('normal', 8); sc(...GRAY99);
+    doc.text(dateDisplay, W - 24, 52, { align: 'right' });
+  }
 
   // Horizontal rule at y=82
   sd(...BLUE); lw(0.5);

@@ -6,6 +6,7 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
   function validate() {
     const e = {};
     if (!ops.companyName.trim()) e.companyName = 'Company name is required.';
+    if (!ops.projectTitle?.trim()) e.projectTitle = 'Project title is required.';
     return e;
   }
 
@@ -43,37 +44,17 @@ export default function Step1_OperationProfile({ ops, setOps, onNext }) {
           {errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>}
         </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Industry / Vertical <span className="text-gray-400 font-normal">(optional)</span></label>
-          <select
-            value={ops.industry}
-            onChange={(e) => setOps((prev) => ({ ...prev, industry: e.target.value }))}
-            onWheel={(e) => e.target.blur()}
-            className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent bg-white
-              ${errors.industry ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
-          >
-            <option value="">Select your industry</option>
-            <option value="manufacturing">Manufacturing</option>
-            <option value="retail">Retail</option>
-            <option value="supplychain">Supply Chain / Distribution</option>
-            <option value="healthcare">Healthcare / Life Sciences</option>
-            <option value="other">Other</option>
-          </select>
-          {errors.industry && <p className="mt-1 text-xs text-red-600">{errors.industry}</p>}
-        </div>
-
         <div className="mb-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Project Title / Description <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <textarea
-            value={ops.projectDescription || ''}
-            onChange={(e) => setOps((prev) => ({ ...prev, projectDescription: e.target.value }))}
-            placeholder="e.g. Reduce inventory search time and improve cycle count accuracy across our DC."
-            rows={3}
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          <label className="block text-sm font-medium text-gray-700 mb-1">Project Title</label>
+          <input
+            type="text"
+            value={ops.projectTitle || ''}
+            onChange={(e) => setOps((prev) => ({ ...prev, projectTitle: e.target.value }))}
+            placeholder="e.g. Inventory Visibility — DC2 Buildout"
+            className={`block w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent
+              ${errors.projectTitle ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-500'}`}
           />
-          <p className="mt-1 text-xs text-gray-400">This helps us recommend the right use cases and appears on your exported report.</p>
+          {errors.projectTitle && <p className="mt-1 text-xs text-red-600">{errors.projectTitle}</p>}
         </div>
       </div>
 
