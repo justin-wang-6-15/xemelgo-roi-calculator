@@ -904,22 +904,63 @@ function UseCaseCard({ ucKey, label, uc, ops, setOps, setUseCases, fin, reviewed
       {expanded && (
         <div className="px-5 pb-5 pt-1 space-y-4 border-t border-gray-100">
           <UseCaseInputs ucKey={ucKey} uc={uc} ops={ops} setOps={setOps} onUpdate={onUpdate} fin={fin} />
-          <div>
-            <label className={labelCls}>
-              Justification <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              value={uc.justification || ''}
-              onChange={(e) => onUpdate('justification', e.target.value.slice(0, 150))}
-              maxLength={150}
-              rows={2}
-              placeholder="Based on 3 FTEs doing weekly cycle counts across 2 warehouses."
-              className={`${inputCls} resize-none`}
-            />
-            <div className="text-right text-xs text-gray-400 mt-1">
-              {(uc.justification || '').length} / 150
+          {['locateItems', 'workOrderTracking', 'picklistVerification'].includes(ucKey) ? (
+            <>
+              {uc.driver1Enabled !== false && (
+                <div>
+                  <label className={labelCls}>
+                    Driver 1 Justification <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={uc.driver1Justification || ''}
+                    onChange={(e) => onUpdate('driver1Justification', e.target.value.slice(0, 150))}
+                    maxLength={150}
+                    rows={2}
+                    placeholder="Based on floor observations and time-motion studies."
+                    className={`${inputCls} resize-none`}
+                  />
+                  <div className="text-right text-xs text-gray-400 mt-1">
+                    {(uc.driver1Justification || '').length} / 150
+                  </div>
+                </div>
+              )}
+              {uc.driver2Enabled !== false && (
+                <div>
+                  <label className={labelCls}>
+                    Driver 2 Justification <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={uc.driver2Justification || ''}
+                    onChange={(e) => onUpdate('driver2Justification', e.target.value.slice(0, 150))}
+                    maxLength={150}
+                    rows={2}
+                    placeholder="Based on supervisor time-tracking logs."
+                    className={`${inputCls} resize-none`}
+                  />
+                  <div className="text-right text-xs text-gray-400 mt-1">
+                    {(uc.driver2Justification || '').length} / 150
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <label className={labelCls}>
+                Justification <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={uc.justification || ''}
+                onChange={(e) => onUpdate('justification', e.target.value.slice(0, 150))}
+                maxLength={150}
+                rows={2}
+                placeholder="Based on 3 FTEs doing weekly cycle counts across 2 warehouses."
+                className={`${inputCls} resize-none`}
+              />
+              <div className="text-right text-xs text-gray-400 mt-1">
+                {(uc.justification || '').length} / 150
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -54,14 +54,17 @@ export default function ThankYou({ ops, useCases, fin, customCategories, contact
             {groupUseCaseTotalsBySolution(useCases, ops, customCategories, fin).buckets.map((bucket) =>
               bucket.lineItems.length > 0 ? (
                 <React.Fragment key={bucket.name}>
+                  <tr className="bg-blue-50 border-t border-blue-100">
+                    <td colSpan={2} className="py-1.5 px-2 text-xs font-semibold text-blue-800 uppercase tracking-wide">{bucket.name}</td>
+                  </tr>
                   {bucket.lineItems.map((li) => (
                     <tr key={li.key}>
-                      <td className="py-1.5 pr-2 text-gray-700 pl-2">{li.name}</td>
+                      <td className="py-1.5 pr-2 text-gray-700 pl-4">{li.name}</td>
                       <td className="text-right text-gray-700">{fmt$(li.annualValue)}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-50">
-                    <td className="py-1 pr-2 pl-2 text-xs font-medium text-gray-500">{bucket.name} subtotal</td>
+                    <td className="py-1 pr-2 pl-4 text-xs font-medium text-gray-500">{bucket.name} subtotal</td>
                     <td className="text-right text-xs font-medium text-gray-500 pr-1">{fmt$(bucket.subtotal)}</td>
                   </tr>
                 </React.Fragment>
