@@ -1,4 +1,5 @@
 import { Workbook } from 'exceljs';
+import { UC_NAMES } from './useCaseNames';
 
 const NAVY   = 'FF1F3A6E';
 const BLUE   = 'FF3B6FD4';
@@ -64,33 +65,7 @@ function fv(ws, addr, formula, result, fillArgb, fontOpts, alignment, numFmt) {
 
 const LABOR_BUCKET_KEYS = ['cycleCount','audit','locateItems','workOrderTracking','picklistVerification','shipReceiveVerification','internalDelivery','goodsReceipt','automatedPackCount','outboundAudit','returnsTransfers','inventoryRequests'];
 
-const UC_NAMES = {
-  cycleCount:              'Cycle Counting',
-  audit:                   'Full Inventory Audit',
-  locateItems:             'Locate Items',
-  workOrderTracking:       'Work Order Cycle Time Tracking',
-  picklistVerification:    'Picklist Verification',
-  shipReceiveVerification: 'Ship & Receive Verification',
-  internalDelivery:        'Internal Delivery Verification',
-  expiredProducts:         'Expired Products',
-  calibrationReminders:    'Calibration Reminders',
-  geofencing:              'Geofencing',
-  goodsReceipt:            'Goods Receipt',
-  automatedPackCount:      'Automated Pack Count',
-  outboundAudit:           'Outbound Shipment Audit',
-  returnsTransfers:        'Returns and Transfers',
-  inventoryRequests:       'Inventory Requests',
-  shrinkage:               'Shrinkage and Loss Prevention',
-  productionEquipment:     'Production Equipment Tracking',
-  rtiTracking:             'Totes and Containers Tracking',
-  proofOfDelivery:         'Proof of Delivery',
-  qualityExceptionTracking:    'Quality Exception Path Tracking',
-  expeditedExceptionTracking:  'Expedited Exception Path Tracking',
-  workingCapitalImprovement:   'Working Capital Improvement',
-  fasterFulfillment:       'Faster Order Fulfillment',
-  misShipReduction:        'Mis-Ship Reduction',
-  dockTurnSpeed:           'Receiving and Shipping Throughput',
-};
+// UC_NAMES imported from ./useCaseNames
 
 const UNITS_LABEL = {
   '':            'Units Produced Per Month',

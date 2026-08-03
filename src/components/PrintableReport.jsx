@@ -2,6 +2,7 @@ import React from 'react';
 import xemelgoLogo from '../assets/xemelgo-logo.png';
 import { groupUseCaseTotalsBySolution, getRampFactor } from '../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../utils/format';
+import { UC_NAMES } from '../utils/useCaseNames';
 
 function buildCumulativeData(fin, totalGrossAnnual) {
   const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
@@ -88,6 +89,124 @@ function MilestoneOutlook({ fin, totalGrossAnnual }) {
           ? `Break-even at week ${breakEvenWeeks} — net position turns positive and grows from there.`
           : 'Net position over 5 years.'}
       </p>
+    </div>
+  );
+}
+
+const SKIP_KEYS = new Set(['key', 'enabled', 'customDrivers', 'roleRows', 'justification',
+  'driver1Justification', 'driver2Justification', 'reviewed', 'id']);
+
+function toLabel(key) {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
+}
+
+function formatVal(v) {
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (v === '' || v === null || v === undefined) return '—';
+  return String(v);
+}
+
+const fieldPair = { display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f3f4f6', fontSize: 12 };
+const labelStyle = { color: '#6b7280', marginRight: 8 };
+const valueStyle = { color: '#111827', fontWeight: 500, textAlign: 'right' };
+
+function FieldList({ obj }) {
+  const pairs = Object.entries(obj).filter(([k]) => !SKIP_KEYS.has(k));
+  if (!pairs.length) return null;
+  return (
+    <div>
+      {pairs.map(([k, v]) => (
+        <div key={k} style={fieldPair}>
+          <span style={labelStyle}>{toLabel(k)}</span>
+          <span style={valueStyle}>{formatVal(v)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UcCard({ ucKey, uc, s }) {
+  const displayName = UC_NAMES[ucKey.split('__')[0]] || ucKey;
+  const roleRows = uc.roleRows || [];
+  const customDrivers = uc.customDrivers || [];
+  const justification = uc.justification || uc.driver1Justification || '';
+  return (
+    <div style={{ marginBottom: 16, border: '1px solid #e5e7eb', borderRadius: 8, padding: 14 }}>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#1f2937', marginBottom: 10 }}>{displayName}</p>
+      <FieldList obj={Object.fromEntries(Object.entries(uc).filter(([k]) => !SKIP_KEYS.has(k)))} />
+      {roleRows.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role Breakdown</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                {['Role', 'Headcount', 'Hrs Lost/Day', 'Burdened Rate'].map((h) => (
+                  <th key={h} style={{ textAlign: 'left', padding: '3px 6px', color: '#6b7280', fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {roleRows.map((row, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '3px 6px', color: '#374151' }}>{row.customRoleName || row.role}</td>
+                  <td style={{ padding: '3px 6px', color: '#374151' }}>{row.headcount}</td>
+                  <td style={{ padding: '3px 6px', color: '#374151' }}>{row.hoursLostPerDay}</td>
+                  <td style={{ padding: '3px 6px', color: '#374151' }}>${row.burdenedRate}/hr</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {customDrivers.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Drivers</p>
+          {customDrivers.map((d, i) => (
+            <div key={i} style={{ fontSize: 12, color: '#374151', padding: '2px 0' }}>
+              • {d.label || d.name || JSON.stringify(d)}
+              {d.value !== undefined && <span style={{ color: '#6b7280' }}> — {d.value}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {justification && (
+        <div style={{ marginTop: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Justification</p>
+          <p style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{justification}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReportInputs({ ops, useCases, fin, s }) {
+  const activeUcEntries = Object.entries(useCases).filter(([, uc]) => uc.enabled !== false);
+  return (
+    <div style={s.panel}>
+      <p style={s.panelTitle}>Report Inputs</p>
+
+      {/* Operation Profile */}
+      <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8, marginTop: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operation Profile</p>
+      <FieldList obj={ops} />
+
+      {/* Use Case Assumptions */}
+      {activeUcEntries.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Use Case Assumptions</p>
+          {activeUcEntries.map(([k, uc]) => (
+            <UcCard key={k} ucKey={k} uc={uc} s={s} />
+          ))}
+        </div>
+      )}
+
+      {/* Financial Assumptions */}
+      <div style={{ marginTop: 20 }}>
+        <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Financial Assumptions</p>
+        <FieldList obj={fin} />
+      </div>
     </div>
   );
 }
@@ -227,6 +346,9 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
         <p style={s.panelTitle}>5-Year Cumulative Outlook</p>
         <MilestoneOutlook fin={fin} totalGrossAnnual={result.totalGrossAnnual} />
       </div>
+
+      {/* Report Inputs */}
+      <ReportInputs ops={ops} useCases={useCases} fin={fin} s={s} />
 
       {/* Disclaimer */}
       <p style={s.disclaimer}>

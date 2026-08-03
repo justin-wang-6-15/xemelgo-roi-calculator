@@ -32,13 +32,16 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     });
 
     // Letter dimensions in pt
-    const PDF_W_PT = 612;
-    const PDF_H_PT = 792;
+    const PDF_W_PT   = 612;
+    const PDF_H_PT   = 792;
+    const MARGIN_PT  = 36; // half-inch margin on all sides
+    const USABLE_W_PT = PDF_W_PT - 2 * MARGIN_PT;
+    const USABLE_H_PT = PDF_H_PT - 2 * MARGIN_PT;
 
-    // How many canvas pixels correspond to one PDF point
-    const pxPerPt = canvas.width / PDF_W_PT;
-    // Canvas pixels per full PDF page height
-    const pageHeightPx = PDF_H_PT * pxPerPt;
+    // How many canvas pixels correspond to one usable PDF point
+    const pxPerPt = canvas.width / USABLE_W_PT;
+    // Canvas pixels per full usable page height
+    const pageHeightPx = USABLE_H_PT * pxPerPt;
     const totalPages = Math.ceil(canvas.height / pageHeightPx);
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
@@ -57,7 +60,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
       const imgData = tmp.toDataURL('image/jpeg', 0.85);
 
       if (page > 0) doc.addPage();
-      doc.addImage(imgData, 'JPEG', 0, 0, PDF_W_PT, pageHPt);
+      doc.addImage(imgData, 'JPEG', MARGIN_PT, MARGIN_PT, USABLE_W_PT, pageHPt);
     }
 
     doc.save(fname);
