@@ -17,7 +17,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   try {
     await new Promise((resolve) => {
       root.render(
-        React.createElement(PrintableReport, { ops, useCases, fin, result, customCategories })
+        React.createElement(PrintableReport, { ops, useCases, fin, result, customCategories, contactInfo })
       );
       requestAnimationFrame(() => requestAnimationFrame(resolve));
     });
@@ -43,6 +43,8 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
 
     // Empirical scale: canvas pixels per CSS pixel
     const scaleFactor = canvas.width / contentEl.offsetWidth;
+    const measuredContentHeightPx = Math.ceil(contentEl.offsetHeight * scaleFactor);
+    const effectiveCanvasHeight = Math.min(canvas.height, measuredContentHeightPx);
     const pxPerPt     = canvas.width / USABLE_W_PT;
     const pageHeightPx = USABLE_H_PT * pxPerPt;
 
@@ -58,7 +60,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     function computeBreaks(canvasHeight, pageHPx, blks) {
       const breaks = [0];
       let cursor = 0;
-      while (cursor < canvasHeight) {
+      while (canvasHeight - cursor > 4) {
         let candidate = Math.min(cursor + pageHPx, canvasHeight);
         for (const b of blks) {
           if (b.top > cursor && b.top < candidate && b.bottom > candidate) {
@@ -72,7 +74,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
       return breaks;
     }
 
-    const breaks     = computeBreaks(canvas.height, pageHeightPx, blocks);
+    const breaks     = computeBreaks(effectiveCanvasHeight, pageHeightPx, blocks);
     const totalPages = breaks.length - 1;
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });

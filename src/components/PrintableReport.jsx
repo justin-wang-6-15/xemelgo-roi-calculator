@@ -160,10 +160,16 @@ function UcCard({ ucKey, uc, color }) {
   );
 }
 
-export default function PrintableReport({ ops, useCases, fin, result, customCategories }) {
+export default function PrintableReport({ ops, useCases, fin, result, customCategories, contactInfo = {} }) {
   const hasInvestment = fin.hardwareCapex !== 0 || fin.setupCapex !== 0 || fin.annualPlatformFee !== 0;
   const { buckets } = groupUseCaseTotalsBySolution(useCases, ops, customCategories, fin);
   const preparedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const firstName = (contactInfo.firstName || '').trim();
+  const lastName  = (contactInfo.lastName  || '').trim();
+  const fullName  = [firstName, lastName].filter(Boolean).join(' ');
+  const email     = (contactInfo.email || '').trim();
+  const showContactBlock = Boolean(fullName) || Boolean(email);
   const activeCount = Object.values(useCases).filter(uc => uc?.enabled).length;
 
   const roiValue = hasInvestment ? result.fiveYrRoi - 1 : null;
@@ -209,6 +215,19 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
           <p style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{ops.companyName || 'Your Facility'}</p>
           <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>ROI Analysis Report</p>
           {ops.projectTitle && <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{ops.projectTitle}</p>}
+          {showContactBlock && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f0f0f0' }}>
+              <p style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', marginBottom: 2 }}>
+                Prepared for
+              </p>
+              {fullName && (
+                <p style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{fullName}</p>
+              )}
+              {email && (
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{email}</p>
+              )}
+            </div>
+          )}
           <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Prepared {preparedDate}</p>
         </div>
       </div>
@@ -299,24 +318,34 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
         <FieldGrid3Col obj={ops} />
 
         {/* Use Case Assumptions grouped by solution */}
-        {[...SOLUTION_ORDER, 'Custom'].map((solName) => {
-          const color = getSolutionColor(solName);
-          const ucEntries = activeUcEntries.filter(([k]) => getSolutionForUcKey(k) === (solName === 'Custom' ? null : solName));
-          if (ucEntries.length === 0) return null;
-          return (
-            <React.Fragment key={solName}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, marginBottom: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: color.border }} />
-                <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#374151' }}>{solName}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                {ucEntries.map(([k, uc]) => (
-                  <UcCard key={k} ucKey={k} uc={uc} color={color} />
-                ))}
-              </div>
-            </React.Fragment>
-          );
-        })}
+        {(() => {
+          const knownSolutions = [...SOLUTION_ORDER, 'Custom'];
+          const activeByKey = activeUcEntries;
+          const unresolvedEntries = activeByKey.filter(([key]) => !knownSolutions.includes(getSolutionForUcKey(key)));
+          const groups = [
+            ...[...SOLUTION_ORDER, 'Custom'].map((solName) => ({
+              solName,
+              entries: activeByKey.filter(([k]) => getSolutionForUcKey(k) === (solName === 'Custom' ? null : solName)),
+            })),
+            ...(unresolvedEntries.length > 0 ? [{ solName: 'Other', entries: unresolvedEntries }] : []),
+          ];
+          return groups.filter((g) => g.entries.length > 0).map(({ solName, entries }) => {
+            const color = getSolutionColor(solName);
+            return (
+              <React.Fragment key={solName}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, marginBottom: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: color.border }} />
+                  <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#374151' }}>{solName}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {entries.map(([k, uc]) => (
+                    <UcCard key={k} ucKey={k} uc={uc} color={color} />
+                  ))}
+                </div>
+              </React.Fragment>
+            );
+          });
+        })()}
 
         {/* Financial Assumptions */}
         <p style={{ fontSize: 14, fontWeight: 700, color: '#0F2A4A', marginTop: 22 }}>Financial assumptions</p>
