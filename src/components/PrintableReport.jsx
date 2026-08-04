@@ -235,9 +235,11 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
       {/* Hero */}
       <div data-keep-together="true" style={s.heroBox}>
         <p style={s.heroLabel}>{hasInvestment ? 'Net Annual Value' : 'Total Estimated Annual Savings'}</p>
-        <p style={{ display: 'inline-block', marginTop: 10, fontSize: 11, background: 'rgba(255,255,255,0.16)', padding: '4px 10px', borderRadius: 100, color: '#eaf1ff' }}>
-          Validated estimate · {activeCount} use case{activeCount === 1 ? '' : 's'} active
-        </p>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ display: 'inline-block', fontSize: 11, background: 'rgba(255,255,255,0.16)', padding: '4px 10px', borderRadius: 100, color: '#eaf1ff' }}>
+            Validated estimate · {activeCount} use case{activeCount === 1 ? '' : 's'} active
+          </p>
+        </div>
         <p style={s.heroValue}>{hasInvestment ? fmt$(result.netAnnualValue) : fmt$(result.totalGrossAnnual)}</p>
         {hasInvestment && (
           <p style={s.heroSub}>
@@ -266,8 +268,9 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
           const color = getSolutionColor(bucket.name);
           return (
             <div key={bucket.name} data-keep-together="true" style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7eb', marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderLeft: `4px solid ${color.border}`, background: color.tint }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, padding: '8px 14px', borderLeft: `4px solid ${color.border}`, background: color.tint }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: color.text }}>{bucket.name}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: color.text }}>·</span>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: color.text }}>{fmt$(bucket.subtotal)}</span>
               </div>
               {bucket.lineItems.map((li) => (
@@ -312,10 +315,6 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
           <p style={{ fontSize: 20, fontWeight: 700, color: '#0F2A4A', marginTop: 4 }}>Appendix A — detailed assumptions</p>
           <p style={{ fontSize: 11.5, color: '#6b7280', marginTop: 4 }}>Every input used to calculate the figures on the preceding pages.</p>
         </div>
-
-        {/* Operation Profile */}
-        <p style={{ fontSize: 14, fontWeight: 700, color: '#0F2A4A', marginTop: 20 }}>Operation profile</p>
-        <FieldGrid3Col obj={ops} />
 
         {/* Use Case Assumptions grouped by solution */}
         {(() => {
