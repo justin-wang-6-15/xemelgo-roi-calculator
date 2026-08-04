@@ -25,7 +25,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     });
 
     const canvas = await html2canvas(container.firstElementChild, {
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -57,10 +57,20 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
       tmp.height   = srcH;
       tmp.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
 
-      const imgData = tmp.toDataURL('image/jpeg', 0.85);
+      const imgData = tmp.toDataURL('image/jpeg', 0.75);
 
       if (page > 0) doc.addPage();
       doc.addImage(imgData, 'JPEG', MARGIN_PT, MARGIN_PT, USABLE_W_PT, pageHPt);
+
+      doc.setDrawColor(230, 230, 230);
+      doc.line(MARGIN_PT, PDF_H_PT - 28, PDF_W_PT - MARGIN_PT, PDF_H_PT - 28);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Prepared for ${company}`, MARGIN_PT, PDF_H_PT - 16);
+      doc.text(`Page ${page + 1} of ${totalPages}`, PDF_W_PT / 2, PDF_H_PT - 16, { align: 'center' });
+      doc.text('Xemelgo confidential', PDF_W_PT - MARGIN_PT, PDF_H_PT - 16, { align: 'right' });
     }
 
     doc.save(fname);

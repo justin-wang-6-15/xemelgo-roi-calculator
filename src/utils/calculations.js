@@ -262,7 +262,7 @@ export function calcUseCaseTotals(useCases, ops, customCategories, fin = {}) {
   return { totalGrossAnnual, buckets };
 }
 
-const SOLUTION_ORDER = [
+export const SOLUTION_ORDER = [
   'Inventory Management',
   'Asset Tracking',
   'Work in Process',
@@ -292,15 +292,19 @@ const SOLUTION_ID_TO_NAME = {
   delivery:  'Package Delivery',
 };
 
+export function getSolutionForUcKey(key) {
+  const base = getBaseUcKey(key);
+  const solId = key.indexOf('__') !== -1 ? key.slice(key.indexOf('__') + 2) : null;
+  return (solId && SOLUTION_ID_TO_NAME[solId]) || BASE_KEY_TO_SOLUTION[base] || null;
+}
+
 export function groupUseCaseTotalsBySolution(useCases, ops, customCategories, fin = {}) {
   const map = {};
   SOLUTION_ORDER.forEach((name) => { map[name] = { name, subtotal: 0, lineItems: [], totalHoursSaved: 0 }; });
 
   Object.entries(useCases).forEach(([key, uc]) => {
     if (!uc?.enabled) return;
-    const base = getBaseUcKey(key);
-    const solId = key.indexOf('__') !== -1 ? key.slice(key.indexOf('__') + 2) : null;
-    const solName = (solId && SOLUTION_ID_TO_NAME[solId]) || BASE_KEY_TO_SOLUTION[base];
+    const solName = getSolutionForUcKey(key);
     if (!solName) return;
     const annualValue = calcUseCaseValue(key, uc, ops, fin);
     const hoursSaved  = calcUseCaseHours(key, uc, ops);
