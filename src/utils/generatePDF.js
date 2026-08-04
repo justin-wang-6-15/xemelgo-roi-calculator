@@ -15,49 +15,79 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
   const root = createRoot(container);
 
   try {
-    // Render off-screen
     await new Promise((resolve) => {
       root.render(
         React.createElement(PrintableReport, { ops, useCases, fin, result, customCategories })
       );
-      // Two RAF passes: first lets React commit, second lets the browser lay out and paint
       requestAnimationFrame(() => requestAnimationFrame(resolve));
     });
 
-    const canvas = await html2canvas(container.firstElementChild, {
-      scale: 1.5,
+    // Measure keep-together blocks while the container is still in the DOM
+    const contentEl = container.firstElementChild;
+    const containerRect = contentEl.getBoundingClientRect();
+    const keepTogetherEls = Array.from(contentEl.querySelectorAll('[data-keep-together]'));
+
+    const canvas = await html2canvas(contentEl, {
+      scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
     });
 
     // Letter dimensions in pt
-    const PDF_W_PT   = 612;
-    const PDF_H_PT   = 792;
-    const MARGIN_PT  = 36; // half-inch margin on all sides
+    const PDF_W_PT    = 612;
+    const PDF_H_PT    = 792;
+    const MARGIN_PT   = 36;
     const USABLE_W_PT = PDF_W_PT - 2 * MARGIN_PT;
     const USABLE_H_PT = PDF_H_PT - 2 * MARGIN_PT;
 
-    // How many canvas pixels correspond to one usable PDF point
-    const pxPerPt = canvas.width / USABLE_W_PT;
-    // Canvas pixels per full usable page height
+    // Empirical scale: canvas pixels per CSS pixel
+    const scaleFactor = canvas.width / contentEl.offsetWidth;
+    const pxPerPt     = canvas.width / USABLE_W_PT;
     const pageHeightPx = USABLE_H_PT * pxPerPt;
-    const totalPages = Math.ceil(canvas.height / pageHeightPx);
+
+    // Map each keep-together element to canvas-pixel coordinates
+    const blocks = keepTogetherEls.map((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        top:    (r.top    - containerRect.top) * scaleFactor,
+        bottom: (r.bottom - containerRect.top) * scaleFactor,
+      };
+    });
+
+    function computeBreaks(canvasHeight, pageHPx, blks) {
+      const breaks = [0];
+      let cursor = 0;
+      while (cursor < canvasHeight) {
+        let candidate = Math.min(cursor + pageHPx, canvasHeight);
+        for (const b of blks) {
+          if (b.top > cursor && b.top < candidate && b.bottom > candidate) {
+            candidate = b.top;
+          }
+        }
+        if (candidate <= cursor) candidate = Math.min(cursor + pageHPx, canvasHeight);
+        breaks.push(candidate);
+        cursor = candidate;
+      }
+      return breaks;
+    }
+
+    const breaks     = computeBreaks(canvas.height, pageHeightPx, blocks);
+    const totalPages = breaks.length - 1;
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
 
     for (let page = 0; page < totalPages; page++) {
-      const srcY    = Math.round(page * pageHeightPx);
-      const srcH    = Math.min(Math.round(pageHeightPx), canvas.height - srcY);
+      const srcY    = Math.round(breaks[page]);
+      const srcH    = Math.round(breaks[page + 1] - breaks[page]);
       const pageHPt = srcH / pxPerPt;
 
-      // Slice this page's strip into a temp canvas
       const tmp    = document.createElement('canvas');
       tmp.width    = canvas.width;
       tmp.height   = srcH;
       tmp.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
 
-      const imgData = tmp.toDataURL('image/jpeg', 0.75);
+      const imgData = tmp.toDataURL('image/jpeg', 0.8);
 
       if (page > 0) doc.addPage();
       doc.addImage(imgData, 'JPEG', MARGIN_PT, MARGIN_PT, USABLE_W_PT, pageHPt);

@@ -132,7 +132,7 @@ function UcCard({ ucKey, uc, color }) {
   const rawFields = Object.entries(uc).filter(([k]) => !SKIP_KEYS.has(k));
 
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 14px', borderTop: `3px solid ${color.border}` }}>
+    <div data-keep-together="true" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 14px', borderTop: `3px solid ${color.border}` }}>
       <p style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 6 }}>{displayName}</p>
       {rawFields.map(([k, v]) => (
         <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
@@ -203,7 +203,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
   return (
     <div style={s.root}>
       {/* Header */}
-      <div style={s.header}>
+      <div data-keep-together="true" style={s.header}>
         <img src={xemelgoLogo} alt="Xemelgo" style={{ height: 32, width: 'auto' }} />
         <div style={s.companyBlock}>
           <p style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{ops.companyName || 'Your Facility'}</p>
@@ -214,7 +214,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
       </div>
 
       {/* Hero */}
-      <div style={s.heroBox}>
+      <div data-keep-together="true" style={s.heroBox}>
         <p style={s.heroLabel}>{hasInvestment ? 'Net Annual Value' : 'Total Estimated Annual Savings'}</p>
         <p style={{ display: 'inline-block', marginTop: 10, fontSize: 11, background: 'rgba(255,255,255,0.16)', padding: '4px 10px', borderRadius: 100, color: '#eaf1ff' }}>
           Validated estimate · {activeCount} use case{activeCount === 1 ? '' : 's'} active
@@ -230,7 +230,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
       </div>
 
       {/* Metric cards */}
-      <div style={s.metricsGrid}>
+      <div data-keep-together="true" style={s.metricsGrid}>
         {metrics.map((m) => (
           <div key={m.label} style={s.metricCard(m.border)}>
             <p style={s.metricLabel}>{m.label}</p>
@@ -246,7 +246,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
         {buckets.filter((b) => b.lineItems.length > 0).map((bucket) => {
           const color = getSolutionColor(bucket.name);
           return (
-            <div key={bucket.name} style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7eb', marginBottom: 10 }}>
+            <div key={bucket.name} data-keep-together="true" style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7eb', marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderLeft: `4px solid ${color.border}`, background: color.tint }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: color.text }}>{bucket.name}</span>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: color.text }}>{fmt$(bucket.subtotal)}</span>
@@ -260,7 +260,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
             </div>
           );
         })}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+        <div data-keep-together="true" style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 12.5, padding: '8px 14px' }}>
             <span>Total Gross Annual</span>
             <span>{fmt$(result.totalGrossAnnual)}</span>
