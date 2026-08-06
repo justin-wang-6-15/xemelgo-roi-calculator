@@ -124,27 +124,160 @@ function FieldGrid3Col({ obj }) {
   );
 }
 
+const FIELD_MANIFEST = {
+  cycleCount: { fields: [
+    ['hoursPerSession', 'Hours per count session'],
+    ['sessionsPerWeek', 'Count sessions per week'],
+    ['peoplePerSession', 'People counting simultaneously per session'],
+    ['burdenedRate', 'Burdened rate'],
+    ['reductionPct', 'Efficiency improvement'],
+  ]},
+  locateItems: { drivers: [
+    { enabledKey: 'driver1Enabled', label: 'Driver 1 — Floor Worker Search Time', roleRows: true,
+      fields: [['reductionPct', 'Efficiency improvement']] },
+    { enabledKey: 'driver2Enabled', label: 'Driver 2 — Supervisory Visibility Time',
+      fields: [
+        ['supervisorHoursPerWeek', 'Supervisor hours spent locating per week'],
+        ['supervisorHeadcount', 'Number of supervisors'],
+        ['supervisorBurdenedRate', 'Supervisor burdened rate'],
+        ['reductionPct', 'Efficiency improvement'],
+      ] },
+  ]},
+  workOrderTracking: { drivers: [
+    { enabledKey: 'driver1Enabled', label: 'Driver 1 — Time Spent Manually Tracking', roleRows: true,
+      fields: [['reductionPct', 'Efficiency improvement']] },
+    { enabledKey: 'driver2Enabled', label: 'Driver 2 — Supervisory Visibility Time',
+      fields: [
+        ['supervisorHoursPerWeek', 'Supervisor hours spent locating per week'],
+        ['supervisorHeadcount', 'Number of supervisors'],
+        ['supervisorBurdenedRate', 'Supervisor burdened rate'],
+        ['reductionPct', 'Efficiency improvement'],
+      ] },
+  ]},
+  picklistVerification: { drivers: [
+    { enabledKey: 'driver1Enabled', label: 'Driver 1 — Pick Error Reduction',
+      fields: [
+        ['picksPerDay', 'Picks per day'],
+        ['errorRate', 'Error rate (%)'],
+        ['costPerError', 'Cost per error'],
+        ['reductionPct', 'Error reduction'],
+      ] },
+    { enabledKey: 'driver2Enabled', label: 'Driver 2 — Time Saved Per Pick',
+      fields: [
+        ['picksPerDay', 'Picks per day'],
+        ['minutesSavedPerPick', 'Minutes saved per pick'],
+        ['burdenedRate', 'Burdened rate'],
+      ] },
+  ]},
+  shrinkage: { fields: [
+    ['incidentsPerYear', 'Unexplained loss incidents per year'],
+    ['materialValuePerIncident', 'Material / inventory value per incident'],
+    ['laborHoursPerIncident', 'Investigation labor per incident (hrs)'],
+    ['burdenedRate', 'Burdened rate'],
+    ['scrapCostPerIncident', 'Scrap cost per incident'],
+    ['scheduleImpactPerIncident', 'Schedule impact per incident'],
+    ['reductionPct', 'Incident reduction'],
+  ]},
+  shipReceiveVerification: { fields: [
+    ['minutesSavedPerTransaction', 'Minutes saved per dock transaction'],
+    ['transactionsPerDay', 'Dock transactions per day'],
+    ['burdenedRate', 'Burdened rate'],
+    ['reductionPct', 'Time reduction'],
+  ]},
+  misShipReduction: { fields: [
+    ['misShipsPerMonth', 'Mis-ships per month'],
+    ['costPerMisShip', 'Cost per mis-ship'],
+    ['reductionPct', 'Reduction rate'],
+  ]},
+  proofOfDelivery: { fields: [
+    ['incidentsPerYear', 'Disputed delivery claims per year'],
+    ['costPerIncident', 'Cost per claim'],
+    ['reductionPct', 'Claim reduction'],
+  ]},
+};
+
+const ROLE_LABELS = {
+  materialHandler: 'Material Handler',
+  planner: 'Planner',
+  indirect: 'Indirect / Leadership',
+  direct: 'Direct Employee',
+};
+
+const FIN_LABELS = {
+  hardwareCapex: 'Hardware & Installation',
+  setupCapex: 'Xemelgo Setup Cost',
+  contingencyRate: 'Contingency Rate',
+  annualPlatformFee: 'Annual Platform Fee',
+  wacc: 'WACC',
+};
+
+function renderField([k, label], uc) {
+  const v = uc[k];
+  if (v === '' || v === null || v === undefined) return null;
+  return (
+    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
+      <span>{label}</span>
+      <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
+    </div>
+  );
+}
+
 function UcCard({ ucKey, uc, color }) {
-  const displayName = UC_NAMES[ucKey.split('__')[0]] || ucKey;
-  const roleRows = uc.roleRows || [];
+  const baseKey = ucKey.split('__')[0];
+  const displayName = UC_NAMES[baseKey] || ucKey;
   const customDrivers = uc.customDrivers || [];
   const justification = uc.justification || uc.driver1Justification || '';
-  const rawFields = Object.entries(uc).filter(([k]) => !SKIP_KEYS.has(k));
+  const manifest = FIELD_MANIFEST[baseKey];
+
+  const driverSubheaderStyle = {
+    fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+    letterSpacing: '0.04em', color: '#9ca3af', margin: '8px 0 3px',
+  };
+
+  let body;
+  if (!manifest) {
+    // Fallback: existing raw dump for unmapped use cases
+    const roleRows = uc.roleRows || [];
+    const rawFields = Object.entries(uc).filter(([k]) => !SKIP_KEYS.has(k));
+    body = (
+      <>
+        {rawFields.map(([k, v]) => (
+          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
+            <span>{toLabel(k)}</span>
+            <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
+          </div>
+        ))}
+        {roleRows.length > 0 && roleRows.map((row, i) => (
+          <div key={i} style={{ fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
+            Role: {row.customRoleName || row.role} · {row.headcount} · {row.hoursLostPerDay} hrs/day · ${row.burdenedRate}/hr
+          </div>
+        ))}
+      </>
+    );
+  } else if (manifest.fields) {
+    body = manifest.fields.map((pair) => renderField(pair, uc)).filter(Boolean);
+  } else {
+    // driver-grouped
+    body = manifest.drivers.filter((d) => uc[d.enabledKey]).map((d) => {
+      const roleRows = d.roleRows ? (uc.roleRows || []) : [];
+      return (
+        <React.Fragment key={d.enabledKey}>
+          <p style={driverSubheaderStyle}>{d.label}</p>
+          {roleRows.map((row, i) => (
+            <div key={i} style={{ fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
+              {ROLE_LABELS[row.role] || row.customRoleName || row.role} — {row.headcount} HC · {row.hoursLostPerDay} hrs/day · ${row.burdenedRate}/hr
+            </div>
+          ))}
+          {d.fields.map((pair) => renderField(pair, uc)).filter(Boolean)}
+        </React.Fragment>
+      );
+    });
+  }
 
   return (
     <div data-keep-together="true" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 14px', borderTop: `3px solid ${color.border}` }}>
       <p style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 6 }}>{displayName}</p>
-      {rawFields.map(([k, v]) => (
-        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-          <span>{toLabel(k)}</span>
-          <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
-        </div>
-      ))}
-      {roleRows.length > 0 && roleRows.map((row, i) => (
-        <div key={i} style={{ fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-          Role: {row.customRoleName || row.role} · {row.headcount} · {row.hoursLostPerDay} hrs/day · ${row.burdenedRate}/hr
-        </div>
-      ))}
+      {body}
       {customDrivers.length > 0 && customDrivers.map((d, i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
           <span>{d.label || d.name || 'Custom Driver'}</span>
@@ -351,7 +484,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
         <div style={{ marginTop: 8, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
           {Object.entries(fin).filter(([k]) => !SKIP_KEYS.has(k)).map(([k, v], i) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', fontSize: 11.5, ...(i > 0 ? { borderTop: '1px solid #f3f4f6' } : {}) }}>
-              <span style={{ color: '#6b7280' }}>{toLabel(k)}</span>
+              <span style={{ color: '#6b7280' }}>{FIN_LABELS[k] || toLabel(k)}</span>
               <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
             </div>
           ))}
