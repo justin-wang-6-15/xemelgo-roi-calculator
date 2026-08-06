@@ -7,6 +7,8 @@ import Step3_FinancialResults from './components/steps/Step3_FinancialResults';
 import Step4_EmailGate from './components/steps/Step4_EmailGate';
 import ThankYou from './components/ThankYou';
 import LivePreviewBar from './components/LivePreviewBar';
+import UseCaseNav from './components/UseCaseNav';
+import { SOLUTIONS } from './components/steps/Step2_UseCases';
 
 const defaultOps = {
   companyName: '',
@@ -198,6 +200,7 @@ export default function App() {
   }
 
   const showGrid = !done && !analyzing && step === 2;
+  const anySolutionSelected = SOLUTIONS.some((sol) => sol.defaults.some((key) => useCases[key]?.enabled));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -249,7 +252,10 @@ export default function App() {
           />
         )}
 
-        <div className={showGrid ? 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start' : ''}>
+        <div className={showGrid ? (anySolutionSelected ? 'lg:grid lg:grid-cols-[200px_1fr_220px] lg:gap-6 lg:items-start' : 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start') : ''}>
+          {!done && !analyzing && step === 2 && anySolutionSelected && (
+            <UseCaseNav useCases={useCases} collapsedUCs={collapsedUCs} setCollapsedUCs={setCollapsedUCs} />
+          )}
           <div className={transitionClass}>
             {analyzing ? (
               <AnalyzingScreen />

@@ -12,7 +12,7 @@ const grid2 = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
 const sourceNote = (text) => <p className="text-xs text-gray-400 italic mt-1">{text}</p>;
 
 // ─── Solutions / use-case metadata ───────────────────────────────────────
-const SOLUTIONS = [
+export const SOLUTIONS = [
   { id: 'inventory', name: 'Inventory management', description: 'Cycle counting, locate items, full audits, and expiry tracking.',
     defaults: ['cycleCount__inventory', 'locateItems__inventory', 'audit', 'shrinkage'],
     extras:   ['expiredProducts', 'goodsReceipt', 'inventoryRequests', 'returnsTransfers'] },
@@ -29,7 +29,7 @@ const SOLUTIONS = [
     defaults: ['internalDelivery'], extras: [], status: 'comingSoon' },
 ];
 
-const UC_LABELS = {
+export const UC_LABELS = {
   cycleCount: 'Cycle counting', locateItems: 'Locate items', audit: 'Full inventory audit',
   expiredProducts: 'Expired products', goodsReceipt: 'Goods receipt', inventoryRequests: 'Inventory requests',
   returnsTransfers: 'Returns and transfers', shrinkage: 'Shrinkage and loss prevention',
@@ -105,7 +105,7 @@ const SOURCE_NOTES = {
   workingCapitalImprovement: `Facilities with real-time WIP visibility typically report 10–30% reductions in WIP inventory. Default set to ${d.workingCapitalImprovement}%.`,
 };
 
-const UC_LABEL_OVERRIDES = {
+export const UC_LABEL_OVERRIDES = {
   'shrinkage__asset': 'Shrinkage and Loss Prevention',
 };
 const UC_DESCRIPTION_OVERRIDES = {
@@ -889,7 +889,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
 
                       const isCollapsed = collapsedUCs.has(key);
                       return (
-                        <div key={key} className={`rounded-lg border transition-colors ${reviewed && enabled ? 'border-green-300 bg-green-50' : enabled ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200 bg-white'}`}>
+                        <div key={key} id={`uc-anchor-${key}`} className={`rounded-lg border transition-colors ${reviewed && enabled ? 'border-green-300 bg-green-50' : enabled ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200 bg-white'}`}>
                           {/* Toggle row */}
                           <div className="flex items-center gap-3 px-4 py-3">
                             <div className="cursor-pointer" onClick={() => toggleUseCase(key)}>
