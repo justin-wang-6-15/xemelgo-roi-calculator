@@ -9,11 +9,14 @@ function getLabel(key) {
 export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) {
   const [activeKey, setActiveKey] = useState(null);
   const observerRef = useRef(null);
+  const rafRef = useRef(null);
 
   const selectedSolutions = SOLUTIONS.filter((sol) =>
     sol.defaults.some((key) => useCases[key]?.enabled)
   );
 
+  // Stable string dependency — only changes when use cases are enabled/disabled,
+  // not on every keypress inside an input field.
   const enabledKeysSorted = selectedSolutions
     .flatMap((sol) => [...sol.defaults, ...sol.extras])
     .filter((key) => useCases[key]?.enabled)
@@ -21,40 +24,54 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
     .join(',');
 
   useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
+    // Clean up any pending RAF from a previous run
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (observerRef.current) observerRef.current.disconnect();
 
     const keys = enabledKeysSorted ? enabledKeysSorted.split(',') : [];
     if (keys.length === 0) return;
 
-    const entries = new Map();
+    const visibleEntries = new Map();
 
     const observer = new IntersectionObserver(
       (observed) => {
         observed.forEach((entry) => {
-          entries.set(entry.target.id, entry);
+          visibleEntries.set(entry.target.id, entry);
         });
+        // Pick the entry closest to the top of the viewport that is intersecting
         let best = null;
-        let bestRatio = -1;
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
-            bestRatio = entry.intersectionRatio;
-            best = entry.target.id.replace('uc-anchor-', '');
+        let bestTop = Infinity;
+        visibleEntries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const top = entry.boundingClientRect.top;
+            if (top >= 0 && top < bestTop) {
+              bestTop = top;
+              best = entry.target.id.replace('uc-anchor-', '');
+            }
           }
         });
         if (best) setActiveKey(best);
       },
-      { threshold: [0, 0.1, 0.25, 0.5, 1.0], rootMargin: '-10% 0px -60% 0px' }
+      // Watch the upper 60% of the viewport — generous enough to always
+      // have at least one card intersecting as the user scrolls
+      { threshold: [0, 0.05, 0.1, 0.5], rootMargin: '0px 0px -40% 0px' }
     );
 
-    keys.forEach((key) => {
-      const el = document.getElementById(`uc-anchor-${key}`);
-      if (el) observer.observe(el);
+    // Defer one frame so the card DOM elements are fully painted before
+    // we try to observe them (the nav mounts before the card list renders)
+    rafRef.current = requestAnimationFrame(() => {
+      keys.forEach((key) => {
+        const el = document.getElementById(`uc-anchor-${key}`);
+        if (el) observer.observe(el);
+      });
+      rafRef.current = null;
     });
 
     observerRef.current = observer;
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabledKeysSorted]);
 
@@ -65,6 +82,10 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
         next.delete(key);
         return next;
       });
+      // Two rAFs: first lets React commit the state update (card expands),
+      // second lets the browser paint the new height before scrolling —
+      // without this the scroll lands short because the card's full height
+      // doesn't exist in the layout yet.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           document.getElementById(`uc-anchor-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -75,10 +96,12 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
     }
   }
 
+  if (selectedSolutions.length === 0) return null;
+
   return (
     <div className="hidden lg:block sticky top-8 max-h-[calc(100vh-4rem)]">
       <div className="overflow-y-auto max-h-[calc(100vh-4rem)] pr-1">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Use Cases</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Jump to</p>
         <div className="space-y-4">
           {selectedSolutions.map((sol) => {
             const visibleKeys = [...sol.defaults, ...sol.extras].filter(
