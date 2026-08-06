@@ -1,6 +1,6 @@
 import { Workbook } from 'exceljs';
 import { UC_NAMES } from './useCaseNames';
-import { toAnnualFrequency, formatFrequency } from './calculations';
+import { toAnnualFrequency, formatFrequency, getBaseUcKey } from './calculations';
 
 const NAVY   = 'FF1F3A6E';
 const BLUE   = 'FF3B6FD4';
@@ -244,13 +244,16 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
 
     for (const key of enabledUcKeys) {
       const uc = useCases[key];
+      const baseKey = getBaseUcKey(key);
       if (!ucCells[key]) ucCells[key] = {};
 
       ws.getRow(r).height = 18; ws.mergeCells(`B${r}:H${r}`);
-      c(ws, `B${r}`, UC_NAMES[key] || key, BGBLUE, font({ bold: true, size: 11, color: { argb: NAVY } }), align('left'));
+      c(ws, `B${r}`, UC_NAMES[baseKey] || UC_NAMES[key] || key, BGBLUE, font({ bold: true, size: 11, color: { argb: NAVY } }), align('left'));
       r++;
 
-      switch (key) {
+      if (!ucCells[baseKey]) ucCells[baseKey] = ucCells[key];
+
+      switch (baseKey) {
         case 'cycleCount':
           if ((uc.mode || 'reductionPct') === 'employeeDelta') {
             writeField(key, 'Employees before', uc.employeesBefore, 'employeesBefore', '0');
@@ -440,10 +443,12 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
   const dpyF = `(${osCells.workDaysPerWeek}*${osCells.workWeeksPerYear})`;
 
   function ucFormula(key) {
-    const cc = ucCells[key] || {};
-    switch (key) {
+    const baseKey = getBaseUcKey(key);
+    const cc = ucCells[key] || ucCells[baseKey] || {};
+    const ucData = useCases[key] || useCases[baseKey] || {};
+    switch (baseKey) {
       case 'cycleCount': {
-        if ((useCases[key].mode || 'reductionPct') === 'employeeDelta') {
+        if ((ucData.mode || 'reductionPct') === 'employeeDelta') {
           return `=(${cc.employeesBefore}*${cc.hoursPerCountBefore}-${cc.employeesAfter}*${cc.hoursPerCountAfter})*${cc.countsPerYear}*${cc.burdenedRate}`;
         }
         const cycleUnit = cc.cycleFrequencyUnit || 'week';
@@ -463,16 +468,16 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
         const rrs = cc.roleRows || [];
         const d1 = rrs.length ? rrs.map(rr => `${rr.hld}*${rr.hc}*${dpyF}*${rr.br}*${cc.reductionPct}`).join('+') : '0';
         const d2 = `${cc.supervisorHoursPerWeek}*${cc.supervisorHeadcount}*50*${cc.supervisorBurdenedRate}*${cc.reductionPct}`;
-        const ucMode = useCases[key].driverMode || 'and';
-        const ucActive = useCases[key].activeDriver || 1;
+        const ucMode = ucData.driverMode || 'and';
+        const ucActive = ucData.activeDriver || 1;
         if (ucMode === 'or') return `=${ucActive === 1 ? d1 : d2}`;
         return `=${d1}+${d2}`;
       }
       case 'picklistVerification': {
         const d1 = `${cc.picksPerDay}*(${cc.errorRate}/100)*${cc.costPerError}*${dpyF}*${cc.reductionPct}`;
         const d2 = `(${cc.minutesSavedPerPick}/60)*${cc.picksPerDay}*${dpyF}*${cc.burdenedRate}*${cc.reductionPct}`;
-        const ucMode = useCases[key].driverMode || 'and';
-        const ucActive = useCases[key].activeDriver || 1;
+        const ucMode = ucData.driverMode || 'and';
+        const ucActive = ucData.activeDriver || 1;
         if (ucMode === 'or') return `=${ucActive === 1 ? d1 : d2}`;
         return `=${d1}+${d2}`;
       }
@@ -526,40 +531,46 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
   r++;
 
   const laborAnnCells = [];
-  LABOR_BUCKET_KEYS.forEach(key => {
-    if (!useCases[key]?.enabled) return;
-    const uc = useCases[key];
-    const h = getLaborHours(key, uc, ops);
-    if (!h) return;
-    const liResult = result.buckets.find(b => b.name === 'Labor Efficiency')?.lineItems.find(l => l.key === key);
-    const annValCached = liResult?.annualValue ?? 0;
-    const justification = uc.justification?.trim();
-    ws.getRow(r).height = justification ? 32 : 18;
-    const bg = key === 'picklistVerification' ? LGRAY : WHITE;
-    if (justification) {
-      const cell = ws.getCell(`B${r}`);
-      cell.value = { richText: [
-        { font: { name: 'Calibri', size: 11, bold: true, color: { argb: NAVY } }, text: UC_NAMES[key] + '\n' },
-        { font: { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF666666' } }, text: justification },
-      ] };
-      cell.fill = fill(bg);
-      cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
-    } else {
-      c(ws, `B${r}`, UC_NAMES[key], bg, font({ size: 11, color: { argb: NAVY } }), align('left'));
-    }
-    c(ws, `C${r}`, h.timeSavedPerDay, YELLOW, font({ size: 11, color: { argb: NAVY } }), align('right'), '0.00');
-    c(ws, `D${r}`, h.peopleAffected,  YELLOW, font({ size: 11, color: { argb: NAVY } }), align('right'), '0');
-    c(ws, `E${r}`, h.weeklyHrs,  DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '0.0');
-    c(ws, `F${r}`, h.annualHrs,  DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '0.0');
-    c(ws, `G${r}`, h.weeklyHrs * h.rate > 0 ? h.weeklyHrs * h.rate : 0, DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '$#,##0');
-    if (enabledUcKeys.includes(key)) {
-      fv(ws, `H${r}`, ucFormula(key), annValCached, DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '$#,##0');
-    } else {
-      c(ws, `H${r}`, annValCached, DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '$#,##0');
-    }
-    ['B','C','D','E','F','G','H'].forEach(col => ws.getCell(`${col}${r}`).border = thinBorder);
-    laborAnnCells.push(`$H$${r}`);
-    r++;
+  LABOR_BUCKET_KEYS.forEach(baseKey => {
+    const matchingKeys = enabledUcKeys.filter(k => getBaseUcKey(k) === baseKey && useCases[k]?.enabled);
+    if (matchingKeys.length === 0 && !useCases[baseKey]?.enabled) return;
+    const resolvedKeys = matchingKeys.length > 0 ? matchingKeys : [baseKey];
+    resolvedKeys.forEach(key => {
+      const uc = useCases[key];
+      if (!uc?.enabled) return;
+      const h = getLaborHours(baseKey, uc, ops);
+      if (!h) return;
+      const liResult = result.buckets.find(b => b.name === 'Labor Efficiency')?.lineItems.find(l => l.key === key);
+      const annValCached = liResult?.annualValue ?? 0;
+      const justification = uc.justification?.trim();
+      ws.getRow(r).height = justification ? 32 : 18;
+      const bg = baseKey === 'picklistVerification' ? LGRAY : WHITE;
+      const displayName = UC_NAMES[key] || UC_NAMES[baseKey] || key;
+      if (justification) {
+        const cell = ws.getCell(`B${r}`);
+        cell.value = { richText: [
+          { font: { name: 'Calibri', size: 11, bold: true, color: { argb: NAVY } }, text: displayName + '\n' },
+          { font: { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF666666' } }, text: justification },
+        ] };
+        cell.fill = fill(bg);
+        cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+      } else {
+        c(ws, `B${r}`, displayName, bg, font({ size: 11, color: { argb: NAVY } }), align('left'));
+      }
+      c(ws, `C${r}`, h.timeSavedPerDay, YELLOW, font({ size: 11, color: { argb: NAVY } }), align('right'), '0.00');
+      c(ws, `D${r}`, h.peopleAffected,  YELLOW, font({ size: 11, color: { argb: NAVY } }), align('right'), '0');
+      c(ws, `E${r}`, h.weeklyHrs,  DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '0.0');
+      c(ws, `F${r}`, h.annualHrs,  DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '0.0');
+      c(ws, `G${r}`, h.weeklyHrs * h.rate > 0 ? h.weeklyHrs * h.rate : 0, DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '$#,##0');
+      if (enabledUcKeys.includes(key)) {
+        fv(ws, `H${r}`, ucFormula(key), annValCached, DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '$#,##0');
+      } else {
+        c(ws, `H${r}`, annValCached, DGRAY, font({ size: 11, color: { argb: NAVY } }), align('right'), '$#,##0');
+      }
+      ['B','C','D','E','F','G','H'].forEach(col => ws.getCell(`${col}${r}`).border = thinBorder);
+      laborAnnCells.push(`$H$${r}`);
+      r++;
+    });
   });
 
   const laborTotal = result.buckets.find(b => b.name === 'Labor Efficiency')?.subtotal ?? 0;
@@ -1017,10 +1028,13 @@ function buildROISummary(ws, ops, useCases, fin, result, contactInfo, dateISO, s
 
   // Labor summary (JS-computed — summary table, not formula-driven)
   let laborWeeklyHrs = 0, laborAnnualHrs = 0, laborWeeklyVal = 0;
-  LABOR_BUCKET_KEYS.forEach(key => {
-    if (!useCases[key]?.enabled) return;
-    const h = getLaborHours(key, useCases[key], ops);
-    if (h) { laborWeeklyHrs += h.weeklyHrs; laborAnnualHrs += h.annualHrs; laborWeeklyVal += h.weeklyHrs * h.rate; }
+  LABOR_BUCKET_KEYS.forEach(baseKey => {
+    const matchingKeys = enabledUcKeys.filter(k => getBaseUcKey(k) === baseKey && useCases[k]?.enabled);
+    const resolvedKeys = matchingKeys.length > 0 ? matchingKeys : (useCases[baseKey]?.enabled ? [baseKey] : []);
+    resolvedKeys.forEach(key => {
+      const h = getLaborHours(getBaseUcKey(key), useCases[key], ops);
+      if (h) { laborWeeklyHrs += h.weeklyHrs; laborAnnualHrs += h.annualHrs; laborWeeklyVal += h.weeklyHrs * h.rate; }
+    });
   });
   const laborBucket    = result.buckets.find(b => b.name === 'Labor Efficiency');
   const laborAnnualVal = laborBucket?.subtotal ?? 0;
