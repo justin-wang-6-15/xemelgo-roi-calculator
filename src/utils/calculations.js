@@ -1,5 +1,20 @@
 // src/utils/calculations.js
 
+export function toAnnualFrequency(value, unit, ops) {
+  const mult = unit === 'week' ? ops.workWeeksPerYear
+    : unit === 'month' ? 12
+    : unit === 'quarter' ? 4
+    : 1;
+  return (Number(value) || 0) * mult;
+}
+
+export function formatFrequency(value, unit) {
+  const n = Number(value) || 0;
+  const label = unit === 'week' ? 'week' : unit === 'month' ? 'month'
+    : unit === 'quarter' ? 'quarter' : 'year';
+  return `${n}x per ${label}`;
+}
+
 // Ramp factor for month m (1-indexed). Months 1–3 ramp at 25/50/75%; full from month 4.
 export function getRampFactor(m) {
   if (m === 1) return 0.25;
@@ -23,14 +38,15 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
         base = (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear * uc.burdenedRate;
       } else {
-        base = uc.hoursPerSession * uc.sessionsPerWeek * ops.workWeeksPerYear * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
+        base = uc.hoursPerSession * toAnnualFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit, ops) * uc.peoplePerSession * uc.burdenedRate * uc.reductionPct;
       }
       break;
     }
     case 'audit': {
-      const labor = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.burdenedRate * uc.reductionPct;
+      const annualAudits = toAnnualFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit, ops);
+      const labor = uc.people * uc.daysPerAudit * uc.hoursPerDay * annualAudits * uc.burdenedRate * uc.reductionPct;
       const downtime = (uc.downtimeCostPerDay !== '' && Number(uc.downtimeCostPerDay) > 0)
-        ? Number(uc.downtimeCostPerDay) * uc.daysPerAudit * uc.auditsPerYear : 0;
+        ? Number(uc.downtimeCostPerDay) * uc.daysPerAudit * annualAudits : 0;
       base = labor + downtime; break;
     }
     case 'locateItems': {
@@ -108,9 +124,9 @@ export function calcUseCaseHours(key, uc, ops) {
       if ((uc.mode || 'reductionPct') === 'employeeDelta') {
         return (uc.employeesBefore * uc.hoursPerCountBefore - uc.employeesAfter * uc.hoursPerCountAfter) * uc.countsPerYear;
       }
-      return uc.hoursPerSession * uc.sessionsPerWeek * ops.workWeeksPerYear * uc.peoplePerSession * uc.reductionPct;
+      return uc.hoursPerSession * toAnnualFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit, ops) * uc.peoplePerSession * uc.reductionPct;
     case 'audit':
-      return uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
+      return uc.people * uc.daysPerAudit * uc.hoursPerDay * toAnnualFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit, ops) * uc.reductionPct;
     case 'locateItems': {
       const d1Hrs = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * uc.reductionPct, 0) : 0;
       const d2Hrs = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * uc.reductionPct : 0;

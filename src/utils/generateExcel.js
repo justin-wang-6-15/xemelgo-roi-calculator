@@ -1,5 +1,6 @@
 import { Workbook } from 'exceljs';
 import { UC_NAMES } from './useCaseNames';
+import { toAnnualFrequency, formatFrequency } from './calculations';
 
 const NAVY   = 'FF1F3A6E';
 const BLUE   = 'FF3B6FD4';
@@ -81,11 +82,12 @@ function getLaborHours(key, uc, ops) {
   const dpw = ops.workDaysPerWeek;
   switch (key) {
     case 'cycleCount': {
-      const ah = uc.hoursPerSession * uc.sessionsPerWeek * 50 * uc.peoplePerSession * uc.reductionPct;
-      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.peoplePerSession, weeklyHrs: uc.hoursPerSession * uc.sessionsPerWeek * uc.peoplePerSession * uc.reductionPct, annualHrs: ah, rate: uc.burdenedRate };
+      const annFreq = toAnnualFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit, ops);
+      const ah = uc.hoursPerSession * annFreq * uc.peoplePerSession * uc.reductionPct;
+      return { timeSavedPerDay: ah / dpy, peopleAffected: uc.peoplePerSession, weeklyHrs: ah / ops.workWeeksPerYear, annualHrs: ah, rate: uc.burdenedRate };
     }
     case 'audit': {
-      const ah = uc.people * uc.daysPerAudit * uc.hoursPerDay * uc.auditsPerYear * uc.reductionPct;
+      const ah = uc.people * uc.daysPerAudit * uc.hoursPerDay * toAnnualFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit, ops) * uc.reductionPct;
       return { timeSavedPerDay: ah / dpy, peopleAffected: uc.people, weeklyHrs: ah / ops.workWeeksPerYear, annualHrs: ah, rate: uc.burdenedRate };
     }
     case 'locateItems':
@@ -259,7 +261,9 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
             writeField(key, 'Burdened rate ($/hr)', uc.burdenedRate, 'burdenedRate', '$#,##0');
           } else {
             writeField(key, 'Hours per session', uc.hoursPerSession, 'hoursPerSession', '0.0');
-            writeField(key, 'Sessions per week', uc.sessionsPerWeek, 'sessionsPerWeek', '0.0');
+            writeField(key, 'Count frequency', formatFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit), 'cycleFrequencyDisplay', '@');
+            writeField(key, '  Frequency value', uc.cycleFrequencyValue, 'cycleFrequencyValue', '0.0');
+            ucCells[key].cycleFrequencyUnit = uc.cycleFrequencyUnit;
             writeField(key, 'People per session', uc.peoplePerSession, 'peoplePerSession', '0');
             writeField(key, 'Burdened rate ($/hr)', uc.burdenedRate, 'burdenedRate', '$#,##0');
             writePct(key, 'Efficiency improvement', uc.reductionPct, 'reductionPct');
@@ -269,7 +273,9 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
           writeField(key, 'People per audit', uc.people, 'people', '0');
           writeField(key, 'Days per audit', uc.daysPerAudit, 'daysPerAudit', '0.0');
           writeField(key, 'Hours per day', uc.hoursPerDay, 'hoursPerDay', '0.0');
-          writeField(key, 'Audits per year', uc.auditsPerYear, 'auditsPerYear', '0');
+          writeField(key, 'Audit frequency', formatFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit), 'auditFrequencyDisplay', '@');
+          writeField(key, '  Frequency value', uc.auditFrequencyValue, 'auditFrequencyValue', '0.0');
+          ucCells[key].auditFrequencyUnit = uc.auditFrequencyUnit;
           writeField(key, 'Burdened rate ($/hr)', uc.burdenedRate, 'burdenedRate', '$#,##0');
           writePct(key, 'Efficiency improvement', uc.reductionPct, 'reductionPct');
           if (Number(uc.downtimeCostPerDay) > 0) {
@@ -436,14 +442,20 @@ function buildSavingsAnalysis(ws, ops, useCases, fin, result, dateISO) {
   function ucFormula(key) {
     const cc = ucCells[key] || {};
     switch (key) {
-      case 'cycleCount':
+      case 'cycleCount': {
         if ((useCases[key].mode || 'reductionPct') === 'employeeDelta') {
           return `=(${cc.employeesBefore}*${cc.hoursPerCountBefore}-${cc.employeesAfter}*${cc.hoursPerCountAfter})*${cc.countsPerYear}*${cc.burdenedRate}`;
         }
-        return `=${cc.hoursPerSession}*${cc.sessionsPerWeek}*50*${cc.peoplePerSession}*${cc.burdenedRate}*${cc.reductionPct}`;
+        const cycleUnit = cc.cycleFrequencyUnit || 'week';
+        const cycleMult = cycleUnit === 'week' ? osCells.workWeeksPerYear : cycleUnit === 'month' ? 12 : cycleUnit === 'quarter' ? 4 : 1;
+        return `=${cc.hoursPerSession}*${cc.cycleFrequencyValue}*${cycleMult}*${cc.peoplePerSession}*${cc.burdenedRate}*${cc.reductionPct}`;
+      }
       case 'audit': {
-        const labor = `${cc.people}*${cc.daysPerAudit}*${cc.hoursPerDay}*${cc.auditsPerYear}*${cc.burdenedRate}*${cc.reductionPct}`;
-        const dt = cc.downtimeCostPerDay ? `+${cc.downtimeCostPerDay}*${cc.daysPerAudit}*${cc.auditsPerYear}` : '';
+        const auditUnit = cc.auditFrequencyUnit || 'year';
+        const auditMult = auditUnit === 'week' ? osCells.workWeeksPerYear : auditUnit === 'month' ? 12 : auditUnit === 'quarter' ? 4 : 1;
+        const annAuditsF = `${cc.auditFrequencyValue}*${auditMult}`;
+        const labor = `${cc.people}*${cc.daysPerAudit}*${cc.hoursPerDay}*${annAuditsF}*${cc.burdenedRate}*${cc.reductionPct}`;
+        const dt = cc.downtimeCostPerDay ? `+${cc.downtimeCostPerDay}*${cc.daysPerAudit}*(${annAuditsF})` : '';
         return `=${labor}${dt}`;
       }
       case 'locateItems':

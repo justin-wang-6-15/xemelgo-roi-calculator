@@ -3,6 +3,7 @@ import RangeSlider from '../RangeSlider';
 import Tooltip from '../Tooltip';
 import { fmt$ } from '../../utils/format';
 import { calcUseCaseValue, BUCKET_CONFIG } from '../../utils/calculations';
+import FrequencyInput from '../FrequencyInput';
 
 const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1';
@@ -179,7 +180,8 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
           <>
             <div className={grid2}>
               <NumField label="Hours per count session" value={uc.hoursPerSession} onChange={(v) => onUpdate('hoursPerSession', v)} />
-              <NumField label="Count sessions per week" value={uc.sessionsPerWeek} onChange={(v) => onUpdate('sessionsPerWeek', v)} />
+              <FrequencyInput label="Count frequency" value={uc.cycleFrequencyValue} unit={uc.cycleFrequencyUnit} ops={ops}
+                onChange={(v, u) => { onUpdate('cycleFrequencyValue', v); onUpdate('cycleFrequencyUnit', u); }} />
               <NumField label="People counting simultaneously per session" value={uc.peoplePerSession} onChange={(v) => onUpdate('peoplePerSession', v)} />
               <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr"
                 onChange={(v) => { onUpdate('burdenedRate', v); setOps((prev) => ({ ...prev, plannerRate: v })); }} />
@@ -210,7 +212,8 @@ function UseCaseInputs({ ucKey, uc, ops, setOps, onUpdate, fin }) {
         <NumField label="People per audit" value={uc.people} onChange={(v) => onUpdate('people', v)} />
         <NumField label="Days per audit" value={uc.daysPerAudit} onChange={(v) => onUpdate('daysPerAudit', v)} />
         <NumField label="Hours per day" value={uc.hoursPerDay} onChange={(v) => onUpdate('hoursPerDay', v)} />
-        <NumField label="Audits per year" value={uc.auditsPerYear} onChange={(v) => onUpdate('auditsPerYear', v)} />
+        <FrequencyInput label="Audit frequency" value={uc.auditFrequencyValue} unit={uc.auditFrequencyUnit} ops={ops}
+            onChange={(v, u) => { onUpdate('auditFrequencyValue', v); onUpdate('auditFrequencyUnit', u); }} />
         <NumField label={RATE_LABEL} tooltip={RATE_TOOLTIP} value={uc.burdenedRate} prefix="$" suffix="/hr" onChange={(v) => onUpdate('burdenedRate', v)} />
         <div>
           <label className={labelCls}>Production downtime cost per audit day <span className="text-gray-400 font-normal">(optional)</span></label>

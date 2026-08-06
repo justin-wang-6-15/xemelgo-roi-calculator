@@ -1,6 +1,6 @@
 import React from 'react';
 import xemelgoLogo from '../assets/xemelgo-logo.png';
-import { groupUseCaseTotalsBySolution, getRampFactor, SOLUTION_ORDER, getSolutionForUcKey } from '../utils/calculations';
+import { groupUseCaseTotalsBySolution, getRampFactor, SOLUTION_ORDER, getSolutionForUcKey, formatFrequency } from '../utils/calculations';
 import { fmt$, fmtPct, fmtWks } from '../utils/format';
 import { UC_NAMES } from '../utils/useCaseNames';
 import { getSolutionColor } from '../utils/solutionColors';
@@ -127,7 +127,7 @@ function FieldGrid3Col({ obj }) {
 const FIELD_MANIFEST = {
   cycleCount: { fields: [
     ['hoursPerSession', 'Hours per count session'],
-    ['sessionsPerWeek', 'Count sessions per week'],
+    ['cycleFrequencyValue', 'Count frequency', (uc) => formatFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit)],
     ['peoplePerSession', 'People counting simultaneously per session'],
     ['burdenedRate', 'Burdened rate'],
     ['reductionPct', 'Efficiency improvement'],
@@ -168,6 +168,15 @@ const FIELD_MANIFEST = {
         ['minutesSavedPerPick', 'Minutes saved per pick'],
         ['burdenedRate', 'Burdened rate'],
       ] },
+  ]},
+  audit: { fields: [
+    ['people', 'People per audit'],
+    ['daysPerAudit', 'Days per audit'],
+    ['hoursPerDay', 'Hours per day'],
+    ['auditFrequencyValue', 'Audit frequency', (uc) => formatFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit)],
+    ['burdenedRate', 'Burdened rate'],
+    ['downtimeCostPerDay', 'Downtime cost per audit day'],
+    ['reductionPct', 'Efficiency improvement'],
   ]},
   shrinkage: { fields: [
     ['incidentsPerYear', 'Unexplained loss incidents per year'],
@@ -211,8 +220,8 @@ const FIN_LABELS = {
   wacc: 'WACC',
 };
 
-function renderField([k, label], uc) {
-  const v = uc[k];
+function renderField([k, label, formatter], uc) {
+  const v = formatter ? formatter(uc) : uc[k];
   if (v === '' || v === null || v === undefined) return null;
   return (
     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
