@@ -243,8 +243,13 @@ function CustomDriversSection({ drivers, onUpdate, driverKey }) {
             )}
             <div className="sm:col-span-2">
               <label className={labelCls}>Justification <span className="text-gray-400 font-normal">(optional)</span></label>
-              <input type="text" value={drv.justification} placeholder={getPlaceholder(drv.driverType)}
-                onChange={(e) => updateDriver(drv.id, 'justification', e.target.value)} className={inputCls} />
+              <textarea
+                rows={2}
+                value={drv.justification}
+                placeholder={getPlaceholder(drv.driverType)}
+                onChange={(e) => updateDriver(drv.id, 'justification', e.target.value)}
+                className={`${inputCls} resize-none`}
+              />
             </div>
           </div>
         </div>
