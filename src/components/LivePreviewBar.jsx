@@ -30,9 +30,8 @@ export default function LivePreviewBar({ ops, useCases, fin, customCategories })
         </div>
       </div>
 
-      {/* Desktop: sticky sidebar card */}
-      <div className="hidden lg:block">
-        <div className="sticky top-8 bg-blue-700 text-white rounded-xl shadow-lg p-5">
+      {/* Desktop: fixed floating panel, right-aligned with content container */}
+      <div className="hidden lg:block fixed top-24 right-[calc((100vw-1024px)/2+1rem)] z-30 w-56 bg-blue-700 text-white rounded-xl shadow-lg p-5">
           <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-4">Live Estimate</p>
           <div className="space-y-4">
             {metrics.map((m) => (
@@ -44,7 +43,6 @@ export default function LivePreviewBar({ ops, useCases, fin, customCategories })
           </div>
           <p className="mt-4 text-xs text-blue-300 leading-relaxed">Updates as you toggle use cases.</p>
         </div>
-      </div>
     </>
   );
 }

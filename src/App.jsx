@@ -252,7 +252,7 @@ export default function App() {
           />
         )}
 
-        <div className={showGrid ? (anySolutionSelected ? 'lg:grid lg:grid-cols-[200px_1fr_220px] lg:gap-6 lg:items-start' : 'lg:grid lg:grid-cols-[1fr_220px] lg:gap-6 lg:items-start') : ''}>
+        <div className={showGrid && anySolutionSelected ? 'lg:grid lg:grid-cols-[200px_1fr] lg:gap-6 lg:items-start' : ''}>
           {!done && !analyzing && step === 2 && anySolutionSelected && (
             <UseCaseNav useCases={useCases} collapsedUCs={collapsedUCs} setCollapsedUCs={setCollapsedUCs} />
           )}
@@ -299,9 +299,8 @@ export default function App() {
               />
             ) : null}
           </div>
-
-          {!done && !analyzing && step === 2 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} />}
         </div>
+        {!done && !analyzing && step === 2 && <LivePreviewBar ops={ops} useCases={useCases} fin={fin} customCategories={customCategories} />}
       </main>
     </div>
   );

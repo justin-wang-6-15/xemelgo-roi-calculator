@@ -843,7 +843,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
   const MULTI_DRIVER_KEYS = new Set(['locateItems', 'workOrderTracking', 'picklistVerification']);
 
   return (
-    <div className="max-w-2xl mx-auto pb-20 lg:pb-0">
+    <div className="max-w-3xl mx-auto pb-20 lg:pb-0">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Which Xemelgo solutions apply to you?</h2>
       <p className="text-sm text-gray-500 mb-6">Select all that apply. We'll pre-select the most relevant use cases and pre-fill inputs with Xemelgo benchmarks.</p>
 
@@ -905,13 +905,13 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
       {anySelected && (
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">Customize your use cases</h3>
-          <div className="space-y-6">
+          <div className="space-y-10">
             {SOLUTIONS.filter((sol) => selectedSolutions.has(sol.id)).map((sol) => {
               const allKeys = [...sol.defaults, ...sol.extras];
               return (
                 <div key={sol.id}>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{sol.name}</p>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {allKeys.map((key) => {
                       const uc = useCases[key];
                       const enabled = uc?.enabled ?? false;
