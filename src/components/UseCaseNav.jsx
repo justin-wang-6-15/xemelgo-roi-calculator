@@ -15,11 +15,10 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
     sol.defaults.some((key) => useCases[key]?.enabled)
   );
 
-  // Stable string dependency — only changes when use cases are enabled/disabled,
+  // Stable string dependency — only changes when solutions are selected/deselected,
   // not on every keypress inside an input field.
-  const enabledKeysSorted = selectedSolutions
+  const allKeysSorted = selectedSolutions
     .flatMap((sol) => [...sol.defaults, ...sol.extras])
-    .filter((key) => useCases[key]?.enabled)
     .sort()
     .join(',');
 
@@ -28,7 +27,7 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (observerRef.current) observerRef.current.disconnect();
 
-    const keys = enabledKeysSorted ? enabledKeysSorted.split(',') : [];
+    const keys = allKeysSorted ? allKeysSorted.split(',') : [];
     if (keys.length === 0) return;
 
     const visibleEntries = new Map();
@@ -73,7 +72,7 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabledKeysSorted]);
+  }, [allKeysSorted]);
 
   function handleClick(key) {
     if (collapsedUCs.has(key)) {
@@ -104,28 +103,29 @@ export default function UseCaseNav({ useCases, collapsedUCs, setCollapsedUCs }) 
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Jump to</p>
         <div className="space-y-4">
           {selectedSolutions.map((sol) => {
-            const visibleKeys = [...sol.defaults, ...sol.extras].filter(
-              (key) => useCases[key]?.enabled
-            );
-            if (visibleKeys.length === 0) return null;
+            const allKeys = [...sol.defaults, ...sol.extras];
             return (
               <div key={sol.id}>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                   {sol.name}
                 </p>
                 <ul className="space-y-0.5">
-                  {visibleKeys.map((key) => {
+                  {allKeys.map((key) => {
                     const isActive = activeKey === key;
+                    const isEnabled = useCases[key]?.enabled;
                     return (
                       <li key={key}>
                         <button
                           onClick={() => handleClick(key)}
-                          className={`w-full text-left text-xs px-2 py-1 rounded transition-colors ${
+                          className={`w-full text-left text-xs px-2 py-1 rounded transition-colors flex items-center gap-1.5 ${
                             isActive
                               ? 'text-blue-600 bg-blue-50 font-medium'
                               : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                           }`}
                         >
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                            isEnabled ? 'bg-blue-600' : 'border border-gray-300'
+                          }`} />
                           {getLabel(key)}
                         </button>
                       </li>
