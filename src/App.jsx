@@ -252,8 +252,8 @@ export default function App() {
           />
         )}
 
-        <div className={showGrid && anySolutionSelected ? 'lg:grid lg:grid-cols-[200px_1fr] lg:gap-6 lg:items-start' : ''}>
-          {!done && !analyzing && step === 2 && anySolutionSelected && (
+        <div className={showGrid ? 'lg:grid lg:grid-cols-[200px_1fr] lg:gap-6 lg:items-start' : ''}>
+          {!done && !analyzing && step === 2 && (
             <UseCaseNav useCases={useCases} collapsedUCs={collapsedUCs} setCollapsedUCs={setCollapsedUCs} />
           )}
           <div className={transitionClass}>
