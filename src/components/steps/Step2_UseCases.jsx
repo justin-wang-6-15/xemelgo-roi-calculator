@@ -843,7 +843,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
   const MULTI_DRIVER_KEYS = new Set(['locateItems', 'workOrderTracking', 'picklistVerification']);
 
   return (
-    <div className="max-w-3xl mx-auto pb-20 lg:pb-0">
+    <div className="max-w-2xl mx-auto lg:mx-0 lg:max-w-[600px] pb-20 lg:pb-0">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">Which Xemelgo solutions apply to you?</h2>
       <p className="text-sm text-gray-500 mb-6">Select all that apply. We'll pre-select the most relevant use cases and pre-fill inputs with Xemelgo benchmarks.</p>
 
