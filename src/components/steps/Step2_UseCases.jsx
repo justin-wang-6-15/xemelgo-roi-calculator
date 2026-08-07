@@ -4,6 +4,7 @@ import Tooltip from '../Tooltip';
 import { fmt$ } from '../../utils/format';
 import { calcUseCaseValue, BUCKET_CONFIG, getBaseUcKey } from '../../utils/calculations';
 import FrequencyInput from '../FrequencyInput';
+import { DRIVER_TYPE_LABELS, OTHER_QUESTION, WORKING_CAPITAL_QUESTION, CUSTOM_DRIVER_QUESTIONS } from '../../utils/customDriverQuestions';
 
 // ─── Shared style constants ───────────────────────────────────────────────
 const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -182,15 +183,26 @@ function JustificationField({ value, onChange, placeholder }) {
   );
 }
 
-function CustomDriversSection({ drivers, onUpdate }) {
+function CustomDriversSection({ drivers, onUpdate, driverKey }) {
   function addDriver() {
-    onUpdate([...drivers, { id: Date.now(), name: '', annualValue: '', justification: '' }]);
+    onUpdate([...drivers, { id: Date.now(), name: '', annualValue: '', justification: '', driverType: null }]);
   }
   function removeDriver(id) {
     onUpdate(drivers.filter((d) => d.id !== id));
   }
   function updateDriver(id, field, value) {
     onUpdate(drivers.map((d) => d.id === id ? { ...d, [field]: value } : d));
+  }
+  function getPlaceholder(type) {
+    if (driverKey === 'workingCapitalImprovement') return WORKING_CAPITAL_QUESTION;
+    const set = CUSTOM_DRIVER_QUESTIONS[driverKey];
+    if (!type || type === 'other' || !set || !set[type]) return OTHER_QUESTION;
+    return set[type];
+  }
+  function availableTypes() {
+    const set = CUSTOM_DRIVER_QUESTIONS[driverKey];
+    if (!set) return ['other'];
+    return [...Object.keys(set), 'other'];
   }
   return (
     <div>
@@ -212,9 +224,26 @@ function CustomDriversSection({ drivers, onUpdate }) {
                   onChange={(e) => updateDriver(drv.id, 'annualValue', e.target.value === '' ? '' : Number(e.target.value))} onWheel={(e) => e.target.blur()} className={inputCls} />
               </div>
             </div>
+            {driverKey !== 'workingCapitalImprovement' && (
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Driver type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableTypes().map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => updateDriver(drv.id, 'driverType', t)}
+                      className={`text-xs px-2.5 py-1 rounded-full border ${drv.driverType === t ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500'}`}
+                    >
+                      {DRIVER_TYPE_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <label className={labelCls}>Justification <span className="text-gray-400 font-normal">(optional)</span></label>
-              <input type="text" value={drv.justification} placeholder="How was this value estimated?"
+              <input type="text" value={drv.justification} placeholder={getPlaceholder(drv.driverType)}
                 onChange={(e) => updateDriver(drv.id, 'justification', e.target.value)} className={inputCls} />
             </div>
           </div>
@@ -941,7 +970,8 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                               {/* Custom drivers */}
                               <CustomDriversSection
                                 drivers={uc.customDrivers || []}
-                                onUpdate={(drivers) => updateUC(key, 'customDrivers', drivers)} />
+                                onUpdate={(drivers) => updateUC(key, 'customDrivers', drivers)}
+                                driverKey={key} />
 
                               {/* Mark reviewed */}
                               <div className="pt-1 border-t border-gray-100 flex items-center justify-between">
