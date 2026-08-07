@@ -256,7 +256,7 @@ export default function App() {
           {!done && !analyzing && step === 2 && (
             <UseCaseNav useCases={useCases} collapsedUCs={collapsedUCs} setCollapsedUCs={setCollapsedUCs} />
           )}
-          <div className={transitionClass}>
+          <div className={`lg:col-start-2 ${transitionClass}`}>
             {analyzing ? (
               <AnalyzingScreen />
             ) : done ? (
