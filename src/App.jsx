@@ -118,7 +118,9 @@ export default function App() {
   const [done, setDone] = useState(false);
   const [visitedSteps, setVisitedSteps] = useState(new Set([1]));
   const [showResetModal, setShowResetModal] = useState(false);
+  const [importError, setImportError] = useState('');
   const dirRef = useRef('forward');
+  const fileInputRef = useRef(null);
 
   function markVisited(stepNum) {
     setVisitedSteps((prev) => {
@@ -199,6 +201,80 @@ export default function App() {
     goTo(stepNum, stepNum < step ? 'back' : 'forward');
   }
 
+  function slugify(str) {
+    return (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  function handleSaveProgress() {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
+    const snapshot = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      step, ops, operationDetails, useCases, fin, customCategories, contactInfo,
+      visitedSteps: Array.from(visitedSteps),
+      collapsedUCs: Array.from(collapsedUCs),
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xemelgo-roi-${slugify(ops.companyName) || 'session'}-${timestamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportClick() {
+    setImportError('');
+    fileInputRef.current?.click();
+  }
+
+  function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        applyImportedState(data);
+      } catch {
+        setImportError("Could not read the file. Make sure it's a valid Xemelgo ROI save file.");
+      }
+    };
+    reader.onerror = () => setImportError('Failed to read the file.');
+    reader.readAsText(file);
+  }
+
+  function applyImportedState(data) {
+    try {
+      const base = makeAllDisabledUseCases();
+      const merged = { ...base };
+      if (data.useCases && typeof data.useCases === 'object') {
+        Object.keys(base).forEach((key) => {
+          if (data.useCases[key]) merged[key] = { ...base[key], ...data.useCases[key] };
+        });
+      }
+      setUseCases(merged);
+      setOps({ ...defaultOps, ...(data.ops || {}) });
+      setOperationDetails({ ...defaultOperationDetails, ...(data.operationDetails || {}) });
+      setFin({ ...defaultFin, ...(data.fin || {}) });
+      setCustomCategories(Array.isArray(data.customCategories) ? data.customCategories : []);
+      setContactInfo(data.contactInfo ?? null);
+      setCollapsedUCs(new Set(Array.isArray(data.collapsedUCs) ? data.collapsedUCs : []));
+      const restoredVisited = new Set(Array.isArray(data.visitedSteps) ? data.visitedSteps : [1]);
+      setVisitedSteps(restoredVisited);
+      const restoredStep = (data.step >= 1 && data.step <= 4) ? data.step : 1;
+      setDone(false);
+      setAnalyzing(false);
+      setTransitionClass('step-enter');
+      setStep(restoredStep);
+      markVisited(restoredStep);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } catch {
+      setImportError('The save file appears to be corrupted or in an unexpected format.');
+    }
+  }
+
   const showGrid = !done && !analyzing && step === 2;
   const anySolutionSelected = SOLUTIONS.some((sol) => sol.defaults.some((key) => useCases[key]?.enabled));
 
@@ -209,15 +285,43 @@ export default function App() {
           <a href="https://www.xemelgo.com" target="_blank" rel="noopener noreferrer">
             <img src={xemelgoLogo} alt="Xemelgo" className="h-8 w-auto" />
           </a>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+          {!done && step === 1 && (
+            <button
+              onClick={handleImportClick}
+              className="ml-auto text-sm text-gray-400 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Import Progress
+            </button>
+          )}
+          {!done && (step === 2 || step === 3 || step === 4) && (
+            <button
+              onClick={handleSaveProgress}
+              className="ml-auto text-sm text-gray-400 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Save Progress
+            </button>
+          )}
           {!done && step > 1 && (
             <button
               onClick={() => setShowResetModal(true)}
-              className="ml-auto text-sm text-gray-400 hover:text-red-600 border border-gray-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
+              className="text-sm text-gray-400 hover:text-red-600 border border-gray-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
             >
               Start Over
             </button>
           )}
         </div>
+        {importError && (
+          <div className="max-w-5xl mx-auto px-4 pb-2">
+            <p className="text-sm text-red-600">{importError}</p>
+          </div>
+        )}
       </header>
 
       {showResetModal && (
