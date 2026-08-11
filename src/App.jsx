@@ -296,7 +296,7 @@ export default function App() {
           {!done && step === 1 && (
             <button
               onClick={handleImportClick}
-              className="ml-auto text-sm text-gray-400 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
+              className="ml-auto text-sm text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-500 px-3 py-1.5 rounded-lg transition-colors"
             >
               Import Progress
             </button>
@@ -304,11 +304,12 @@ export default function App() {
           {!done && (step === 2 || step === 3 || step === 4) && (
             <Tooltip
               className="ml-auto"
+              position="bottom"
               content="Downloads your current calculator project so you can import it later and continue where you left off."
             >
               <button
                 onClick={handleSaveProgress}
-                className="text-sm text-gray-400 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-sm text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-500 px-3 py-1.5 rounded-lg transition-colors"
               >
                 Download ROI Project
               </button>
@@ -317,7 +318,7 @@ export default function App() {
           {!done && step > 1 && (
             <button
               onClick={() => setShowResetModal(true)}
-              className="text-sm text-gray-400 hover:text-red-600 border border-gray-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
+              className="text-sm text-blue-600 hover:text-red-600 border border-blue-300 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
             >
               Start Over
             </button>

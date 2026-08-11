@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function Tooltip({ content, children, className = '' }) {
+export default function Tooltip({ content, children, className = '', position = 'top' }) {
   const [visible, setVisible] = useState(false);
   const ref = useRef(null);
 
@@ -12,6 +12,12 @@ export default function Tooltip({ content, children, className = '' }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const isBottom = position === 'bottom';
+  const bubblePositionClasses = isBottom ? 'top-full mt-2' : 'bottom-full mb-2';
+  const arrowPositionClasses = isBottom
+    ? 'bottom-full border-b-gray-900'
+    : 'top-full border-t-gray-900';
+
   return (
     <span
       ref={ref}
@@ -22,9 +28,9 @@ export default function Tooltip({ content, children, className = '' }) {
     >
       {children}
       {visible && (
-        <span className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl pointer-events-none leading-relaxed">
+        <span className={`absolute z-50 ${bubblePositionClasses} left-1/2 -translate-x-1/2 w-56 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl pointer-events-none leading-relaxed`}>
           {content}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+          <span className={`absolute ${arrowPositionClasses} left-1/2 -translate-x-1/2 border-4 border-transparent`} />
         </span>
       )}
     </span>
