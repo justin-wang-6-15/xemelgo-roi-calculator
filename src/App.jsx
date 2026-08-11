@@ -8,6 +8,7 @@ import Step4_EmailGate from './components/steps/Step4_EmailGate';
 import ThankYou from './components/ThankYou';
 import LivePreviewBar from './components/LivePreviewBar';
 import UseCaseNav from './components/UseCaseNav';
+import Tooltip from './components/Tooltip';
 import { SOLUTIONS } from './components/steps/Step2_UseCases';
 
 const defaultOps = {
@@ -301,12 +302,17 @@ export default function App() {
             </button>
           )}
           {!done && (step === 2 || step === 3 || step === 4) && (
-            <button
-              onClick={handleSaveProgress}
-              className="ml-auto text-sm text-gray-400 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
+            <Tooltip
+              className="ml-auto"
+              content="Downloads your current calculator project so you can import it later and continue where you left off."
             >
-              Save Progress
-            </button>
+              <button
+                onClick={handleSaveProgress}
+                className="text-sm text-gray-400 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Download ROI Project
+              </button>
+            </Tooltip>
           )}
           {!done && step > 1 && (
             <button

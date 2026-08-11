@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function Tooltip({ content, children }) {
+export default function Tooltip({ content, children, className = '' }) {
   const [visible, setVisible] = useState(false);
   const ref = useRef(null);
 
@@ -15,7 +15,7 @@ export default function Tooltip({ content, children }) {
   return (
     <span
       ref={ref}
-      className="relative inline-flex items-center"
+      className={`relative inline-flex items-center ${className}`.trim()}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
       onClick={() => setVisible((v) => !v)}
