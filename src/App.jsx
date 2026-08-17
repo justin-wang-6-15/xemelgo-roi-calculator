@@ -145,11 +145,13 @@ export default function App() {
 
   // Step 1 → Step 2: reset use cases to all-disabled, then show analyzing screen
   function handleStep1Next() {
-    setUseCases(makeAllDisabledUseCases());
-    setCollapsedUCs(new Set());
-    setOsExpanded(false);
-    setOperationDetails(defaultOperationDetails);
-    setCustomCategories([]);
+    if (!visitedSteps.has(2)) {
+      setUseCases(makeAllDisabledUseCases());
+      setCollapsedUCs(new Set());
+      setOsExpanded(false);
+      setOperationDetails(defaultOperationDetails);
+      setCustomCategories([]);
+    }
     markVisited(2);
     setAnalyzing(true);
     setTimeout(() => {
