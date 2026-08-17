@@ -28,7 +28,7 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     const keepTogetherEls = Array.from(contentEl.querySelectorAll('[data-keep-together]'));
 
     const canvas = await html2canvas(contentEl, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -90,10 +90,10 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
       tmp.height   = srcH;
       tmp.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
 
-      const imgData = tmp.toDataURL('image/jpeg', 0.8);
+      const imgData = tmp.toDataURL('image/png');
 
       if (page > 0) doc.addPage();
-      doc.addImage(imgData, 'JPEG', MARGIN_X_PT, MARGIN_Y_PT, USABLE_W_PT, pageHPt);
+      doc.addImage(imgData, 'PNG', MARGIN_X_PT, MARGIN_Y_PT, USABLE_W_PT, pageHPt);
 
       doc.setDrawColor(230, 230, 230);
       doc.line(MARGIN_X_PT, PDF_H_PT - 28, PDF_W_PT - MARGIN_X_PT, PDF_H_PT - 28);

@@ -373,11 +373,24 @@ function NoteBlock({ text }) {
   );
 }
 
+function estimateNoteLength(uc) {
+  return [uc.justification, uc.driver1Justification, uc.driver2Justification]
+    .filter(Boolean)
+    .reduce((sum, t) => sum + String(t).length, 0);
+}
+
 function UcCard({ ucKey, uc, color, annualValue }) {
   const baseKey = ucKey.split('__')[0];
   const displayName = UC_NAMES[baseKey] || ucKey;
   const customDrivers = uc.customDrivers || [];
   const compactFn = COMPACT_STATS[baseKey];
+  // Cards with unusually long combined note text can end up taller than a full PDF
+  // page, so a keep-together block can never actually be honored for them — forcing
+  // atomicity in that case only wastes a blank page before still cutting the note
+  // midway. Past this rough length, let the card flow naturally instead. This is a
+  // rendering/pagination decision only; it never truncates or limits what a rep can
+  // type into the justification field.
+  const isUnusuallyLong = estimateNoteLength(uc) > 650;
 
   let body;
 
@@ -464,8 +477,8 @@ function UcCard({ ucKey, uc, color, annualValue }) {
   }
 
   return (
-    <div data-keep-together="true" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', borderTop: `3px solid ${color.border}`, marginBottom: 2 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+    <div data-keep-together={isUnusuallyLong ? undefined : "true"} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', borderTop: `3px solid ${color.border}`, marginBottom: 2 }}>
+      <div data-keep-together="true" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
         <p style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>{displayName}</p>
         {annualValue != null && (
           <span style={{ fontSize: 11, fontWeight: 700, color: color.text }}>{fmt$(annualValue)}</span>
@@ -558,7 +571,7 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
     header: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #e5e7eb' },
     heroBox: { background: 'linear-gradient(135deg, #1a4fb0, #2f6fe0)', borderRadius: 14, padding: '32px 28px', marginBottom: 20, color: '#ffffff' },
     heroLabel: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#bfdbfe', marginBottom: 8 },
-    heroValue: { fontSize: 44, fontWeight: 700, marginBottom: 8, fontVariantNumeric: 'tabular-nums' },
+    heroValue: { fontSize: 44, fontWeight: 700, lineHeight: 1.15, marginBottom: 14, fontVariantNumeric: 'tabular-nums' },
     heroSub: { fontSize: 13, color: '#bfdbfe', lineHeight: 1.5 },
     metricsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 },
     metricCard: (border) => ({ background: '#fafbfc', borderRadius: 10, padding: '12px 10px', borderTop: `3px solid ${border}` }),
@@ -722,14 +735,35 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {entries.map(([k, uc]) => {
-                    // Find this use case's annualValue from the bucket's lineItems
-                    const li = matchingBucket?.lineItems.find((item) => item.key === k);
-                    return (
-                      <UcCard key={k} ucKey={k} uc={uc} color={color} annualValue={li?.annualValue} />
-                    );
-                  })}
+                <div>
+                  {(() => {
+                    const LONG_UC_KEYS = new Set(['locateItems', 'workOrderTracking', 'picklistVerification']);
+                    const rows = [];
+                    let buffer = null;
+                    entries.forEach(([k, uc]) => {
+                      const isLong = LONG_UC_KEYS.has(k.split('__')[0]);
+                      if (isLong) {
+                        if (buffer) { rows.push([buffer]); buffer = null; }
+                        rows.push([[k, uc]]);
+                      } else if (buffer) {
+                        rows.push([buffer, [k, uc]]);
+                        buffer = null;
+                      } else {
+                        buffer = [k, uc];
+                      }
+                    });
+                    if (buffer) rows.push([buffer]);
+                    return rows.map((row, ri) => (
+                      <div key={ri} style={{ display: 'grid', gridTemplateColumns: row.length === 2 ? '1fr 1fr' : '1fr', gap: 10, marginBottom: 10 }}>
+                        {row.map(([k, uc]) => {
+                          const li = matchingBucket?.lineItems.find((item) => item.key === k);
+                          return (
+                            <UcCard key={k} ucKey={k} uc={uc} color={color} annualValue={li?.annualValue} />
+                          );
+                        })}
+                      </div>
+                    ));
+                  })()}
                 </div>
               </React.Fragment>
             );
