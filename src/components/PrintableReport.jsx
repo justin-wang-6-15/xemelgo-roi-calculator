@@ -83,10 +83,10 @@ function MilestoneOutlook({ fin, totalGrossAnnual }) {
         Value compounds every year it runs
       </p>
       <p style={{ fontSize: 11.5, color: '#6b7280', marginBottom: 16, lineHeight: 1.5 }}>
-        The chart below shows cumulative net position month by month over five years, accounting for the ramp-up period and ongoing platform cost.
+        The chart below shows cumulative net position month by month over five years, accounting for the ramp-up period and ongoing platform cost. Year 1, 3, and 5 are validated from your inputs; Year 2 and 4 are interpolated.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+      <div data-keep-together="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
         {milestones.map(({ label, value, emphasis }) => (
           <div key={label} style={{
             borderRadius: 12,
@@ -102,54 +102,65 @@ function MilestoneOutlook({ fin, totalGrossAnnual }) {
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', overflow: 'visible', height: SVG_H }}>
-        {/* Zero baseline */}
-        {zero_y >= PAD_T && zero_y <= PAD_T + ch && (
-          <line x1={PAD_L} y1={zero_y} x2={SVG_W - PAD_R} y2={zero_y} stroke="#d1d5db" strokeWidth="1" />
-        )}
+      <div data-keep-together="true">
+        <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', overflow: 'visible', height: SVG_H }}>
+          {/* Zero baseline */}
+          {zero_y >= PAD_T && zero_y <= PAD_T + ch && (
+            <line x1={PAD_L} y1={zero_y} x2={SVG_W - PAD_R} y2={zero_y} stroke="#d1d5db" strokeWidth="1" />
+          )}
 
-        {/* Pre-breakeven amber wedge */}
-        {areaBelow.length > 0 && (
-          <path d={segmentPath(areaBelow)} fill="rgba(251,191,36,0.18)" />
-        )}
+          {/* Pre-breakeven amber wedge */}
+          {areaBelow.length > 0 && (
+            <path d={segmentPath(areaBelow)} fill="#FAC775" fillOpacity="0.55" />
+          )}
 
-        {/* Post-breakeven green area */}
-        {areaAbove.length > 0 && (
-          <path d={segmentPath(areaAbove)} fill="rgba(59,130,246,0.12)" />
-        )}
+          {/* Post-breakeven blue area */}
+          {areaAbove.length > 0 && (
+            <path d={segmentPath(areaAbove)} fill="#378ADD" fillOpacity="0.2" />
+          )}
 
-        {/* Main line */}
-        <polyline points={linePts} fill="none" stroke="#004FDB" strokeWidth="2.5" strokeLinejoin="round" />
+          {/* Main line */}
+          <polyline points={linePts} fill="none" stroke="#004FDB" strokeWidth="2.5" strokeLinejoin="round" />
 
-        {/* Breakeven dashed guide + marker */}
-        {be_x != null && be_y != null && (
-          <>
-            <line x1={be_x} y1={PAD_T} x2={be_x} y2={PAD_T + ch} stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="4,3" />
-            <circle cx={be_x} cy={be_y} r="5" fill="#f59e0b" />
-            <text x={be_x + 7} y={be_y - 6} fontSize="9" fill="#92400e" fontWeight="600">
-              Wk {beWeeks} / break even
+          {/* Breakeven dashed guide + marker */}
+          {be_x != null && be_y != null && (
+            <>
+              <line x1={be_x} y1={PAD_T} x2={be_x} y2={PAD_T + ch} stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="4,3" />
+              <circle cx={be_x} cy={be_y} r="5" fill="#f59e0b" />
+              <text x={be_x + 7} y={be_y - 6} fontSize="9" fill="#92400e" fontWeight="600">
+                Wk {beWeeks} / break even
+              </text>
+            </>
+          )}
+
+          {/* Year dots — differentiated by validation status */}
+          {yearDots.map((m, i) => {
+            const v = netPosition[m];
+            const cx = px(m);
+            const cy = py(v);
+            if (i === 0) {
+              // Year 0: small muted gray
+              return <circle key={m} cx={cx} cy={cy} r="3" fill="#9ca3af" />;
+            }
+            if (i === 1 || i === 3 || i === 5) {
+              // Year 1, 3, 5: validated — large solid blue
+              return <circle key={m} cx={cx} cy={cy} r="4.5" fill="#004FDB" />;
+            }
+            // Year 2, 4: interpolated — hollow
+            return <circle key={m} cx={cx} cy={cy} r="3.5" fill="#ffffff" stroke="#004FDB" strokeWidth="1.5" />;
+          })}
+
+          {/* X-axis labels */}
+          {yearDots.map((m, i) => (
+            <text key={m} x={px(m)} y={PAD_T + ch + 14} fontSize="9" fill="#9ca3af" textAnchor="middle">
+              {i === 0 ? 'Now' : `Yr ${i}`}
             </text>
-          </>
-        )}
-
-        {/* Year dots */}
-        {yearDots.map((m) => {
-          const v = netPosition[m];
-          return (
-            <circle key={m} cx={px(m)} cy={py(v)} r="3.5" fill={v >= 0 ? '#004FDB' : '#9ca3af'} />
-          );
-        })}
-
-        {/* X-axis labels */}
-        {yearDots.map((m, i) => (
-          <text key={m} x={px(m)} y={PAD_T + ch + 14} fontSize="9" fill="#9ca3af" textAnchor="middle">
-            {i === 0 ? 'Now' : `Yr ${i}`}
-          </text>
-        ))}
-      </svg>
+          ))}
+        </svg>
+      </div>
 
       {/* How-to-read block */}
-      <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+      <div data-keep-together="true" style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb' }}>
         <p style={{ fontSize: 9.5, fontWeight: 700, color: '#374151', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>How to read this</p>
         <ul style={{ margin: 0, padding: '0 0 0 14px', listStyle: 'disc' }}>
           {[
@@ -158,7 +169,7 @@ function MilestoneOutlook({ fin, totalGrossAnnual }) {
             beWeeks != null
               ? `Orange dot — break-even at week ${beWeeks}, where cumulative savings equal total investment.`
               : 'Break-even point not reached within the 5-year window at these inputs.',
-            'Year cards above show your net position at 1, 3, and 5 years.',
+            'Solid blue dots mark Year 1, 3, and 5 (validated from your inputs); hollow dots mark Year 2 and 4 (interpolated).',
           ].map((line, i) => (
             <li key={i} style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.6 }}>{line}</li>
           ))}
@@ -532,12 +543,12 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
   const companyName = ops.companyName || 'Your Facility';
 
   const metrics = [
-    { label: '5-Year ROI',         value: hasInvestment ? fmtPct(roiValue) : '—',            caption: 'Total return over 5 years',          border: '#185FA5' },
-    { label: '5-Year NPV',         value: hasInvestment ? fmt$(result.npv) : '—',             caption: 'Net present value at your WACC',     border: '#0F6E56' },
-    { label: 'IRR (Annual)',        value: irrDisplay,                                          caption: 'Internal rate of return',            border: '#534AB7' },
-    { label: 'Payback Period',      value: hasInvestment ? fmtWks(result.paybackWeeks) : '—', caption: 'Weeks to recover investment',         border: '#854F0B' },
-    { label: 'Annual SaaS ROI',    value: hasInvestment ? fmtPct(result.saasRoi) : '—',       caption: 'Return per dollar of platform fee',  border: '#534AB7' },
-    { label: 'Annual Hours Saved', value: totalHoursSaved > 0 ? `${Math.round(totalHoursSaved).toLocaleString()} hrs` : '—', caption: 'Labor hours returned each year', border: '#0F6E56' },
+    { label: '5-Year ROI',         value: hasInvestment ? fmtPct(roiValue) : '—',            caption: 'Total return over 5 years',          border: '#2F5FFF' },
+    { label: '5-Year NPV',         value: hasInvestment ? fmt$(result.npv) : '—',             caption: 'Net present value at your WACC',     border: '#2F5FFF' },
+    { label: 'IRR (Annual)',        value: irrDisplay,                                          caption: 'Internal rate of return',            border: '#2F5FFF' },
+    { label: 'Payback Period',      value: hasInvestment ? fmtWks(result.paybackWeeks) : '—', caption: 'Weeks to recover investment',         border: '#0E8F6E' },
+    { label: 'Annual SaaS ROI',    value: hasInvestment ? fmtPct(result.saasRoi) : '—',       caption: 'Return per dollar of platform fee',  border: '#0E8F6E' },
+    { label: 'Annual Hours Saved', value: totalHoursSaved > 0 ? `${Math.round(totalHoursSaved).toLocaleString()} hrs` : '—', caption: 'Labor hours returned each year', border: '#0E8F6E' },
   ];
 
   const activeUcEntries = Object.entries(useCases).filter(([, uc]) => uc?.enabled);
@@ -547,12 +558,12 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
     header: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #e5e7eb' },
     heroBox: { background: 'linear-gradient(135deg, #1a4fb0, #2f6fe0)', borderRadius: 14, padding: '32px 28px', marginBottom: 20, color: '#ffffff' },
     heroLabel: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#bfdbfe', marginBottom: 8 },
-    heroValue: { fontSize: 44, fontWeight: 700, marginBottom: 8 },
+    heroValue: { fontSize: 44, fontWeight: 700, marginBottom: 8, fontVariantNumeric: 'tabular-nums' },
     heroSub: { fontSize: 13, color: '#bfdbfe', lineHeight: 1.5 },
-    metricsGrid: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 24 },
+    metricsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 },
     metricCard: (border) => ({ background: '#fafbfc', borderRadius: 10, padding: '12px 10px', borderTop: `3px solid ${border}` }),
     metricLabel: { fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', color: '#6b7280', marginBottom: 4 },
-    metricValue: { fontSize: 17, fontWeight: 700, color: '#111827' },
+    metricValue: { fontSize: 17, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' },
     metricCaption: { fontSize: 9, color: '#9ca3af', marginTop: 3 },
     panel: { background: '#ffffff', borderRadius: 12, padding: 24, marginBottom: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.08)' },
     panelTitle: { fontSize: 14, fontWeight: 600, color: '#1f2937', marginBottom: 16 },
@@ -664,13 +675,11 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
             </div>
           )}
         </div>
-        <p style={s.disclaimer}>{DISCLAIMER}</p>
       </div>
 
       {/* ── 5-Year Outlook ── */}
       <div style={s.panel}>
         <MilestoneOutlook fin={fin} totalGrossAnnual={result.totalGrossAnnual} />
-        <p style={s.disclaimer}>{DISCLAIMER}</p>
       </div>
 
       {/* ── Appendix ── */}
@@ -742,20 +751,18 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
       </div>
 
       {/* ── Bottom line ── */}
-      <div style={{ marginTop: 28, padding: '16px 20px', background: '#f0f4ff', borderRadius: 10, border: '1px solid #bfdbfe' }}>
-        <p style={{ fontSize: 12, color: '#1e3a8a', lineHeight: 1.65 }}>
-          <strong>Bottom line:</strong>{' '}
-          {activeCount} use case{activeCount === 1 ? '' : 's'} were modeled for <strong>{projectTitle}</strong>,
-          generating a net annual value of <strong>{hasInvestment ? fmt$(result.netAnnualValue) : fmt$(result.totalGrossAnnual)}</strong>
+      <div data-keep-together="true" style={{ marginTop: 28, padding: '18px 20px', background: '#0a1938', borderRadius: 12 }}>
+        <p style={{ fontSize: 12.7, fontWeight: 700, color: '#ffffff', marginBottom: 8 }}>Bottom line</p>
+        <p style={{ fontSize: 10.9, color: '#ffffff', lineHeight: 1.65 }}>
+          {activeCount} use case{activeCount === 1 ? '' : 's'} were modeled for {projectTitle},
+          generating a net annual value of{' '}
+          <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{hasInvestment ? fmt$(result.netAnnualValue) : fmt$(result.totalGrossAnnual)}</strong>
           {hasInvestment && result.paybackWeeks != null
             ? ` with a projected payback period of ${fmtWks(result.paybackWeeks)}.`
             : '.'}
           {' '}All figures reflect the inputs entered in this session and are subject to validation against your actual operating data.
         </p>
       </div>
-
-      {/* ── Final disclaimer ── */}
-      <p style={{ ...s.disclaimer, marginTop: 24 }}>{DISCLAIMER}</p>
     </div>
   );
 }

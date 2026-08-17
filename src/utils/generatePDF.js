@@ -37,9 +37,10 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
     // Letter dimensions in pt
     const PDF_W_PT    = 612;
     const PDF_H_PT    = 792;
-    const MARGIN_PT   = 36;
-    const USABLE_W_PT = PDF_W_PT - 2 * MARGIN_PT;
-    const USABLE_H_PT = PDF_H_PT - 2 * MARGIN_PT;
+    const MARGIN_X_PT = 51;
+    const MARGIN_Y_PT = 45;
+    const USABLE_W_PT = PDF_W_PT - 2 * MARGIN_X_PT;
+    const USABLE_H_PT = PDF_H_PT - 2 * MARGIN_Y_PT;
 
     // Empirical scale: canvas pixels per CSS pixel
     const scaleFactor = canvas.width / contentEl.offsetWidth;
@@ -92,17 +93,27 @@ export async function generatePDF(ops, useCases, fin, result, contactInfo, custo
       const imgData = tmp.toDataURL('image/jpeg', 0.8);
 
       if (page > 0) doc.addPage();
-      doc.addImage(imgData, 'JPEG', MARGIN_PT, MARGIN_PT, USABLE_W_PT, pageHPt);
+      doc.addImage(imgData, 'JPEG', MARGIN_X_PT, MARGIN_Y_PT, USABLE_W_PT, pageHPt);
 
       doc.setDrawColor(230, 230, 230);
-      doc.line(MARGIN_PT, PDF_H_PT - 28, PDF_W_PT - MARGIN_PT, PDF_H_PT - 28);
+      doc.line(MARGIN_X_PT, PDF_H_PT - 28, PDF_W_PT - MARGIN_X_PT, PDF_H_PT - 28);
+
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8.1);
+      doc.setTextColor(136, 144, 163);
+      doc.text(
+        'All figures are calculated based on user provided inputs. Nothing is final until validated.',
+        PDF_W_PT / 2,
+        PDF_H_PT - 22,
+        { align: 'center' }
+      );
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(`Prepared for ${company}`, MARGIN_PT, PDF_H_PT - 16);
-      doc.text(`Page ${page + 1} of ${totalPages}`, PDF_W_PT / 2, PDF_H_PT - 16, { align: 'center' });
-      doc.text('Xemelgo confidential', PDF_W_PT - MARGIN_PT, PDF_H_PT - 16, { align: 'right' });
+      doc.text(`Prepared for ${company}`, MARGIN_X_PT, PDF_H_PT - 13);
+      doc.text(`Page ${page + 1} of ${totalPages}`, PDF_W_PT / 2, PDF_H_PT - 13, { align: 'center' });
+      doc.text('Xemelgo confidential', PDF_W_PT - MARGIN_X_PT, PDF_H_PT - 13, { align: 'right' });
     }
 
     doc.save(fname);
