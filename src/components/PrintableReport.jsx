@@ -5,6 +5,8 @@ import { fmt$, fmtPct, fmtWks } from '../utils/format';
 import { UC_NAMES } from '../utils/useCaseNames';
 import { getSolutionColor } from '../utils/solutionColors';
 
+// ─── Cumulative chart helpers ────────────────────────────────────────────────
+
 function buildCumulativeData(fin, totalGrossAnnual) {
   const rawCapex = (Number(fin.hardwareCapex) || 0) + (Number(fin.setupCapex) || 0);
   const monthlyFee = (Number(fin.annualPlatformFee) || 0) / 12;
@@ -25,31 +27,49 @@ function buildCumulativeData(fin, totalGrossAnnual) {
   return { netPosition, breakEvenMonth };
 }
 
+function fmtShort(v) {
+  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
 function MilestoneOutlook({ fin, totalGrossAnnual }) {
   const { netPosition, breakEvenMonth } = buildCumulativeData(fin, totalGrossAnnual);
 
-  const chartPoints = [0, 12, 24, 36, 48, 60].map((m) => netPosition[m]);
-  const yMin = Math.min(...chartPoints, 0);
-  const yMax = Math.max(...chartPoints, 0);
+  const allMonths = Array.from({ length: 61 }, (_, i) => i);
+  const yMin = Math.min(...netPosition, 0);
+  const yMax = Math.max(...netPosition, 0);
   const range = yMax - yMin || 1;
 
-  const SVG_W = 700, SVG_H = 130;
-  const PAD_L = 8, PAD_R = 8, PAD_T = 12, PAD_B = 8;
+  const SVG_W = 700, SVG_H = 150;
+  const PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 20;
   const cw = SVG_W - PAD_L - PAD_R;
   const ch = SVG_H - PAD_T - PAD_B;
 
-  const px = (i) => PAD_L + (i / 5) * cw;
+  const px = (m) => PAD_L + (m / 60) * cw;
   const py = (v) => PAD_T + ch - ((v - yMin) / range) * ch;
-  const pathD = chartPoints.map((v, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ');
   const zero_y = py(0);
 
-  function fmtShort(v) {
-    if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-    if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-    return `$${v.toFixed(0)}`;
+  const linePts = allMonths.map((m) => `${px(m).toFixed(1)},${py(netPosition[m]).toFixed(1)}`).join(' ');
+
+  // Build filled area path (trace line then back along baseline)
+  const areaAbove = allMonths.filter((m) => netPosition[m] >= 0);
+  const areaBelow = allMonths.filter((m) => netPosition[m] < 0);
+
+  function segmentPath(months) {
+    if (months.length === 0) return '';
+    const pts = months.map((m) => `${px(m).toFixed(1)},${py(netPosition[m]).toFixed(1)}`);
+    return `M${pts[0]} L${pts.slice(1).join(' L')} L${px(months[months.length - 1]).toFixed(1)},${zero_y.toFixed(1)} L${px(months[0]).toFixed(1)},${zero_y.toFixed(1)} Z`;
   }
 
-  const breakEvenWeeks = breakEvenMonth != null ? Math.round(breakEvenMonth * (52 / 12)) : null;
+  // Breakeven marker
+  const beMonth = breakEvenMonth;
+  const beWeeks = beMonth != null ? Math.round(beMonth * (52 / 12)) : null;
+  const be_x = beMonth != null ? px(beMonth) : null;
+  const be_y = beMonth != null ? py(0) : null;
+
+  // Year dots at 0, 12, 24, 36, 48, 60
+  const yearDots = [0, 12, 24, 36, 48, 60];
 
   const milestones = [
     { label: 'Year 1', value: netPosition[12], emphasis: false },
@@ -59,6 +79,13 @@ function MilestoneOutlook({ fin, totalGrossAnnual }) {
 
   return (
     <div>
+      <p style={{ fontSize: 15, fontWeight: 700, color: '#0F2A4A', marginBottom: 4 }}>
+        Value compounds every year it runs
+      </p>
+      <p style={{ fontSize: 11.5, color: '#6b7280', marginBottom: 16, lineHeight: 1.5 }}>
+        The chart below shows cumulative net position month by month over five years, accounting for the ramp-up period and ongoing platform cost.
+      </p>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
         {milestones.map(({ label, value, emphasis }) => (
           <div key={label} style={{
@@ -76,134 +103,72 @@ function MilestoneOutlook({ fin, totalGrossAnnual }) {
       </div>
 
       <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: '100%', overflow: 'visible', height: SVG_H }}>
+        {/* Zero baseline */}
         {zero_y >= PAD_T && zero_y <= PAD_T + ch && (
-          <line x1={PAD_L} y1={zero_y} x2={SVG_W - PAD_R} y2={zero_y} stroke="#e5e7eb" strokeWidth="1" />
+          <line x1={PAD_L} y1={zero_y} x2={SVG_W - PAD_R} y2={zero_y} stroke="#d1d5db" strokeWidth="1" />
         )}
-        <path d={pathD} fill="none" stroke="#004FDB" strokeWidth="2.5" strokeLinejoin="round" />
-        {chartPoints.map((v, i) => (
-          <circle key={i} cx={px(i)} cy={py(v)} r="4" fill={v >= 0 ? '#004FDB' : '#9ca3af'} />
+
+        {/* Pre-breakeven amber wedge */}
+        {areaBelow.length > 0 && (
+          <path d={segmentPath(areaBelow)} fill="rgba(251,191,36,0.18)" />
+        )}
+
+        {/* Post-breakeven green area */}
+        {areaAbove.length > 0 && (
+          <path d={segmentPath(areaAbove)} fill="rgba(59,130,246,0.12)" />
+        )}
+
+        {/* Main line */}
+        <polyline points={linePts} fill="none" stroke="#004FDB" strokeWidth="2.5" strokeLinejoin="round" />
+
+        {/* Breakeven dashed guide + marker */}
+        {be_x != null && be_y != null && (
+          <>
+            <line x1={be_x} y1={PAD_T} x2={be_x} y2={PAD_T + ch} stroke="#f59e0b" strokeWidth="1.2" strokeDasharray="4,3" />
+            <circle cx={be_x} cy={be_y} r="5" fill="#f59e0b" />
+            <text x={be_x + 7} y={be_y - 6} fontSize="9" fill="#92400e" fontWeight="600">
+              Wk {beWeeks} / break even
+            </text>
+          </>
+        )}
+
+        {/* Year dots */}
+        {yearDots.map((m) => {
+          const v = netPosition[m];
+          return (
+            <circle key={m} cx={px(m)} cy={py(v)} r="3.5" fill={v >= 0 ? '#004FDB' : '#9ca3af'} />
+          );
+        })}
+
+        {/* X-axis labels */}
+        {yearDots.map((m, i) => (
+          <text key={m} x={px(m)} y={PAD_T + ch + 14} fontSize="9" fill="#9ca3af" textAnchor="middle">
+            {i === 0 ? 'Now' : `Yr ${i}`}
+          </text>
         ))}
       </svg>
 
-      <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
-        {breakEvenWeeks != null
-          ? `Break-even at week ${breakEvenWeeks} — net position turns positive and grows from there.`
-          : 'Net position over 5 years.'}
-      </p>
+      {/* How-to-read block */}
+      <div style={{ marginTop: 14, padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+        <p style={{ fontSize: 9.5, fontWeight: 700, color: '#374151', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>How to read this</p>
+        <ul style={{ margin: 0, padding: '0 0 0 14px', listStyle: 'disc' }}>
+          {[
+            'Blue area — cumulative net savings above the investment line.',
+            'Amber area — pre-breakeven period; the program is recovering its upfront cost.',
+            beWeeks != null
+              ? `Orange dot — break-even at week ${beWeeks}, where cumulative savings equal total investment.`
+              : 'Break-even point not reached within the 5-year window at these inputs.',
+            'Year cards above show your net position at 1, 3, and 5 years.',
+          ].map((line, i) => (
+            <li key={i} style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.6 }}>{line}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
 
-const SKIP_KEYS = new Set(['key', 'enabled', 'customDrivers', 'roleRows', 'justification',
-  'driver1Justification', 'driver2Justification', 'reviewed', 'id']);
-
-const PCT_FIELDS = new Set(['reductionPct', 'contingencyRate', 'wacc']);
-
-function toLabel(key) {
-  return key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
-}
-
-function formatValue(v, key = '') {
-  if (PCT_FIELDS.has(key)) return (Number(v) * 100).toFixed(1) + '%';
-  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
-  if (v === '' || v === null || v === undefined) return '—';
-  return String(v);
-}
-
-function FieldGrid3Col({ obj }) {
-  const entries = Object.entries(obj || {}).filter(([k]) => !SKIP_KEYS.has(k));
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px 20px', marginTop: 14, marginBottom: 22 }}>
-      {entries.map(([k, v]) => (
-        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '5px 0', borderBottom: '1px solid #f3f4f6' }}>
-          <span style={{ color: '#6b7280' }}>{toLabel(k)}</span>
-          <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const FIELD_MANIFEST = {
-  cycleCount: { fields: [
-    ['hoursPerSession', 'Hours per count session'],
-    ['cycleFrequencyValue', 'Count frequency', (uc) => formatFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit)],
-    ['peoplePerSession', 'People counting simultaneously per session'],
-    ['burdenedRate', 'Burdened rate'],
-    ['reductionPct', 'Efficiency improvement'],
-  ]},
-  locateItems: { drivers: [
-    { enabledKey: 'driver1Enabled', label: 'Driver 1 — Floor Worker Search Time', roleRows: true,
-      fields: [['reductionPct', 'Efficiency improvement']] },
-    { enabledKey: 'driver2Enabled', label: 'Driver 2 — Supervisory Visibility Time',
-      fields: [
-        ['supervisorHoursPerWeek', 'Supervisor hours spent locating per week'],
-        ['supervisorHeadcount', 'Number of supervisors'],
-        ['supervisorBurdenedRate', 'Supervisor burdened rate'],
-        ['reductionPct', 'Efficiency improvement'],
-      ] },
-  ]},
-  workOrderTracking: { drivers: [
-    { enabledKey: 'driver1Enabled', label: 'Driver 1 — Time Spent Manually Tracking', roleRows: true,
-      fields: [['reductionPct', 'Efficiency improvement']] },
-    { enabledKey: 'driver2Enabled', label: 'Driver 2 — Supervisory Visibility Time',
-      fields: [
-        ['supervisorHoursPerWeek', 'Supervisor hours spent locating per week'],
-        ['supervisorHeadcount', 'Number of supervisors'],
-        ['supervisorBurdenedRate', 'Supervisor burdened rate'],
-        ['reductionPct', 'Efficiency improvement'],
-      ] },
-  ]},
-  picklistVerification: { drivers: [
-    { enabledKey: 'driver1Enabled', label: 'Driver 1 — Pick Error Reduction',
-      fields: [
-        ['picksPerDay', 'Picks per day'],
-        ['errorRate', 'Error rate (%)'],
-        ['costPerError', 'Cost per error'],
-        ['reductionPct', 'Error reduction'],
-      ] },
-    { enabledKey: 'driver2Enabled', label: 'Driver 2 — Time Saved Per Pick',
-      fields: [
-        ['picksPerDay', 'Picks per day'],
-        ['minutesSavedPerPick', 'Minutes saved per pick'],
-        ['burdenedRate', 'Burdened rate'],
-      ] },
-  ]},
-  audit: { fields: [
-    ['people', 'People per audit'],
-    ['daysPerAudit', 'Days per audit'],
-    ['hoursPerDay', 'Hours per day'],
-    ['auditFrequencyValue', 'Audit frequency', (uc) => formatFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit)],
-    ['burdenedRate', 'Burdened rate'],
-    ['downtimeCostPerDay', 'Downtime cost per audit day'],
-    ['reductionPct', 'Efficiency improvement'],
-  ]},
-  shrinkage: { fields: [
-    ['incidentsPerYear', 'Unexplained loss incidents per year'],
-    ['materialValuePerIncident', 'Material / inventory value per incident'],
-    ['laborHoursPerIncident', 'Investigation labor per incident (hrs)'],
-    ['burdenedRate', 'Burdened rate'],
-    ['scrapCostPerIncident', 'Scrap cost per incident'],
-    ['scheduleImpactPerIncident', 'Schedule impact per incident'],
-    ['reductionPct', 'Incident reduction'],
-  ]},
-  shipReceiveVerification: { fields: [
-    ['minutesSavedPerTransaction', 'Minutes saved per dock transaction'],
-    ['transactionsPerDay', 'Dock transactions per day'],
-    ['burdenedRate', 'Burdened rate'],
-    ['reductionPct', 'Time reduction'],
-  ]},
-  misShipReduction: { fields: [
-    ['misShipsPerMonth', 'Mis-ships per month'],
-    ['costPerMisShip', 'Cost per mis-ship'],
-    ['reductionPct', 'Reduction rate'],
-  ]},
-  proofOfDelivery: { fields: [
-    ['incidentsPerYear', 'Disputed delivery claims per year'],
-    ['costPerIncident', 'Cost per claim'],
-    ['reductionPct', 'Claim reduction'],
-  ]},
-};
+// ─── Field manifest (compact stat line formatters) ───────────────────────────
 
 const ROLE_LABELS = {
   materialHandler: 'Material Handler',
@@ -220,87 +185,331 @@ const FIN_LABELS = {
   wacc: 'WACC',
 };
 
-function renderField([k, label, formatter], uc) {
-  const v = formatter ? formatter(uc) : uc[k];
+const PCT_FIELDS = new Set(['reductionPct', 'contingencyRate', 'wacc']);
+
+function fmtV(v, key = '') {
+  if (PCT_FIELDS.has(key)) return `${(Number(v) * 100).toFixed(0)}%`;
   if (v === '' || v === null || v === undefined) return null;
+  return String(v);
+}
+
+function joinStats(parts) {
+  return parts.filter(Boolean).join(' · ');
+}
+
+// Returns a compact one-line string summarising the key inputs for a use case.
+// Each entry covers every key in makeAllDisabledUseCases() for that base key.
+const COMPACT_STATS = {
+  cycleCount: (uc) => joinStats([
+    `${uc.hoursPerSession} hrs/session`,
+    formatFrequency(uc.cycleFrequencyValue, uc.cycleFrequencyUnit),
+    `${uc.peoplePerSession} people`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} efficiency`,
+  ]),
+  audit: (uc) => joinStats([
+    `${uc.people} people`,
+    `${uc.daysPerAudit} days/audit`,
+    `${uc.hoursPerDay} hrs/day`,
+    formatFrequency(uc.auditFrequencyValue, uc.auditFrequencyUnit),
+    `$${uc.burdenedRate}/hr`,
+    uc.downtimeCostPerDay ? `$${uc.downtimeCostPerDay} downtime/day` : null,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  shipReceiveVerification: (uc) => joinStats([
+    `${uc.minutesSavedPerTransaction} min saved/transaction`,
+    `${uc.transactionsPerDay} transactions/day`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  internalDelivery: (uc) => joinStats([
+    `${uc.minutesPerTransfer} min/transfer`,
+    `${uc.transfersPerDay} transfers/day`,
+    `${uc.peoplePerTransfer} people`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  expiredProducts: (uc) => joinStats([
+    `${uc.incidentsPerYear} incidents/yr`,
+    `$${uc.costPerIncident}/incident`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  calibrationReminders: (uc) => joinStats([
+    `${uc.failuresPerYear} failures/yr`,
+    `$${uc.costPerFailure}/failure`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  geofencing: (uc) => joinStats([
+    `${uc.incidentsPerYear} incidents/yr`,
+    `$${uc.costPerIncident}/incident`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  fasterFulfillment: (uc) => joinStats([
+    `${uc.currentCycleTime}h → ${uc.targetCycleTime}h cycle time`,
+    `${uc.ordersPerMonth} orders/mo`,
+    `$${uc.revenuePerOrder}/order`,
+  ]),
+  misShipReduction: (uc) => joinStats([
+    `${uc.misShipsPerMonth} mis-ships/mo`,
+    `$${uc.costPerMisShip}/mis-ship`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  dockTurnSpeed: (uc) => joinStats([
+    `${uc.minutesSaved} min saved/transaction`,
+    `${uc.transactionsPerDay} transactions/day`,
+    `${uc.dockStaff} staff`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  goodsReceipt: (uc) => joinStats([
+    `${uc.minutesSavedPerTransaction} min saved/transaction`,
+    `${uc.transactionsPerDay} transactions/day`,
+    `${uc.dockStaff} dock staff`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  automatedPackCount: (uc) => joinStats([
+    `${uc.minutesSavedPerTransaction} min saved/transaction`,
+    `${uc.transactionsPerDay} transactions/day`,
+    `${uc.dockStaff} dock staff`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  outboundAudit: (uc) => joinStats([
+    `${uc.minutesSaved} min saved/transaction`,
+    `${uc.transactionsPerDay} transactions/day`,
+    `${uc.dockStaff} dock staff`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  returnsTransfers: (uc) => joinStats([
+    `${uc.minutesPerTransfer} min/transfer`,
+    `${uc.transfersPerDay} transfers/day`,
+    `${uc.peoplePerTransfer} people`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  inventoryRequests: (uc) => joinStats([
+    `${uc.hoursPerWeek} hrs/wk`,
+    `${uc.peopleInvolved} people`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  shrinkage: (uc) => joinStats([
+    `${uc.incidentsPerYear} incidents/yr`,
+    `$${uc.materialValuePerIncident}/incident material value`,
+    `${uc.laborHoursPerIncident} hrs investigation`,
+    `$${uc.burdenedRate}/hr`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  productionEquipment: (uc) => joinStats([
+    `${uc.incidentsPerYear} incidents/yr`,
+    `$${uc.costPerIncident}/incident`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  rtiTracking: (uc) => joinStats([
+    `${uc.incidentsPerYear} incidents/yr`,
+    `$${uc.costPerIncident}/incident`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  proofOfDelivery: (uc) => joinStats([
+    `${uc.incidentsPerYear} disputed claims/yr`,
+    `$${uc.costPerIncident}/claim`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  qualityExceptionTracking: (uc) => joinStats([
+    `${uc.exceptionsPerYear} exceptions/yr`,
+    `$${uc.reworkCostPerException} rework cost`,
+    uc.scrapCostPerException ? `$${uc.scrapCostPerException} scrap` : null,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  expeditedExceptionTracking: (uc) => joinStats([
+    `${uc.lateShipmentsPerMonth} late shipments/mo`,
+    `$${uc.costPerLateShipment}/late shipment`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  workingCapitalImprovement: (uc) => joinStats([
+    `$${Number(uc.wipInventoryValue).toLocaleString()} WIP inventory value`,
+    `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+  ]),
+  // Multi-driver use cases: handled separately in UcCard
+  locateItems: null,
+  workOrderTracking: null,
+  picklistVerification: null,
+};
+
+// Compact stat lines for role-row drivers
+function roleRowStats(roleRows) {
+  return (roleRows || []).map((row, i) => (
+    <p key={i} style={{ fontSize: 10, color: '#4b5563', margin: '1px 0' }}>
+      {ROLE_LABELS[row.role] || row.customRoleName || row.role} — {row.headcount} HC · {row.hoursLostPerDay} hrs/day · ${row.burdenedRate}/hr
+    </p>
+  ));
+}
+
+const statLineStyle = { fontSize: 10, color: '#4b5563', margin: '2px 0', fontVariantNumeric: 'tabular-nums' };
+const noteLabelStyle = { fontSize: 9, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' };
+const noteTxtStyle = { fontSize: 9.5, color: '#6b7280', fontStyle: 'italic', marginTop: 2, lineHeight: 1.45 };
+const driverLabelStyle = { fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#9ca3af', margin: '7px 0 2px' };
+
+function NoteBlock({ text }) {
+  if (!text) return null;
   return (
-    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-      <span>{label}</span>
-      <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
+    <div style={{ marginTop: 5, paddingTop: 5, borderTop: '1px dashed #e5e7eb' }}>
+      <span style={noteLabelStyle}>NOTE </span>
+      <span style={noteTxtStyle}>"{text}"</span>
     </div>
   );
 }
 
-function UcCard({ ucKey, uc, color }) {
+function UcCard({ ucKey, uc, color, annualValue }) {
   const baseKey = ucKey.split('__')[0];
   const displayName = UC_NAMES[baseKey] || ucKey;
   const customDrivers = uc.customDrivers || [];
-  const justification = uc.justification || uc.driver1Justification || '';
-  const manifest = FIELD_MANIFEST[baseKey];
-
-  const driverSubheaderStyle = {
-    fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-    letterSpacing: '0.04em', color: '#9ca3af', margin: '8px 0 3px',
-  };
+  const compactFn = COMPACT_STATS[baseKey];
 
   let body;
-  if (!manifest) {
-    // Fallback: existing raw dump for unmapped use cases
-    const roleRows = uc.roleRows || [];
-    const rawFields = Object.entries(uc).filter(([k]) => !SKIP_KEYS.has(k));
+
+  if (baseKey === 'locateItems' || baseKey === 'workOrderTracking') {
+    // Two drivers: driver1 = roleRows, driver2 = supervisor
     body = (
       <>
-        {rawFields.map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-            <span>{toLabel(k)}</span>
-            <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
-          </div>
-        ))}
-        {roleRows.length > 0 && roleRows.map((row, i) => (
-          <div key={i} style={{ fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-            Role: {row.customRoleName || row.role} · {row.headcount} · {row.hoursLostPerDay} hrs/day · ${row.burdenedRate}/hr
-          </div>
-        ))}
+        {uc.driver1Enabled && (
+          <>
+            <p style={driverLabelStyle}>Driver 1 — {baseKey === 'locateItems' ? 'Floor Worker Search Time' : 'Time Spent Manually Tracking'}</p>
+            {roleRowStats(uc.roleRows)}
+            <p style={statLineStyle}>{fmtV(uc.reductionPct, 'reductionPct')} efficiency improvement</p>
+            <NoteBlock text={uc.driver1Justification} />
+          </>
+        )}
+        {uc.driver2Enabled && (
+          <>
+            <p style={driverLabelStyle}>Driver 2 — Supervisory Visibility Time</p>
+            <p style={statLineStyle}>
+              {joinStats([
+                `${uc.supervisorHoursPerWeek} hrs/wk`,
+                `${uc.supervisorHeadcount} supervisors`,
+                `$${uc.supervisorBurdenedRate}/hr`,
+                `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+              ])}
+            </p>
+            <NoteBlock text={uc.driver2Justification} />
+          </>
+        )}
       </>
     );
-  } else if (manifest.fields) {
-    body = manifest.fields.map((pair) => renderField(pair, uc)).filter(Boolean);
+  } else if (baseKey === 'picklistVerification') {
+    body = (
+      <>
+        {uc.driver1Enabled && (
+          <>
+            <p style={driverLabelStyle}>Driver 1 — Pick Error Reduction</p>
+            <p style={statLineStyle}>
+              {joinStats([
+                `${uc.picksPerDay} picks/day`,
+                `${uc.errorRate}% error rate`,
+                `$${uc.costPerError}/error`,
+                `${fmtV(uc.reductionPct, 'reductionPct')} reduction`,
+              ])}
+            </p>
+            <NoteBlock text={uc.driver1Justification} />
+          </>
+        )}
+        {uc.driver2Enabled && (
+          <>
+            <p style={driverLabelStyle}>Driver 2 — Time Saved Per Pick</p>
+            <p style={statLineStyle}>
+              {joinStats([
+                `${uc.picksPerDay} picks/day`,
+                `${uc.minutesSavedPerPick} min saved/pick`,
+                `$${uc.burdenedRate}/hr`,
+              ])}
+            </p>
+            <NoteBlock text={uc.driver2Justification} />
+          </>
+        )}
+      </>
+    );
+  } else if (compactFn) {
+    body = (
+      <>
+        <p style={statLineStyle}>{compactFn(uc)}</p>
+        <NoteBlock text={uc.justification} />
+      </>
+    );
   } else {
-    // driver-grouped
-    body = manifest.drivers.filter((d) => uc[d.enabledKey]).map((d) => {
-      const roleRows = d.roleRows ? (uc.roleRows || []) : [];
-      return (
-        <React.Fragment key={d.enabledKey}>
-          <p style={driverSubheaderStyle}>{d.label}</p>
-          {roleRows.map((row, i) => (
-            <div key={i} style={{ fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-              {ROLE_LABELS[row.role] || row.customRoleName || row.role} — {row.headcount} HC · {row.hoursLostPerDay} hrs/day · ${row.burdenedRate}/hr
-            </div>
-          ))}
-          {d.fields.map((pair) => renderField(pair, uc)).filter(Boolean)}
-        </React.Fragment>
-      );
-    });
+    // Fallback for any unmapped key
+    body = (
+      <>
+        <p style={statLineStyle}>
+          {joinStats(Object.entries(uc)
+            .filter(([k]) => !new Set(['key','enabled','customDrivers','roleRows','justification','driver1Justification','driver2Justification','reviewed','id']).has(k))
+            .map(([k, v]) => (v !== '' && v !== null && v !== undefined) ? `${v}` : null)
+          )}
+        </p>
+        <NoteBlock text={uc.justification} />
+      </>
+    );
   }
 
   return (
-    <div data-keep-together="true" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 14px', borderTop: `3px solid ${color.border}` }}>
-      <p style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 6 }}>{displayName}</p>
+    <div data-keep-together="true" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', borderTop: `3px solid ${color.border}`, marginBottom: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+        <p style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>{displayName}</p>
+        {annualValue != null && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: color.text }}>{fmt$(annualValue)}</span>
+        )}
+      </div>
       {body}
       {customDrivers.length > 0 && customDrivers.map((d, i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, padding: '3px 0', color: '#4b5563' }}>
-          <span>{d.label || d.name || 'Custom Driver'}</span>
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, padding: '2px 0', color: '#4b5563' }}>
+          <span>{d.name || d.label || 'Custom Driver'}</span>
           {d.annualValue !== undefined && <span style={{ color: '#111827', fontWeight: 600 }}>{fmt$(Number(d.annualValue))}</span>}
         </div>
       ))}
-      {justification && (
-        <p style={{ fontSize: 9.5, color: '#9ca3af', fontStyle: 'italic', marginTop: 6, paddingTop: 6, borderTop: '1px dashed #e5e7eb' }}>
-          "{justification}"
-        </p>
-      )}
     </div>
   );
 }
+
+// ─── Proportion bar ──────────────────────────────────────────────────────────
+
+function ProportionBar({ buckets, total }) {
+  if (!total || total <= 0) return null;
+  const activeBuckets = buckets.filter((b) => b.subtotal > 0);
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', height: 20, borderRadius: 6, overflow: 'hidden', width: '100%' }}>
+        {activeBuckets.map((b) => {
+          const color = getSolutionColor(b.name);
+          const pct = (b.subtotal / total) * 100;
+          return (
+            <div
+              key={b.name}
+              style={{ width: `${pct}%`, background: color.border, minWidth: pct > 0 ? 2 : 0 }}
+              title={`${b.name}: ${fmt$(b.subtotal)}`}
+            />
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', marginTop: 8 }}>
+        {activeBuckets.map((b) => {
+          const color = getSolutionColor(b.name);
+          return (
+            <div key={b.name} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color.border, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: '#374151' }}>{b.name}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#111827' }}>{fmt$(b.subtotal)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main report ─────────────────────────────────────────────────────────────
+
+const DISCLAIMER = 'All figures are calculated based on user provided inputs. Nothing is final until validated.';
 
 export default function PrintableReport({ ops, useCases, fin, result, customCategories, contactInfo = {} }) {
   const hasInvestment = fin.hardwareCapex !== 0 || fin.setupCapex !== 0 || fin.annualPlatformFee !== 0;
@@ -319,6 +528,9 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
   const totalHoursSaved = laborBucket?.totalHoursSaved ?? 0;
   const irrDisplay = !hasInvestment ? '—' : result.irrAnnual > 3.0 ? '>300%' : fmtPct(result.irrAnnual);
 
+  const projectTitle = ops.projectTitle || 'ROI Analysis';
+  const companyName = ops.companyName || 'Your Facility';
+
   const metrics = [
     { label: '5-Year ROI',         value: hasInvestment ? fmtPct(roiValue) : '—',            caption: 'Total return over 5 years',          border: '#185FA5' },
     { label: '5-Year NPV',         value: hasInvestment ? fmt$(result.npv) : '—',             caption: 'Net present value at your WACC',     border: '#0F6E56' },
@@ -328,10 +540,11 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
     { label: 'Annual Hours Saved', value: totalHoursSaved > 0 ? `${Math.round(totalHoursSaved).toLocaleString()} hrs` : '—', caption: 'Labor hours returned each year', border: '#0F6E56' },
   ];
 
+  const activeUcEntries = Object.entries(useCases).filter(([, uc]) => uc?.enabled);
+
   const s = {
     root: { width: 800, background: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif', color: '#111827', padding: 40 },
-    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 20, borderBottom: '1px solid #e5e7eb' },
-    companyBlock: { textAlign: 'right' },
+    header: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #e5e7eb' },
     heroBox: { background: 'linear-gradient(135deg, #1a4fb0, #2f6fe0)', borderRadius: 14, padding: '32px 28px', marginBottom: 20, color: '#ffffff' },
     heroLabel: { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#bfdbfe', marginBottom: 8 },
     heroValue: { fontSize: 44, fontWeight: 700, marginBottom: 8 },
@@ -343,56 +556,61 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
     metricCaption: { fontSize: 9, color: '#9ca3af', marginTop: 3 },
     panel: { background: '#ffffff', borderRadius: 12, padding: 24, marginBottom: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.08)' },
     panelTitle: { fontSize: 14, fontWeight: 600, color: '#1f2937', marginBottom: 16 },
-    disclaimer: { marginTop: 24, fontSize: 10, color: '#9ca3af', textAlign: 'center', lineHeight: 1.5 },
+    disclaimer: { marginTop: 16, fontSize: 10, color: '#9ca3af', textAlign: 'center', lineHeight: 1.5, fontStyle: 'italic' },
   };
-
-  const activeUcEntries = Object.entries(useCases).filter(([, uc]) => uc?.enabled !== false && uc?.enabled);
 
   return (
     <div style={s.root}>
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div data-keep-together="true" style={s.header}>
         <img src={xemelgoLogo} alt="Xemelgo" style={{ height: 32, width: 'auto' }} />
-        <div style={s.companyBlock}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{ops.companyName || 'Your Facility'}</p>
-          <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>ROI Analysis Report</p>
-          {ops.projectTitle && <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{ops.projectTitle}</p>}
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
+            {activeCount} use case{activeCount === 1 ? '' : 's'} active
+          </p>
+          <p style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+            Prepared for {companyName} · {preparedDate}
+          </p>
           {showContactBlock && (
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f0f0f0' }}>
-              <p style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9ca3af', marginBottom: 2 }}>
-                Prepared for
-              </p>
-              {fullName && (
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{fullName}</p>
-              )}
-              {email && (
-                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{email}</p>
-              )}
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #f0f0f0' }}>
+              {fullName && <p style={{ fontSize: 11.5, fontWeight: 600, color: '#374151' }}>{fullName}</p>}
+              {email && <p style={{ fontSize: 10.5, color: '#6b7280', marginTop: 1 }}>{email}</p>}
             </div>
           )}
-          <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Prepared {preparedDate}</p>
         </div>
       </div>
 
-      {/* Hero */}
+      {/* ── Title block ── */}
+      <div data-keep-together="true" style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#185FA5', marginBottom: 6 }}>
+          ROI Analysis
+        </p>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#0F2A4A', margin: 0, lineHeight: 1.15 }}>
+          {projectTitle}
+        </h1>
+        <p style={{ fontSize: 13, color: '#6b7280', marginTop: 6 }}>
+          {companyName} · validated estimate across {activeCount} active use case{activeCount === 1 ? '' : 's'}
+        </p>
+        <p style={{ fontSize: 13, fontStyle: 'italic', color: '#374151', marginTop: 10, paddingLeft: 14, borderLeft: '3px solid #93c5fd', lineHeight: 1.5 }}>
+          "Every competitor sells visibility. Xemelgo sells execution."
+        </p>
+      </div>
+
+      {/* ── Hero ── */}
       <div data-keep-together="true" style={s.heroBox}>
         <p style={s.heroLabel}>{hasInvestment ? 'Net Annual Value' : 'Total Estimated Annual Savings'}</p>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ display: 'inline-block', fontSize: 11, background: 'rgba(255,255,255,0.16)', padding: '4px 10px', borderRadius: 100, color: '#eaf1ff' }}>
-            Validated estimate · {activeCount} use case{activeCount === 1 ? '' : 's'} active
-          </p>
-        </div>
         <p style={s.heroValue}>{hasInvestment ? fmt$(result.netAnnualValue) : fmt$(result.totalGrossAnnual)}</p>
         {hasInvestment && (
           <p style={s.heroSub}>
-            At these inputs, <strong style={{ color: '#ffffff' }}>{ops.companyName || 'your facility'}</strong> recovers its full investment in{' '}
+            At these inputs, <strong style={{ color: '#ffffff' }}>{companyName}</strong> recovers its full investment in{' '}
             <strong style={{ color: '#ffffff' }}>{fmtWks(result.paybackWeeks)}</strong> and generates{' '}
             <strong style={{ color: '#ffffff' }}>{fmt$(result.npv)}</strong> in net value over 5 years.
           </p>
         )}
       </div>
 
-      {/* Metric cards */}
+      {/* ── Metric cards ── */}
       <div data-keep-together="true" style={s.metricsGrid}>
         {metrics.map((m) => (
           <div key={m.label} style={s.metricCard(m.border)}>
@@ -403,9 +621,13 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
         ))}
       </div>
 
-      {/* Savings summary */}
+      {/* ── Savings summary ── */}
       <div style={s.panel}>
         <p style={{ ...s.panelTitle, color: '#0F2A4A' }}>Savings summary by solution</p>
+
+        {/* Proportion bar */}
+        <ProportionBar buckets={buckets} total={result.totalGrossAnnual} />
+
         {buckets.filter((b) => b.lineItems.length > 0).map((bucket) => {
           const color = getSolutionColor(bucket.name);
           return (
@@ -442,15 +664,16 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
             </div>
           )}
         </div>
+        <p style={s.disclaimer}>{DISCLAIMER}</p>
       </div>
 
-      {/* 5-Year Outlook */}
+      {/* ── 5-Year Outlook ── */}
       <div style={s.panel}>
-        <p style={s.panelTitle}>5-Year Cumulative Outlook</p>
         <MilestoneOutlook fin={fin} totalGrossAnnual={result.totalGrossAnnual} />
+        <p style={s.disclaimer}>{DISCLAIMER}</p>
       </div>
 
-      {/* Appendix */}
+      {/* ── Appendix ── */}
       <div>
         <div style={{ borderBottom: '2px solid #0F2A4A', paddingBottom: 12, marginTop: 24 }}>
           <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#185FA5', fontWeight: 700 }}>Report inputs</p>
@@ -458,52 +681,81 @@ export default function PrintableReport({ ops, useCases, fin, result, customCate
           <p style={{ fontSize: 11.5, color: '#6b7280', marginTop: 4 }}>Every input used to calculate the figures on the preceding pages.</p>
         </div>
 
-        {/* Use Case Assumptions grouped by solution */}
+        {/* Use case cards grouped by solution, with bucket dollar total in section header */}
         {(() => {
           const knownSolutions = [...SOLUTION_ORDER, 'Custom'];
-          const activeByKey = activeUcEntries;
-          const unresolvedEntries = activeByKey.filter(([key]) => !knownSolutions.includes(getSolutionForUcKey(key)));
+          const unresolvedEntries = activeUcEntries.filter(([key]) => !knownSolutions.includes(getSolutionForUcKey(key)));
+
           const groups = [
             ...[...SOLUTION_ORDER, 'Custom'].map((solName) => ({
               solName,
-              entries: activeByKey.filter(([k]) => getSolutionForUcKey(k) === (solName === 'Custom' ? null : solName)),
+              entries: activeUcEntries.filter(([k]) => getSolutionForUcKey(k) === (solName === 'Custom' ? null : solName)),
             })),
             ...(unresolvedEntries.length > 0 ? [{ solName: 'Other', entries: unresolvedEntries }] : []),
           ];
+
           return groups.filter((g) => g.entries.length > 0).map(({ solName, entries }) => {
             const color = getSolutionColor(solName);
+            // Find the matching bucket to get its dollar subtotal
+            const matchingBucket = buckets.find((b) => b.name === solName);
+            const bucketTotal = matchingBucket?.subtotal ?? 0;
+
             return (
               <React.Fragment key={solName}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20, marginBottom: 8 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: color.border }} />
-                  <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#374151' }}>{solName}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#374151' }}>
+                    {solName}
+                  </span>
+                  {bucketTotal > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: color.text }}>
+                      {fmt$(bucketTotal)} / year
+                    </span>
+                  )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {entries.map(([k, uc]) => (
-                    <UcCard key={k} ucKey={k} uc={uc} color={color} />
-                  ))}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {entries.map(([k, uc]) => {
+                    // Find this use case's annualValue from the bucket's lineItems
+                    const li = matchingBucket?.lineItems.find((item) => item.key === k);
+                    return (
+                      <UcCard key={k} ucKey={k} uc={uc} color={color} annualValue={li?.annualValue} />
+                    );
+                  })}
                 </div>
               </React.Fragment>
             );
           });
         })()}
 
-        {/* Financial Assumptions */}
+        {/* Financial assumptions */}
         <p style={{ fontSize: 14, fontWeight: 700, color: '#0F2A4A', marginTop: 22 }}>Financial assumptions</p>
         <div style={{ marginTop: 8, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-          {Object.entries(fin).filter(([k]) => !SKIP_KEYS.has(k)).map(([k, v], i) => (
+          {Object.entries(fin).filter(([k]) => !new Set(['key','enabled','customDrivers','reviewed']).has(k)).map(([k, v], i) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', fontSize: 11.5, ...(i > 0 ? { borderTop: '1px solid #f3f4f6' } : {}) }}>
-              <span style={{ color: '#6b7280' }}>{FIN_LABELS[k] || toLabel(k)}</span>
-              <span style={{ color: '#111827', fontWeight: 600 }}>{formatValue(v, k)}</span>
+              <span style={{ color: '#6b7280' }}>{FIN_LABELS[k] || k}</span>
+              <span style={{ color: '#111827', fontWeight: 600 }}>
+                {PCT_FIELDS.has(k) ? `${(Number(v) * 100).toFixed(1)}%` : (v === '' ? '—' : String(v))}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <p style={s.disclaimer}>
-        These figures are estimates based on inputs provided during this session. Actual results will vary based on your specific implementation and operational factors.
-      </p>
+      {/* ── Bottom line ── */}
+      <div style={{ marginTop: 28, padding: '16px 20px', background: '#f0f4ff', borderRadius: 10, border: '1px solid #bfdbfe' }}>
+        <p style={{ fontSize: 12, color: '#1e3a8a', lineHeight: 1.65 }}>
+          <strong>Bottom line:</strong>{' '}
+          {activeCount} use case{activeCount === 1 ? '' : 's'} were modeled for <strong>{projectTitle}</strong>,
+          generating a net annual value of <strong>{hasInvestment ? fmt$(result.netAnnualValue) : fmt$(result.totalGrossAnnual)}</strong>
+          {hasInvestment && result.paybackWeeks != null
+            ? ` with a projected payback period of ${fmtWks(result.paybackWeeks)}.`
+            : '.'}
+          {' '}All figures reflect the inputs entered in this session and are subject to validation against your actual operating data.
+        </p>
+      </div>
+
+      {/* ── Final disclaimer ── */}
+      <p style={{ ...s.disclaimer, marginTop: 24 }}>{DISCLAIMER}</p>
     </div>
   );
 }
