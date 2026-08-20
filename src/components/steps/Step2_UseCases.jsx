@@ -5,6 +5,7 @@ import { fmt$ } from '../../utils/format';
 import { calcUseCaseValue, BUCKET_CONFIG, getBaseUcKey } from '../../utils/calculations';
 import FrequencyInput from '../FrequencyInput';
 import { DRIVER_TYPE_LABELS, OTHER_QUESTION, WORKING_CAPITAL_QUESTION, CUSTOM_DRIVER_QUESTIONS } from '../../utils/customDriverQuestions';
+import FormulaTooltip from '../FormulaTooltip';
 
 // ─── Shared style constants ───────────────────────────────────────────────
 const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -934,6 +935,7 @@ export default function Step2_UseCases({ ops, setOps, fin, useCases, setUseCases
                                 <span className={`text-sm font-medium ${enabled ? 'text-gray-900' : 'text-gray-700'}`}>{UC_LABEL_OVERRIDES[key] ?? UC_LABELS[baseKey] ?? key}</span>
                                 {reviewed && enabled && <span className="text-xs font-medium text-green-600 bg-green-100 rounded px-1.5 py-0.5">Reviewed</span>}
                                 {isDefault && <span className="text-xs text-blue-500 font-medium flex-shrink-0">default</span>}
+                                {enabled && <FormulaTooltip ucKey={key} uc={uc} ops={ops} fin={fin} />}
                               </div>
                               {!showInputs && (UC_DESCRIPTION_OVERRIDES[key] ?? UC_DESCRIPTIONS[baseKey]) && (
                                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{UC_DESCRIPTION_OVERRIDES[key] ?? UC_DESCRIPTIONS[baseKey]}</p>

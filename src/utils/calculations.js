@@ -29,8 +29,47 @@ export function getBaseUcKey(key) {
   return idx === -1 ? key : key.slice(0, idx);
 }
 
+export function getDaysPerYear(ops) {
+  return ops.workDaysPerWeek * ops.workWeeksPerYear;
+}
+
+export function calcLocateItemsDriver1(uc, ops) {
+  if (uc.driver1Enabled === false) return 0;
+  const daysPerYear = getDaysPerYear(ops);
+  return (uc.roleRows || []).reduce((sum, row) =>
+    sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0);
+}
+export function calcLocateItemsDriver2(uc, ops) {
+  if (uc.driver2Enabled === false) return 0;
+  return (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0)
+    * ops.workWeeksPerYear * (uc.supervisorBurdenedRate || 0) * uc.reductionPct;
+}
+
+export function calcWorkOrderTrackingDriver1(uc, ops) {
+  if (uc.driver1Enabled === false) return 0;
+  const daysPerYear = getDaysPerYear(ops);
+  return (uc.roleRows || []).reduce((sum, row) =>
+    sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0);
+}
+export function calcWorkOrderTrackingDriver2(uc, ops) {
+  if (uc.driver2Enabled === false) return 0;
+  return (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0)
+    * ops.workWeeksPerYear * (uc.supervisorBurdenedRate || 0) * uc.reductionPct;
+}
+
+export function calcPicklistDriver1(uc, ops) {
+  if (uc.driver1Enabled === false) return 0;
+  const daysPerYear = getDaysPerYear(ops);
+  return uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct;
+}
+export function calcPicklistDriver2(uc, ops) {
+  if (uc.driver2Enabled === false) return 0;
+  const daysPerYear = getDaysPerYear(ops);
+  return ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * (uc.burdenedRate || 0) * uc.reductionPct;
+}
+
 export function calcUseCaseValue(key, uc, ops, fin = {}) {
-  const daysPerYear = ops.workDaysPerWeek * ops.workWeeksPerYear;
+  const daysPerYear = getDaysPerYear(ops);
   const customTotal = (uc.customDrivers || []).reduce((sum, d) => sum + (Number(d.annualValue) || 0), 0);
   let base = 0;
   switch (getBaseUcKey(key)) {
@@ -49,21 +88,12 @@ export function calcUseCaseValue(key, uc, ops, fin = {}) {
         ? Number(uc.downtimeCostPerDay) * uc.daysPerAudit * annualAudits : 0;
       base = labor + downtime; break;
     }
-    case 'locateItems': {
-      const d1 = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0) : 0;
-      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
-      base = d1 + d2; break;
-    }
-    case 'workOrderTracking': {
-      const d1 = (uc.driver1Enabled !== false) ? (uc.roleRows || []).reduce((sum, row) => sum + row.hoursLostPerDay * row.headcount * daysPerYear * row.burdenedRate * uc.reductionPct, 0) : 0;
-      const d2 = (uc.driver2Enabled !== false) ? (uc.supervisorHoursPerWeek || 0) * (uc.supervisorHeadcount || 0) * ops.workWeeksPerYear * (uc.supervisorBurdenedRate || 0) * uc.reductionPct : 0;
-      base = d1 + d2; break;
-    }
-    case 'picklistVerification': {
-      const d1 = (uc.driver1Enabled !== false) ? uc.picksPerDay * (uc.errorRate / 100) * uc.costPerError * daysPerYear * uc.reductionPct : 0;
-      const d2 = (uc.driver2Enabled !== false) ? ((uc.minutesSavedPerPick || 0) / 60) * uc.picksPerDay * daysPerYear * (uc.burdenedRate || 0) * uc.reductionPct : 0;
-      base = d1 + d2; break;
-    }
+    case 'locateItems':
+      base = calcLocateItemsDriver1(uc, ops) + calcLocateItemsDriver2(uc, ops); break;
+    case 'workOrderTracking':
+      base = calcWorkOrderTrackingDriver1(uc, ops) + calcWorkOrderTrackingDriver2(uc, ops); break;
+    case 'picklistVerification':
+      base = calcPicklistDriver1(uc, ops) + calcPicklistDriver2(uc, ops); break;
     case 'shipReceiveVerification':
       base = (uc.minutesSavedPerTransaction / 60) * uc.transactionsPerDay * daysPerYear * uc.burdenedRate * uc.reductionPct; break;
     case 'internalDelivery':
