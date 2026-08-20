@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "autoPort": true,
       "name": "roi-calculator",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
